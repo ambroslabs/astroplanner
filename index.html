@@ -403,6 +403,8 @@
   .bar input, .controls input, #obs-in { min-height: 44px !important; }
   .planet-table span { font-size: 13px !important; }
   .planet-table > div > span:first-child { flex: 0 0 74px !important; }
+  .heat-col input[type="range"] { width: 100% !important; min-height: 44px !important; }
+  .heat-col { flex: 1 1 100% !important; }
   .moon-check { min-height: 44px !important; padding: 0 !important; }
   .moon-check input { width: 22px !important; height: 22px !important; }
 }
@@ -475,7 +477,7 @@
       <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Usable dark hours by RA / Dec</div>
       <div class="dark-info" style="font-size: 16px; color: #D9A960; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;">{{ darkInfo }}</div>
     </div>
-    <div class="controls" style="display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #2E2C27;">
+    <div class="controls" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #2E2C27;">
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label for="date-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Date</label>
         <div style="display: flex; align-items: stretch; gap: 4px;">
@@ -495,6 +497,13 @@
           <input aria-label="Custom threshold" type="number" min="0" max="89" step="1" value="{{ thrText }}" sc-camel-on-change="{{ onThr }}" style="width: 64px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;">
         </div>
       </div>
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Highlight</span>
+        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+          <input aria-label="Highlight intensity" type="range" min="0" max="100" step="5" value="{{ heatPct }}" sc-camel-on-input="{{ onHeat }}" style="width: 96px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ heatLabel }}</span>
+        </div>
+      </div>
       <label class="moon-check" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
         <input type="checkbox" checked="{{ showMoon }}" sc-camel-on-change="{{ onMoon }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
         Moon
@@ -504,7 +513,7 @@
         Planets
       </label>
       <div style="flex: 1;"></div>
-      <button sc-camel-on-click="{{ exportHeatPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
+      <button sc-camel-on-click="{{ exportHeatPng }}" style="margin-left: auto; background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
     <div style="display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 12px; font-size: 13.5px; color: #C9C4B7;">
@@ -542,7 +551,7 @@ class Component extends DCLogic {
   state = {
     lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
     date: new Date().toISOString().slice(0, 10),
-    thr: 40, thrText: '40', showMoon: true, showPlanets: true, geoMsg: '', obsSel: 'starfront', tab: 'heat',
+    thr: 40, thrText: '40', showMoon: true, showPlanets: true, heat: 0.8, geoMsg: '', obsSel: 'starfront', tab: 'heat',
   };
   OBSERVATORIES = [
     { id: 'starfront', name: 'Starfront Observatories \u2014 Rockwood, TX', lat: 31.55, lon: -99.38 },
@@ -573,6 +582,39 @@ class Component extends DCLogic {
     const ra = ((Math.atan2(this.sd(lam) * this.cd(e) - Math.tan(beta * this.D2R) * this.sd(e), this.cd(lam)) / this.D2R / 15) % 24 + 24) % 24;
     return { ra, dec };
   }
+  // Simplified zodiac figures for orientation: J2000 RA (hours) / Dec (degrees),
+  // with l listing the index pairs joined by a line.
+  ZODIAC = [
+    { n: 'ARIES', s: [[2.119,23.46],[1.911,20.81],[1.892,19.29]], l: [[0,1],[1,2]] },
+    { n: 'TAURUS', s: [[3.791,24.11],[4.477,19.18],[5.438,28.61],[4.330,15.63],[4.599,16.51],[5.627,21.14]],
+      l: [[0,1],[1,2],[1,3],[3,4],[4,5]] },
+    { n: 'GEMINI', s: [[7.577,31.89],[7.755,28.03],[6.629,16.40],[6.383,22.51],[6.732,25.13],[7.335,21.98]],
+      l: [[0,4],[4,3],[0,1],[1,5],[5,2]] },
+    { n: 'CANCER', s: [[8.275,9.19],[8.745,18.15],[8.721,21.47],[8.974,11.86]], l: [[0,1],[1,2],[1,3]] },
+    { n: 'LEO', s: [[10.139,11.97],[10.278,16.76],[10.333,19.84],[10.278,23.42],[9.879,26.01],[9.764,23.77],
+                    [11.235,20.52],[11.818,14.57],[11.237,15.43]],
+      l: [[5,4],[4,3],[3,2],[2,1],[1,0],[0,8],[8,7],[8,6],[6,7],[2,6]] },
+    { n: 'VIRGO', s: [[13.420,-11.16],[12.694,-1.45],[13.036,10.96],[13.579,-0.60],[12.927,3.40],[11.845,1.76],[12.333,-0.67]],
+      l: [[0,3],[3,4],[4,2],[4,1],[1,6],[6,5]] },
+    { n: 'LIBRA', s: [[14.848,-16.04],[15.283,-9.38],[15.067,-25.28],[15.596,-14.79]], l: [[2,0],[0,1],[1,3],[3,0]] },
+    { n: 'SCORPIUS', s: [[16.490,-26.43],[16.090,-19.81],[16.006,-22.62],[15.985,-26.11],[16.353,-25.59],
+                         [16.598,-28.22],[16.836,-34.29],[16.865,-38.05],[16.912,-42.36],[17.203,-43.24],
+                         [17.622,-43.00],[17.793,-40.13],[17.708,-39.03],[17.560,-37.10]],
+      l: [[1,2],[2,3],[2,4],[4,0],[0,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]] },
+    { n: 'SAGITTARIUS', s: [[18.097,-30.42],[18.350,-29.83],[18.403,-34.38],[19.044,-29.88],[18.466,-25.42],
+                            [18.921,-26.30],[18.762,-26.99],[19.115,-27.67]],
+      l: [[0,1],[1,2],[1,4],[4,6],[6,5],[5,7],[7,3],[3,2],[3,6]] },
+    { n: 'CAPRICORNUS', s: [[20.300,-12.51],[20.351,-14.78],[21.668,-16.66],[21.784,-16.13],[21.444,-22.41],
+                            [20.864,-26.92],[20.768,-25.27]],
+      l: [[0,1],[1,6],[6,5],[5,4],[4,2],[2,3],[3,0]] },
+    { n: 'AQUARIUS', s: [[22.096,-0.32],[21.526,-5.57],[22.360,-1.39],[22.911,-15.82],[22.481,-0.02],
+                         [22.590,-0.12],[22.880,-7.58],[20.794,-9.50]],
+      l: [[7,1],[1,0],[0,2],[2,4],[4,5],[4,6],[6,3]] },
+    { n: 'PISCES', s: [[1.524,15.35],[23.286,3.28],[2.034,2.76],[23.983,6.86],[23.666,5.63],[23.703,1.78],
+                       [0.816,7.59],[1.045,7.89],[1.762,9.16],[23.470,6.38]],
+      l: [[1,9],[9,4],[4,5],[5,1],[4,3],[3,6],[6,7],[7,8],[8,2],[2,0]] },
+  ];
+
   // ---------- planets ----------
   // JPL approximate Keplerian elements, mean ecliptic and equinox of J2000,
   // valid 1800-2050: [a, e, I, L, longitude of perihelion, longitude of node]
@@ -731,6 +773,43 @@ class Component extends DCLogic {
     const yOf = dec => Y0 + (90 - dec) / 180 * (Y1 - Y0);
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
     ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, HH);
+
+    // Zodiac figures sit under the heat field, so the highlight's own
+    // transparency is what lets them read as a background reference.
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+    {
+      const spanW = X1 - X0;
+      for (const con of this.ZODIAC) {
+        const pts = con.s.map(([ra, dec]) => [xOf(ra), yOf(dec)]);
+        // A figure straddling RA 0 has points at both edges; draw it at each
+        // offset and let the clip discard the copy that falls outside.
+        for (const off of [0, -spanW, spanW]) {
+          ctx.strokeStyle = 'rgba(203,214,232,0.7)'; ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (const [i, j] of con.l) {
+            let x1 = pts[i][0], x2 = pts[j][0];
+            if (Math.abs(x1 - x2) > spanW / 2) { if (x1 < x2) x1 += spanW; else x2 += spanW; }
+            ctx.moveTo(x1 + off, pts[i][1]); ctx.lineTo(x2 + off, pts[j][1]);
+          }
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(246,245,242,0.85)';
+          for (const [px, py] of pts) {
+            ctx.beginPath(); ctx.arc(px + off, py, 1.7, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+        // label at the circular mean RA, so wrapped figures land sensibly
+        let cx = 0, cy = 0;
+        for (const [ra] of con.s) { cx += Math.cos(ra / 24 * 2 * Math.PI); cy += Math.sin(ra / 24 * 2 * Math.PI); }
+        const mRa = ((Math.atan2(cy, cx) / (2 * Math.PI) * 24) % 24 + 24) % 24;
+        const mDec = con.s.reduce((a, b) => a + b[1], 0) / con.s.length;
+        ctx.fillStyle = 'rgba(203,214,232,0.55)';
+        ctx.font = '700 11px Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(con.n, xOf(mRa), yOf(mDec) - 13);
+        ctx.textAlign = 'left';
+      }
+    }
+    ctx.restore();
     // heat field
     const cols = 384, rows = 181;
     const off = document.createElement('canvas'); off.width = cols; off.height = rows;
@@ -749,7 +828,9 @@ class Component extends DCLogic {
     }
     octx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = this.state.heat;
     ctx.drawImage(off, X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.globalAlpha = 1;
     // gridlines
     ctx.strokeStyle = 'rgba(246,245,242,0.12)'; ctx.lineWidth = 1;
     for (let ra = 0; ra <= 24; ra += 2) { ctx.beginPath(); ctx.moveTo(xOf(ra === 24 ? 23.9999 : ra), Y0); ctx.lineTo(xOf(ra === 24 ? 23.9999 : ra), Y1); ctx.stroke(); }
@@ -954,6 +1035,8 @@ class Component extends DCLogic {
     return {
       latText: s.latText, lonText: s.lonText, date: s.date, thrText: s.thrText, showMoon: s.showMoon,
       showPlanets: s.showPlanets,
+      heatPct: String(Math.round(s.heat * 100)),
+      heatLabel: Math.round(s.heat * 100) + '%',
       planetRows: this.planetData()
         .sort((a, b) => b.hours - a.hours)
         .map(p => ({
@@ -974,6 +1057,7 @@ class Component extends DCLogic {
       nextDay: () => this.shiftDay(1),
       onMoon: e => this.setState({ showMoon: e.target.checked }),
       onPlanets: e => this.setState({ showPlanets: e.target.checked }),
+      onHeat: e => this.setState({ heat: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       geoMsg: this.state.geoMsg,
       obsSel: this.state.obsSel,
       showChartTab: this.state.tab === 'chart',
