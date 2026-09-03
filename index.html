@@ -492,11 +492,16 @@
       </div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 320px; min-width: 0;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Time <span style="color: #4A463E;">&#183; {{ timeFrom }} &#8594; {{ timeTo }}</span></span>
-        <div style="display: flex; align-items: center; gap: 8px; height: 38px;">
+        <div style="display: flex; align-items: center; gap: 8px; min-height: 38px; flex-wrap: wrap;">
           <button sc-camel-on-click="{{ timeBack }}" aria-label="Back four months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#171;</button>
           <!-- max must equal TSPAN -->
           <input aria-label="Date within the span shown" type="range" min="0" max="732" step="1" value="{{ timeVal }}" ref="{{ timeRef }}" sc-camel-on-input="{{ onTime }}" style="flex: 1 1 auto; min-width: 0; accent-color: #D9A960; background: transparent; cursor: pointer;">
           <button sc-camel-on-click="{{ timeFwd }}" aria-label="Forward four months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#187;</button>
+          <button sc-camel-on-click="{{ timeCentre }}" aria-label="Centre the span on this date" title="Centre on this date" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#9678;</button>
+          <button sc-camel-on-click="{{ play }}" aria-label="Play" title="Play" style="background: #161616; border: 1px solid {{ playBorder }}; border-radius: 2px; color: {{ playColor }}; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#9654;</button>
+          <button sc-camel-on-click="{{ stop }}" aria-label="Stop" title="Stop" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#9632;</button>
+          <input aria-label="Playback speed" type="range" min="0" max="7" step="1" value="{{ speedIx }}" sc-camel-on-input="{{ onSpeed }}" style="width: 72px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 12px; font-weight: 600; color: #8E897D; width: 44px; font-variant-numeric: tabular-nums;">{{ speedLabel }}</span>
         </div>
       </div>
       <!-- when, on a row of its own -->
@@ -623,6 +628,14 @@ class Component extends DCLogic {
   TSPAN = 732;
   TLO = 122;   // 1/6
   THI = 610;   // 5/6
+  // Days of sky per second of real time. Spelt the way you would say it out
+  // loud, and roughly geometric, so every notch is a change you can feel
+  // rather than a nudge. The ends are the two the brief asked for.
+  SPEEDS = [
+    { v: 1 / 5, l: '1d/5s' }, { v: 1 / 3, l: '1d/3s' }, { v: 1 / 2, l: '1d/2s' },
+    { v: 1, l: '1d/s' }, { v: 2, l: '2d/s' }, { v: 3, l: '3d/s' },
+    { v: 5, l: '5d/s' }, { v: 7, l: '1w/s' },
+  ];
   MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
@@ -630,8 +643,9 @@ class Component extends DCLogic {
     stars: 1, milkyway: 0.25, contrast: 0.35, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     frame: null, autoFrame: true,
-    // start of the year the time slider spans; '' means centre it on the date
+    // start of the span the time slider covers; '' means centre it on the date
     winStart: '',
+    speedIx: 3,   // index into SPEEDS; playback itself is never restored
     // marked points ride along with the rest of the chart: they survive a
     // reload, and Reset chart clears them like everything else here
     probes: [],
@@ -1084,7 +1098,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '' }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
@@ -1905,6 +1919,36 @@ class Component extends DCLogic {
                : this.state.date;
     this.setState({ date, winStart: start });
   }
+  // Playback advances whole days, since that is the resolution the chart has,
+  // and carries the window with it exactly as a drag would. dt is capped so a
+  // tab that was in the background does not come back and leap a month: rAF
+  // stops while hidden, and the first frame after would otherwise carry the
+  // whole gap.
+  tick(ts) {
+    if (!this.state.playing) { this._raf = null; return; }
+    if (this._tPrev == null) this._tPrev = ts;
+    const dt = Math.min(0.25, (ts - this._tPrev) / 1000);
+    this._tPrev = ts;
+    this._tAcc = (this._tAcc || 0) + dt * this.SPEEDS[this.state.speedIx].v;
+    const whole = Math.floor(this._tAcc);
+    if (whole >= 1) {
+      this._tAcc -= whole;
+      const date = this.addDays(this.state.date, whole);
+      this.setState({ date, winStart: this.reWindow(date, this.winStart()) });
+    }
+    this._raf = requestAnimationFrame(t => this.tick(t));
+  }
+  play() {
+    if (this.state.playing) return;
+    this._tPrev = null; this._tAcc = 0;
+    this.setState({ playing: true });
+    this._raf = requestAnimationFrame(t => this.tick(t));
+  }
+  stop() {
+    if (this._raf) cancelAnimationFrame(this._raf);
+    this._raf = null;
+    this.setState({ playing: false });
+  }
   shiftDay(n) {
     const [y, m, d] = this.state.date.split('-').map(Number);
     const dt = new Date(Date.UTC(y, m - 1, d + n));
@@ -1982,6 +2026,10 @@ class Component extends DCLogic {
       latText: s.latText, lonText: s.lonText, date: s.date, thrText: s.thrText, showMoon: s.showMoon,
       showPlanets: s.showPlanets,
       timeVal: String(this.dayNum(s.date) - this.dayNum(this.winStart())),
+      speedIx: String(s.speedIx),
+      speedLabel: this.SPEEDS[s.speedIx].l,
+      playColor: s.playing ? '#D9A960' : '#C9C4B7',
+      playBorder: s.playing ? '#8C6A3F' : '#2E2C27',
       timeFrom: this.monthLabel(this.winStart()),
       timeTo: this.monthLabel(this.addDays(this.winStart(), this.TSPAN)),
       milkyPct: String(Math.round(s.milkyway * 100)),
@@ -2039,6 +2087,12 @@ class Component extends DCLogic {
       },
       timeBack: () => this.jumpMonths(-4),
       timeFwd: () => this.jumpMonths(4),
+      // Recentres the span on the date being shown; the date itself does not move.
+      timeCentre: () => this.setState({
+        winStart: this.dayStr(this.dayNum(this.state.date) - Math.floor(this.TSPAN / 2)) }),
+      onSpeed: e => this.setState({ speedIx: Math.max(0, Math.min(this.SPEEDS.length - 1, Number(e.target.value))) }),
+      play: () => this.play(),
+      stop: () => this.stop(),
       prevDay: () => this.shiftDay(-1),
       nextDay: () => this.shiftDay(1),
       resetChart: () => this.resetChart(),
