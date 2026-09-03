@@ -604,7 +604,7 @@ class Component extends DCLogic {
     showEcliptic: true, centered: true, mask: true, maskStrength: 0.85, maskFalloff: 0.5,
     heat: 0.8, stars: 1, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
-    crop: null, autoCrop: false,
+    crop: null, autoCrop: true,
   };
   // Class fields initialise in order, so both defaults exist by the time this runs.
   state = this.initialState();
@@ -1023,7 +1023,12 @@ class Component extends DCLogic {
     if (s.date !== this.todayStr()) out.date = s.date;
     try { localStorage.setItem(this.STORE_KEY, JSON.stringify(out)); } catch (e) { /* full or blocked */ }
   }
-  resetChart() { this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr(), probe: null })); }
+  resetChart() {
+    // The watched settings have not changed, so the signature would suppress
+    // the re-fit and leave Auto ticked over an uncropped chart.
+    this._cropSig = null;
+    this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr(), probe: null }));
+  }
   resetSite() { this.setState(Object.assign({}, this.SITE_DEFAULTS, { geoMsg: '' })); }
 
   // ---------- planets ----------
@@ -1582,6 +1587,13 @@ class Component extends DCLogic {
     this.setState({ date: dt.toISOString().slice(0, 10) });
   }
   componentDidMount() {
+    // componentDidUpdate does the re-fitting, but it never runs for the first
+    // render - without this, a fresh load shows Auto ticked and no crop.
+    if (this.state.autoCrop) {
+      this._cropSig = this.cropSignature();
+      const c = this.fitCrop();
+      if (c) this.setState({ crop: c });
+    }
     this.drawHeatmap(this.canvas);
     // Canvas text takes no part in font-fallback swaps, so a mount that beats
     // Inter's load leaves the chart lettered in the fallback face until the
