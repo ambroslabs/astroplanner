@@ -600,10 +600,12 @@ class Component extends DCLogic {
   // Everything here is persisted and restored. Split into the two groups the
   // reset buttons act on, so each button can restore exactly its own half.
   SITE_DEFAULTS = { lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38', obsSel: 'starfront' };
-  // Tone the usable end of the field is lifted toward. Warm dark grey: it has
-  // to sit above the #161616 panel without competing with the gold contours or
-  // the blue-white star figures drawn over it.
-  LIFT = [96, 92, 82];
+  // Tone the usable end of the field is lifted toward: the UI gold, #D9A960,
+  // scaled to sit above the #161616 panel. Same luminance as the neutral grey
+  // it replaces, so the contrast the slider buys is unchanged and only the hue
+  // moves - and moving it toward the gold pushes it further from the cool band
+  // of the Milky Way drawn over it.
+  LIFT = [114, 89, 50];
   // The band's own light, added on top. Cool against the warm ground, so the
   // two separate by hue and not only by brightness.
   MW = [95, 150, 255];
