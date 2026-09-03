@@ -1041,7 +1041,115 @@ class Component extends DCLogic {
       ctx.restore();
     };
 
-    if (this.state.mask) drawConstellations();
+
+    const drawWrapped = (pts, style) => { // pts: [ra, dec]
+      ctx.strokeStyle = style.color; ctx.lineWidth = style.w;
+      ctx.setLineDash(style.dash || []);
+      ctx.beginPath();
+      let px = null;
+      for (const [ra, dec] of pts) {
+        const x = xOf(ra), y = yOf(dec);
+        if (px !== null && Math.abs(x - px) > (X1 - X0) / 2) ctx.moveTo(x, y);
+        else if (px === null) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        px = x;
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+    };
+    // ecliptic
+    const n = this.daysJ2000(), e = this.eps(n), ecl = [];
+    for (let lam = 0; lam <= 360; lam += 2) {
+      const ra = ((Math.atan2(this.cd(e) * this.sd(lam), this.cd(lam)) / this.D2R / 15) % 24 + 24) % 24;
+      ecl.push([ra, Math.asin(this.sd(e) * this.sd(lam)) / this.D2R]);
+    }
+    ecl.sort((a, b) => a[0] - b[0]);
+    // The ecliptic, Moon and bodies are layers over the sky, so in mask mode
+    // they belong under the veil alongside the constellations: masked sky
+    // should hide what is in it, not just its background.
+    const drawEcliptic = () => {
+      if (this.state.showEcliptic) drawWrapped(ecl, { color: 'rgba(142,137,125,0.95)', w: 2, dash: [2, 5] });
+    };
+    const drawMoon = () => {
+      if (this.state.showMoon) {
+        const m = this.moonPos(n + 0.5 - (dark.L < 24 && dark.L > 0 ? 0 : 0)); // ~local midnight
+        const mx = xOf(m.ra), my = yOf(m.dec);
+        ctx.fillStyle = '#F6F5F2'; ctx.strokeStyle = '#161616'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#F6F5F2'; ctx.font = '700 13px Inter, sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText('MOON', mx + 12, my + 4);
+        const ring = [], r0 = 30;
+        for (let th = 0; th <= 360; th += 5) {
+          const sD = this.sd(m.dec) * this.cd(r0) + this.cd(m.dec) * this.sd(r0) * this.cd(th);
+          const dec2 = Math.asin(Math.max(-1, Math.min(1, sD))) / this.D2R;
+          const dra = Math.atan2(this.sd(th) * this.sd(r0) * this.cd(m.dec), this.cd(r0) - this.sd(m.dec) * sD) / this.D2R / 15;
+          ring.push([((m.ra + dra) % 24 + 24) % 24, dec2]);
+        }
+        drawWrapped(ring, { color: 'rgba(246,245,242,0.75)', w: 2, dash: [3, 5] });
+      }
+    };
+    const drawBodies = () => {
+      if (this.state.showSun || this.state.showPlanets) {
+        ctx.font = '700 13px Inter, sans-serif';
+        // Bodies cluster on the ecliptic, so labels are nudged off their
+        // preferred spot until they stop colliding with one already placed.
+        const taken = [];
+        if (this.state.showMoon) {
+          const m2 = this.moonPos(n + 0.5), mx2 = xOf(m2.ra), my2 = yOf(m2.dec);
+          taken.push({ x: mx2 + 12, y: my2 + 4, w: ctx.measureText('MOON').width, h: 14 });
+        }
+        const hits = (a) => taken.some(b =>
+          a.x < b.x + b.w + 4 && a.x + a.w + 4 > b.x && a.y - a.h < b.y && a.y > b.y - b.h);
+
+        const bodies = [];
+        if (this.state.showSun) {
+          const sun = this.bodyPos(null, n + 0.5);
+          bodies.push({ ra: sun.ra, dec: sun.dec, label: 'SUN', color: '#F5C36A', r: 9 });
+        }
+        if (this.state.showPlanets) {
+          for (const p of this.planetData())
+            bodies.push({ ra: p.ra, dec: p.dec, label: p.id.toUpperCase(), color: '#93C4EE', r: 5 });
+        }
+
+        for (const b of bodies) {
+          const px = xOf(b.ra), py = yOf(b.dec), w = ctx.measureText(b.label).width;
+          const left = px > X1 - 110;
+          let best = null;
+          for (const dy of [4, -12, 20, -28, 36, -44, 52]) {
+            const lx2 = left ? px - b.r - 5 - w : px + b.r + 5;
+            const cand = { x: lx2, y: py + dy, w, h: 14 };
+            if (!hits(cand)) { best = cand; break; }
+          }
+          if (!best) best = { x: left ? px - b.r - 5 - w : px + b.r + 5, y: py + 4, w, h: 14 };
+          taken.push(best);
+
+          ctx.fillStyle = b.color; ctx.strokeStyle = '#161616'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(px, py, b.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          // a leader line when the label had to move off the marker
+          if (Math.abs(best.y - (py + 4)) > 6) {
+            ctx.strokeStyle = 'rgba(147,196,238,0.5)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(px, py);
+            ctx.lineTo(left ? best.x + w : best.x, best.y - 4); ctx.stroke();
+          }
+          ctx.textAlign = 'left';
+          // keep labels legible where they cross the bright end of the heat ramp
+          ctx.strokeStyle = 'rgba(10,10,10,0.85)'; ctx.lineWidth = 3;
+          ctx.strokeText(b.label, best.x, best.y);
+          ctx.fillStyle = b.color;
+          ctx.fillText(b.label, best.x, best.y);
+        }
+      }
+    };
+
+    if (this.state.mask) {
+      // The veil only covers the plot rect, so anything drawn under it has to be
+      // clipped to the same rect - a marker at the edge would otherwise hang
+      // past the veil and stay bright. The Sun does exactly that when centred.
+      ctx.save();
+      ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+      drawConstellations(); drawEcliptic(); drawMoon(); drawBodies();
+      ctx.restore();
+    }
+
 
     // heat field
     const cols = 384, rows = 181;
@@ -1083,28 +1191,7 @@ class Component extends DCLogic {
     ctx.strokeStyle = 'rgba(246,245,242,0.12)'; ctx.lineWidth = 1;
     for (const t of raTicks) { ctx.beginPath(); ctx.moveTo(t.x, Y0); ctx.lineTo(t.x, Y1); ctx.stroke(); }
     for (let d = -60; d <= 60; d += 30) { ctx.beginPath(); ctx.moveTo(X0, yOf(d)); ctx.lineTo(X1, yOf(d)); ctx.stroke(); }
-    const drawWrapped = (pts, style) => { // pts: [ra, dec]
-      ctx.strokeStyle = style.color; ctx.lineWidth = style.w;
-      ctx.setLineDash(style.dash || []);
-      ctx.beginPath();
-      let px = null;
-      for (const [ra, dec] of pts) {
-        const x = xOf(ra), y = yOf(dec);
-        if (px !== null && Math.abs(x - px) > (X1 - X0) / 2) ctx.moveTo(x, y);
-        else if (px === null) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-        px = x;
-      }
-      ctx.stroke(); ctx.setLineDash([]);
-    };
-    // ecliptic
-    const n = this.daysJ2000(), e = this.eps(n), ecl = [];
-    for (let lam = 0; lam <= 360; lam += 2) {
-      const ra = ((Math.atan2(this.cd(e) * this.sd(lam), this.cd(lam)) / this.D2R / 15) % 24 + 24) % 24;
-      ecl.push([ra, Math.asin(this.sd(e) * this.sd(lam)) / this.D2R]);
-    }
-    ecl.sort((a, b) => a[0] - b[0]);
-    if (this.state.showEcliptic) drawWrapped(ecl, { color: 'rgba(142,137,125,0.95)', w: 2, dash: [2, 5] });
+    if (!this.state.mask) drawEcliptic();
     // contours (typical case only)
     if (L > 0 && L < 24) {
       const any1 = [], any2 = [], full1 = [], full2 = [];
@@ -1129,75 +1216,7 @@ class Component extends DCLogic {
         drawWrapped(full2, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
       }
     }
-    // moon
-    if (this.state.showMoon) {
-      const m = this.moonPos(n + 0.5 - (dark.L < 24 && dark.L > 0 ? 0 : 0)); // ~local midnight
-      const mx = xOf(m.ra), my = yOf(m.dec);
-      ctx.fillStyle = '#F6F5F2'; ctx.strokeStyle = '#161616'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#F6F5F2'; ctx.font = '700 13px Inter, sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText('MOON', mx + 12, my + 4);
-      const ring = [], r0 = 30;
-      for (let th = 0; th <= 360; th += 5) {
-        const sD = this.sd(m.dec) * this.cd(r0) + this.cd(m.dec) * this.sd(r0) * this.cd(th);
-        const dec2 = Math.asin(Math.max(-1, Math.min(1, sD))) / this.D2R;
-        const dra = Math.atan2(this.sd(th) * this.sd(r0) * this.cd(m.dec), this.cd(r0) - this.sd(m.dec) * sD) / this.D2R / 15;
-        ring.push([((m.ra + dra) % 24 + 24) % 24, dec2]);
-      }
-      drawWrapped(ring, { color: 'rgba(246,245,242,0.75)', w: 2, dash: [3, 5] });
-    }
-
-    // sun and planets, drawn together so their labels share one collision pass
-    if (this.state.showSun || this.state.showPlanets) {
-      ctx.font = '700 13px Inter, sans-serif';
-      // Bodies cluster on the ecliptic, so labels are nudged off their
-      // preferred spot until they stop colliding with one already placed.
-      const taken = [];
-      if (this.state.showMoon) {
-        const m2 = this.moonPos(n + 0.5), mx2 = xOf(m2.ra), my2 = yOf(m2.dec);
-        taken.push({ x: mx2 + 12, y: my2 + 4, w: ctx.measureText('MOON').width, h: 14 });
-      }
-      const hits = (a) => taken.some(b =>
-        a.x < b.x + b.w + 4 && a.x + a.w + 4 > b.x && a.y - a.h < b.y && a.y > b.y - b.h);
-
-      const bodies = [];
-      if (this.state.showSun) {
-        const sun = this.bodyPos(null, n + 0.5);
-        bodies.push({ ra: sun.ra, dec: sun.dec, label: 'SUN', color: '#F5C36A', r: 9 });
-      }
-      if (this.state.showPlanets) {
-        for (const p of this.planetData())
-          bodies.push({ ra: p.ra, dec: p.dec, label: p.id.toUpperCase(), color: '#93C4EE', r: 5 });
-      }
-
-      for (const b of bodies) {
-        const px = xOf(b.ra), py = yOf(b.dec), w = ctx.measureText(b.label).width;
-        const left = px > X1 - 110;
-        let best = null;
-        for (const dy of [4, -12, 20, -28, 36, -44, 52]) {
-          const lx2 = left ? px - b.r - 5 - w : px + b.r + 5;
-          const cand = { x: lx2, y: py + dy, w, h: 14 };
-          if (!hits(cand)) { best = cand; break; }
-        }
-        if (!best) best = { x: left ? px - b.r - 5 - w : px + b.r + 5, y: py + 4, w, h: 14 };
-        taken.push(best);
-
-        ctx.fillStyle = b.color; ctx.strokeStyle = '#161616'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(px, py, b.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        // a leader line when the label had to move off the marker
-        if (Math.abs(best.y - (py + 4)) > 6) {
-          ctx.strokeStyle = 'rgba(147,196,238,0.5)'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(px, py);
-          ctx.lineTo(left ? best.x + w : best.x, best.y - 4); ctx.stroke();
-        }
-        ctx.textAlign = 'left';
-        // keep labels legible where they cross the bright end of the heat ramp
-        ctx.strokeStyle = 'rgba(10,10,10,0.85)'; ctx.lineWidth = 3;
-        ctx.strokeText(b.label, best.x, best.y);
-        ctx.fillStyle = b.color;
-        ctx.fillText(b.label, best.x, best.y);
-      }
-    }
+    if (!this.state.mask) { drawMoon(); drawBodies(); }
     // frame + ticks + labels
     ctx.strokeStyle = '#C9C4B7'; ctx.lineWidth = 1.5;
     ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
