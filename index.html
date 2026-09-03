@@ -606,7 +606,7 @@ class Component extends DCLogic {
   LIFT = [96, 92, 82];
   // The band's own light, added on top. Cool against the warm ground, so the
   // two separate by hue and not only by brightness.
-  MW = [150, 200, 255];
+  MW = [95, 150, 255];
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
@@ -1104,7 +1104,21 @@ class Component extends DCLogic {
     const dl = Math.min(g.l, 360 - g.l);
     const sigma = 6 + 9 * Math.exp(-Math.pow(dl / 55, 2));
     const amp = 0.30 + 0.70 * Math.exp(-Math.pow(dl / 75, 2));
-    return amp * Math.exp(-0.5 * Math.pow(g.b / sigma, 2));
+    let v = amp * Math.exp(-0.5 * Math.pow(g.b / sigma, 2));
+    // Structure, not a smooth blob. A featureless gradient is exactly what the
+    // contrast ground already is, so the two read as the same kind of thing
+    // however they are tinted - colour alone was not enough to separate them.
+    // The dark lane along the plane is the Great Rift; the rest is cloud
+    // variation, on three incommensurate periods so it never settles into a
+    // repeat the eye can catch.
+    const rift = 1 - 0.55 * Math.exp(-0.5 * Math.pow((g.b - 1.2) / 2.4, 2)) * Math.exp(-Math.pow(dl / 65, 2));
+    const clouds = 1 + 0.20 * Math.sin(g.l / 9.31 + 0.7) * Math.cos(g.b / 5.13)
+                     + 0.13 * Math.sin(g.l / 3.71 + 1.9)
+                     + 0.10 * Math.cos(g.l / 17.3 + g.b / 6.1);
+    v *= rift * clouds;
+    // Lifted and steepened: the band needs to carry at low slider values, where
+    // it was a haze indistinguishable from the ground behind it.
+    return Math.min(1, Math.pow(Math.max(0, v), 1.25) * 1.9);
   }
 
   // ---------- planets ----------
