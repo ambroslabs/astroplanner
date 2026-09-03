@@ -548,6 +548,7 @@
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
+      <button sc-camel-on-click="{{ toggleSplit }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opSplit }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 3px; background: repeating-linear-gradient(90deg, #D9A960 0 5px, transparent 5px 10px);"></span>split window</button>
       <button sc-camel-on-click="{{ toggleFullDark }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opFullDark }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 28px; height: 3px; background: repeating-linear-gradient(90deg, #F6F5F2 0 8px, #0A0A0A 8px 14px);"></span>all-night boundary</button>
       <button sc-camel-on-click="{{ toggleEcliptic }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opEcliptic }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 0; border-top: 2px dotted #C9C4B7;"></span>ecliptic</button>
       <button sc-camel-on-click="{{ toggleMoon }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opMoon }};" style-hover="color: #F6F5F2;"><span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px dotted rgba(246,245,242,0.75); border-radius: 50%;"><span style="width: 7px; height: 7px; background: #F6F5F2; border-radius: 50%;"></span></span>Moon &#177; 30&#176; dimming radius</button>
@@ -589,7 +590,7 @@ class Component extends DCLogic {
   // reset buttons act on, so each button can restore exactly its own half.
   SITE_DEFAULTS = { lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38', obsSel: 'starfront' };
   CHART_DEFAULTS = {
-    thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
+    thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
     stars: 1, milkyway: 0.25, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
@@ -1182,6 +1183,31 @@ class Component extends DCLogic {
     if (dark.L >= 24) return Math.min(2 * H, 24);
     return this.arcOverlap(ra - H, 2 * H, dark.dusk, dark.L);
   }
+  // The object's window above the threshold and the dark window are two arcs
+  // on a 24h circle, so their overlap can land in two disjoint pieces: an
+  // object that transits in daylight is up at dusk, drops below the threshold,
+  // and comes back before dawn. arcOverlap already sums those two terms; this
+  // returns them separately as { start, len } hours from dusk, so the readout
+  // can say what the total hides. In the split case the first piece always
+  // begins at dusk and the second always ends at dawn.
+  usableSegments(ra, dec, dark) {
+    const H = this.hoursAbove(this.state.lat, this.state.thr, dec) / 2;
+    if (H <= 0 || dark.L <= 0) return [];
+    if (dark.L >= 24 || 2 * H >= 24) return [{ start: 0, len: Math.min(2 * H, dark.L, 24) }];
+    const a1 = ra - H, l1 = 2 * H, e = ((dark.dusk - a1) % 24 + 24) % 24, segs = [];
+    const head = Math.min(l1, e + dark.L) - e;      // the piece that starts at dusk
+    if (head > 0) segs.push({ start: 0, len: head });
+    const tail = Math.min(l1, e - 24 + dark.L);     // the wrapped piece, ending at dawn
+    if (tail > 0) segs.push({ start: 24 - e, len: tail });
+    return segs.sort((p, q) => p.start - q.start);
+  }
+  // Minutes, so the two pieces do not visibly disagree with the total above
+  // them: at one decimal 1.58h and 0.96h print as 1.6 and 1.0, which sum to
+  // more than the 2.5h on the line above.
+  fmtDur(h) {
+    const m = Math.round(h * 60);
+    return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') + 'm';
+  }
   fmtLST(h) {
     h = ((h % 24) + 24) % 24;
     const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
@@ -1496,15 +1522,43 @@ class Component extends DCLogic {
       ctx.beginPath(); ctx.moveTo(X0, yOf(t.dec)); ctx.lineTo(X1, yOf(t.dec)); ctx.stroke(); }
     // contours (typical case only)
     if (L > 0 && L < 24) {
-      const any1 = [], any2 = [], full1 = [], full2 = [];
+      // The two "any usable time" edges sit at dusk - H and dawn + H, so the
+      // band between them is 2H + L wide. Above the declination where that
+      // reaches 24h the band has wrapped onto itself: every RA gets some
+      // usable time, and the edges no longer divide usable from unusable.
+      // They still divide something - inside them the object is up at dusk,
+      // sinks below the threshold, and climbs back before dawn - so that
+      // stretch is drawn dashed rather than looking like more of the same
+      // line. Without the split the two halves read as one X, and the sky
+      // above the crossing looks unusable when it is merely broken in two.
+      const any1 = [], any2 = [], split1 = [], split2 = [], full1 = [], full2 = [];
+      let prev = null;
       for (let dec = -90; dec <= 90.001; dec += 0.5) {
         const d = Math.min(dec, 90), H = this.hoursAbove(lat, thr, d) / 2;
-        if (H > 0 && H < 12) { any1.push([((dark.dusk - H) % 24 + 24) % 24, d]); any2.push([((dark.dawn + H) % 24 + 24) % 24, d]); }
+        if (H > 0 && H < 12) {
+          const p1 = [((dark.dusk - H) % 24 + 24) % 24, d], p2 = [((dark.dawn + H) % 24 + 24) % 24, d];
+          const wrapped = 2 * H + L >= 24;
+          // repeat the previous point in the new array so solid and dashed
+          // meet at the crossing instead of leaving a gap
+          if (prev && prev.wrapped !== wrapped) {
+            (wrapped ? split1 : any1).push(prev.p1);
+            (wrapped ? split2 : any2).push(prev.p2);
+          }
+          (wrapped ? split1 : any1).push(p1);
+          (wrapped ? split2 : any2).push(p2);
+          prev = { p1, p2, wrapped };
+        } else prev = null;
         if (H < 12 && 2 * H >= L) { full1.push([((dark.dawn - H) % 24 + 24) % 24, d]); full2.push([((dark.dusk + H) % 24 + 24) % 24, d]); }
       }
+      // the export legend explains only what the chart actually shows
+      this._splitOnChart = split1.length > 0;
       if (this.state.showUsable) {
         drawWrapped(any1, { color: '#D9A960', w: 2.5 });
         drawWrapped(any2, { color: '#D9A960', w: 2.5 });
+      }
+      if (this.state.showSplit) {
+        drawWrapped(split1, { color: '#D9A960', w: 2, dash: [5, 5] });
+        drawWrapped(split2, { color: '#D9A960', w: 2, dash: [5, 5] });
       }
       if (this.state.showFullDark) {
         // Two-tone: a pale solid underlay with dark dashes over it. A single
@@ -1532,11 +1586,20 @@ class Component extends DCLogic {
       const big = hrs > 0.05 ? hrs.toFixed(1) + 'h usable' : 'not usable';
       const small = 'RA ' + this.fmtLST(pr.ra) + '  \u03B4 ' + (pr.dec >= 0 ? '+' : '\u2212') +
         Math.abs(pr.dec).toFixed(1) + '\u00B0';
+      // Two stretches means the object dips below the threshold mid-night. The
+      // total on its own reads as one continuous run, which is the wrong thing
+      // to plan a session around.
+      const segs = hrs > 0.05 ? this.usableSegments(pr.ra, pr.dec, dark) : [];
+      const split = segs.length > 1
+        ? this.fmtDur(segs[0].len) + ' after dusk  \u00B7  ' + this.fmtDur(segs[1].len) + ' before dawn'
+        : null;
       ctx.font = '700 15px Inter, sans-serif';
       const w1 = ctx.measureText(big).width;
       ctx.font = '600 13px Inter, sans-serif';
       const w2 = ctx.measureText(small).width;
-      const bw = Math.max(w1, w2) + 22, bh = 46;
+      ctx.font = '600 12px Inter, sans-serif';
+      const w3 = split ? ctx.measureText(split).width : 0;
+      const bw = Math.max(w1, w2, w3) + 22, bh = split ? 64 : 46;
       let bx = px + 16, by = py - bh - 10;
       if (bx + bw > X1 - 4) bx = px - 16 - bw;
       if (by < Y0 + 4) by = py + 16;
@@ -1548,6 +1611,10 @@ class Component extends DCLogic {
       ctx.fillText(big, bx + 11, by + 20);
       ctx.fillStyle = '#C9C4B7'; ctx.font = '600 13px Inter, sans-serif';
       ctx.fillText(small, bx + 11, by + 38);
+      if (split) {
+        ctx.fillStyle = '#8E897D'; ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText(split, bx + 11, by + 56);
+      }
     }
     // Only a box-select draws a marquee. A pan keeps _drag set too, and
     // repaints on every move, so without this check dragging to pan drew a
@@ -1712,6 +1779,7 @@ class Component extends DCLogic {
       falloffPct: String(Math.round(s.maskFalloff * 100)),
       falloffLabel: Math.round(s.maskFalloff * 100) + '%',
       opUsable: s.showUsable ? '1' : '0.32',
+      opSplit: s.showSplit ? '1' : '0.32',
       opFullDark: s.showFullDark ? '1' : '0.32',
       opEcliptic: s.showEcliptic ? '1' : '0.32',
       opMoon: s.showMoon ? '1' : '0.32',
@@ -1761,6 +1829,7 @@ class Component extends DCLogic {
       toggleMoon: () => this.setState({ showMoon: !this.state.showMoon }),
       togglePlanets: () => this.setState({ showPlanets: !this.state.showPlanets }),
       toggleUsable: () => this.setState({ showUsable: !this.state.showUsable }),
+      toggleSplit: () => this.setState({ showSplit: !this.state.showSplit }),
       toggleFullDark: () => this.setState({ showFullDark: !this.state.showFullDark }),
       toggleEcliptic: () => this.setState({ showEcliptic: !this.state.showEcliptic }),
       onStars: e => this.setState({ stars: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
@@ -1819,6 +1888,7 @@ class Component extends DCLogic {
   exportLegend(ctx, W, PAD, y) {
     const s = this.state, items = [];
     if (s.showUsable) items.push({ kind: 'solid', color: '#D9A960', label: 'usable boundary' });
+    if (s.showSplit && this._splitOnChart) items.push({ kind: 'dashed', color: '#D9A960', label: 'split window' });
     if (s.showFullDark) items.push({ kind: 'twotone', label: 'all-night boundary' });
     if (s.showEcliptic) items.push({ kind: 'dotted', color: 'rgba(142,137,125,0.95)', label: 'ecliptic' });
     if (s.showMoon) items.push({ kind: 'moon', label: 'Moon \u00B1 30\u00B0 dimming radius' });
@@ -1845,6 +1915,10 @@ class Component extends DCLogic {
         ctx.strokeStyle = 'rgba(246,245,242,0.92)'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + SW, cy); ctx.stroke();
         ctx.strokeStyle = '#0A0A0A'; ctx.setLineDash([8, 6]);
+        ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + SW, cy); ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (it.kind === 'dashed') {
+        ctx.strokeStyle = it.color; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
         ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + SW, cy); ctx.stroke();
         ctx.setLineDash([]);
       } else if (it.kind === 'dotted') {
