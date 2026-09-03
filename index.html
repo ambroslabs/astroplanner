@@ -519,10 +519,20 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starsLabel }}</span>
         </div>
       </div>
+      <!-- forces Field, RA axis and Crop onto a row of their own -->
+      <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Field</span>
         <div class="axis-group" style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
           <sc-for list="{{ fieldOptions }}" as="o" hint-placeholder-count="2">
+            <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 12px; cursor: pointer; white-space: nowrap;">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">RA axis</span>
+        <div class="axis-group" style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
+          <sc-for list="{{ axisOptions }}" as="o" hint-placeholder-count="2">
             <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 12px; cursor: pointer; white-space: nowrap;">{{ o.label }}</button>
           </sc-for>
         </div>
@@ -538,14 +548,6 @@
             <input type="checkbox" checked="{{ autoCrop }}" sc-camel-on-change="{{ onAutoCrop }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
             Auto
           </label>
-        </div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">RA axis</span>
-        <div class="axis-group" style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
-          <sc-for list="{{ axisOptions }}" as="o" hint-placeholder-count="2">
-            <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 12px; cursor: pointer; white-space: nowrap;">{{ o.label }}</button>
-          </sc-for>
         </div>
       </div>
       <div style="flex: 1;"></div>
