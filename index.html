@@ -1644,9 +1644,13 @@ class Component extends DCLogic {
     if (frame) ctx.restore();
     // Click readout, drawn last so it sits above the field either way.
     // Several points can be down at once, so each box has to dodge the ones
-    // already placed as well as the plot edges - overlapping readouts hide the
-    // very numbers they were opened to compare.
+    // already placed, every marker on the chart, and the plot edges - a readout
+    // that covers a crosshair hides the thing it is labelling, and overlapping
+    // readouts hide the numbers they were opened to compare. A box that had to
+    // travel to find room is joined to its point by a leader, since at that
+    // distance nothing else says which box belongs to which.
     const placed = [];
+    const markers = this.state.probes.map(q => ({ x: xOf(q.ra), y: yOf(q.dec) }));
     for (const pr of this.state.probes) {
       const px = xOf(pr.ra), py = yOf(pr.dec);
       const hrs = Math.max(0, this.usable(pr.ra, pr.dec, dark));
@@ -1673,20 +1677,56 @@ class Component extends DCLogic {
       ctx.font = '600 12px Inter, sans-serif';
       const w3 = split ? ctx.measureText(split).width : 0;
       const bw = Math.max(w1, w2, w3) + 22, bh = split ? 64 : 46;
-      const clear = (x, y) => x >= X0 + 4 && x + bw <= X1 - 4 && y >= Y0 + 4 && y + bh <= Y1 - 4 &&
-        !placed.some(q => x < q.x + q.w + 5 && x + bw + 5 > q.x && y < q.y + q.h + 5 && y + bh + 5 > q.y);
-      let bx = null, by = null;
-      for (const [dx, dy] of [[16, -bh - 10], [-16 - bw, -bh - 10], [16, 16], [-16 - bw, 16],
-                              [16, -bh / 2], [-16 - bw, -bh / 2], [-bw / 2, -bh - 22], [-bw / 2, 24]]) {
-        if (clear(px + dx, py + dy)) { bx = px + dx; by = py + dy; break; }
+      // Cost, not a yes/no test: when the chart is crowded there may be no
+      // free spot at all, and the least bad one still beats a fixed fallback.
+      const cost = (x, y) => {
+        if (x < X0 + 4 || x + bw > X1 - 4 || y < Y0 + 4 || y + bh > Y1 - 4) return Infinity;
+        let c = 0;
+        for (const q of placed) {
+          const ox = Math.min(x + bw, q.x + q.w) - Math.max(x, q.x);
+          const oy = Math.min(y + bh, q.y + q.h) - Math.max(y, q.y);
+          if (ox > 0 && oy > 0) c += ox * oy;
+        }
+        // covering a crosshair costs more than any plausible box overlap, so
+        // a box will always rather sit on another box than on a point
+        for (const m of markers)
+          if (m.x > x - 13 && m.x < x + bw + 13 && m.y > y - 13 && m.y < y + bh + 13) c += 1e6;
+        return c;
+      };
+      // Eight placements at a growing gap, nearest first, so a box travels only
+      // as far as it has to. Each is expressed as a corner or edge offset
+      // rather than a polar one, which is what guarantees the clearance: a box
+      // placed along a diagonal by angle can still end up flush against its own
+      // point. Up-and-right leads every round - the old fixed position, and
+      // still the answer whenever it is free.
+      let bx = null, by = null, bestC = Infinity;
+      for (const gap of [16, 28, 46, 72, 106, 148]) {
+        const spots = [[px + gap, py - gap - bh], [px - gap - bw, py - gap - bh],
+                       [px + gap, py + gap], [px - gap - bw, py + gap],
+                       [px + gap, py - bh / 2], [px - gap - bw, py - bh / 2],
+                       [px - bw / 2, py - gap - bh], [px - bw / 2, py + gap]];
+        for (const [x, y] of spots) {
+          const c = cost(x, y);
+          if (c < bestC) { bestC = c; bx = x; by = y; }
+          if (c === 0) break;
+        }
+        if (bestC === 0) break;
       }
-      if (bx === null) {
-        // nowhere free: fall back to the old placement and let it overlap
-        bx = px + 16; by = py - bh - 10;
-        if (bx + bw > X1 - 4) bx = px - 16 - bw;
-        if (by < Y0 + 4) by = py + 16;
-      }
+      if (bx === null) { bx = Math.min(Math.max(px + 16, X0 + 4), X1 - 4 - bw); by = Math.min(Math.max(py - bh - 10, Y0 + 4), Y1 - 4 - bh); }
       placed.push({ x: bx, y: by, w: bw, h: bh });
+      // Leader from the box edge nearest the point, stopping short of the
+      // crosshair. Drawn before the box so the box caps it cleanly.
+      {
+        const ax = Math.max(bx, Math.min(px, bx + bw)), ay = Math.max(by, Math.min(py, by + bh));
+        const vx = px - ax, vy = py - ay, len = Math.hypot(vx, vy);
+        if (len > 15) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(217,169,96,0.55)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(ax, ay);
+          ctx.lineTo(px - vx / len * 11, py - vy / len * 11); ctx.stroke();
+          ctx.restore();
+        }
+      }
       ctx.fillStyle = 'rgba(10,10,10,0.90)'; ctx.strokeStyle = '#4A463E'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
       ctx.textAlign = 'left';
