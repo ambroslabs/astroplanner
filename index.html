@@ -591,8 +591,8 @@ class Component extends DCLogic {
     lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
     date: new Date().toISOString().slice(0, 10),
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
-    showEcliptic: true, centered: false, mask: false, maskStrength: 0.85, maskFalloff: 0.5,
-    heat: 0.8, stars: 0.35, geoMsg: '', obsSel: 'starfront', tab: 'heat',
+    showEcliptic: true, centered: true, mask: true, maskStrength: 0.85, maskFalloff: 0.5,
+    heat: 0.8, stars: 1, geoMsg: '', obsSel: 'starfront', tab: 'heat',
   };
   OBSERVATORIES = [
     { id: 'starfront', name: 'Starfront Observatories \u2014 Rockwood, TX', lat: 31.55, lon: -99.38 },
