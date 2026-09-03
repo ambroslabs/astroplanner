@@ -497,16 +497,6 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ thrLabel }}</span>
         </div>
       </div>
-      <sc-if value="{{ modeHighlight }}" hint-placeholder-val="{{ true }}">
-      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Highlight</span>
-        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
-          <input aria-label="Highlight intensity" type="range" min="0" max="100" step="5" value="{{ heatPct }}" sc-camel-on-input="{{ onHeat }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
-          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ heatLabel }}</span>
-        </div>
-      </div>
-      </sc-if>
-      <sc-if value="{{ modeMask }}" hint-placeholder-val="{{ false }}">
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Mask</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
@@ -521,7 +511,6 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ falloffLabel }}</span>
         </div>
       </div>
-      </sc-if>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Milky way</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
@@ -538,14 +527,6 @@
       </div>
       <!-- forces Field, RA axis and Frame onto a row of their own -->
       <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
-      <div style="display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Field</span>
-        <div class="axis-group" style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
-          <sc-for list="{{ fieldOptions }}" as="o" hint-placeholder-count="2">
-            <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 12px; cursor: pointer; white-space: nowrap;">{{ o.label }}</button>
-          </sc-for>
-        </div>
-      </div>
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Frame</span>
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -609,8 +590,8 @@ class Component extends DCLogic {
   SITE_DEFAULTS = { lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38', obsSel: 'starfront' };
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
-    showEcliptic: true, mask: true, maskStrength: 0.75, maskFalloff: 0.25,
-    heat: 0.8, stars: 1, milkyway: 0.25, tab: 'heat',
+    showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
+    stars: 1, milkyway: 0.25, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     frame: null, autoFrame: true,
   };
@@ -1237,13 +1218,6 @@ class Component extends DCLogic {
     });
   }
   // ---------- heatmap ----------
-  heatColor(t) {
-    const stops = [[16, 18, 16], [36, 84, 52], [96, 178, 116], [198, 240, 206]], pos = [0, 0.4, 0.75, 1];
-    t = Math.max(0, Math.min(1, t));
-    let i = 0; while (i < pos.length - 2 && t > pos[i + 1]) i++;
-    const f = (t - pos[i]) / (pos[i + 1] - pos[i]);
-    return stops[i].map((a, k) => Math.round(a + (stops[i + 1][k] - a) * f));
-  }
   drawHeatmap(canvas) {
     if (!canvas) return;
     const S = 2, W = 992, HH = 620;
@@ -1476,7 +1450,7 @@ class Component extends DCLogic {
       }
     };
 
-    if (this.state.mask) {
+    {
       // The veil only covers the plot rect, so anything drawn under it has to be
       // clipped to the same rect - a marker at the edge would otherwise hang
       // past the veil and stay bright. The Sun does exactly that when centred.
@@ -1504,31 +1478,23 @@ class Component extends DCLogic {
         const denom = L >= 24 ? 24 : L;
         const t = denom > 0 ? u / denom : 0;
         const k = (r * cols + c) * 4;
-        if (this.state.mask) {
-          // A veil that thins as usable time rises: opaque over sky that is out
-          // of reach, clear over the best of it. maskFalloff sets how much
-          // usable time has to accumulate before it lifts.
-          const a = this.state.maskStrength * (1 - Math.pow(t, maskP));
-          img.data[k] = 8; img.data[k + 1] = 8; img.data[k + 2] = 8;
-          img.data[k + 3] = Math.round(255 * Math.max(0, Math.min(1, a)));
-        } else {
-          const [rr, gg, bb] = this.heatColor(t);
-          img.data[k] = rr; img.data[k + 1] = gg; img.data[k + 2] = bb; img.data[k + 3] = 255;
-        }
+        // A veil that thins as usable time rises: opaque over sky that is out
+        // of reach, clear over the best of it. maskFalloff sets how much usable
+        // time has to accumulate before it lifts.
+        const a = this.state.maskStrength * (1 - Math.pow(t, maskP));
+        img.data[k] = 8; img.data[k + 1] = 8; img.data[k + 2] = 8;
+        img.data[k + 3] = Math.round(255 * Math.max(0, Math.min(1, a)));
       }
     }
     octx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = this.state.mask ? 1 : this.state.heat;
     ctx.drawImage(off, X0, Y0, X1 - X0, Y1 - Y0);
     ctx.globalAlpha = 1;
-    if (!this.state.mask) { drawMilkyWay(); drawConstellations(); }
     // gridlines
     ctx.strokeStyle = 'rgba(246,245,242,0.12)'; ctx.lineWidth = 1;
     for (const t of raTicks) { ctx.beginPath(); ctx.moveTo(t.x, Y0); ctx.lineTo(t.x, Y1); ctx.stroke(); }
     for (const t of decTicks) { if (!t.grid) continue;
       ctx.beginPath(); ctx.moveTo(X0, yOf(t.dec)); ctx.lineTo(X1, yOf(t.dec)); ctx.stroke(); }
-    if (!this.state.mask) drawEcliptic();
     // contours (typical case only)
     if (L > 0 && L < 24) {
       const any1 = [], any2 = [], full1 = [], full2 = [];
@@ -1553,7 +1519,6 @@ class Component extends DCLogic {
         drawWrapped(full2, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
       }
     }
-    if (!this.state.mask) { drawMoon(); drawBodies(); }
     if (frame) ctx.restore();
     // Click readout, drawn last so it sits above the field either way.
     if (this.state.probe) {
@@ -1619,42 +1584,33 @@ class Component extends DCLogic {
     // colorbar
     const CB = 928, cbW = 18;
     const denomL = L >= 24 ? 24 : L;
-    if (this.state.mask) {
-      // A ramp of dark-on-dark says little, so the bar carries a sample star
-      // chain under the veil: it shows what the mask actually does to the sky
-      // at each level, clear at the top and hidden at the bottom.
-      ctx.fillStyle = '#161616'; ctx.fillRect(CB, Y0, cbW, Y1 - Y0);
-      ctx.save();
-      ctx.beginPath(); ctx.rect(CB, Y0, cbW, Y1 - Y0); ctx.clip();
-      // A fixed opacity, not the constellation slider: this is a legend for the
-      // mask and has to stay readable even with constellations turned off.
-      ctx.globalAlpha = 0.75;
-      const N = 20, nodes = [];
-      for (let i = 0; i < N; i++) {
-        // an irrational step keeps the chain from settling into a visible period
-        nodes.push([CB + cbW / 2 + Math.sin(i * 2.399) * (cbW / 2 - 4.5),
-                    Y0 + 12 + i * (Y1 - Y0 - 24) / (N - 1)]);
-      }
-      ctx.strokeStyle = 'rgba(203,214,232,0.85)'; ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      nodes.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]));
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(246,245,242,0.85)';
-      for (const q of nodes) { ctx.beginPath(); ctx.arc(q[0], q[1], 2.1, 0, Math.PI * 2); ctx.fill(); }
-      ctx.restore();
-      for (let i = 0; i <= 200; i++) {
-        const t = 1 - i / 200, y = Y0 + i / 200 * (Y1 - Y0);
-        const a = this.state.maskStrength * (1 - Math.pow(t, maskP));
-        ctx.fillStyle = 'rgba(8,8,8,' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
-        ctx.fillRect(CB, y, cbW, (Y1 - Y0) / 200 + 1);
-      }
-    } else {
-      for (let i = 0; i <= 200; i++) {
-        const t = 1 - i / 200, y = Y0 + i / 200 * (Y1 - Y0);
-        const [rr, gg, bb] = this.heatColor(t);
-        ctx.fillStyle = 'rgb(' + rr + ',' + gg + ',' + bb + ')';
-        ctx.fillRect(CB, y, cbW, (Y1 - Y0) / 200 + 1);
-      }
+    // A ramp of dark-on-dark says little, so the bar carries a sample star
+    // chain under the veil: it shows what the mask actually does to the sky
+    // at each level, clear at the top and hidden at the bottom.
+    ctx.fillStyle = '#161616'; ctx.fillRect(CB, Y0, cbW, Y1 - Y0);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(CB, Y0, cbW, Y1 - Y0); ctx.clip();
+    // A fixed opacity, not the constellation slider: this is a legend for the
+    // mask and has to stay readable even with constellations turned off.
+    ctx.globalAlpha = 0.75;
+    const N = 20, nodes = [];
+    for (let i = 0; i < N; i++) {
+      // an irrational step keeps the chain from settling into a visible period
+      nodes.push([CB + cbW / 2 + Math.sin(i * 2.399) * (cbW / 2 - 4.5),
+                  Y0 + 12 + i * (Y1 - Y0 - 24) / (N - 1)]);
+    }
+    ctx.strokeStyle = 'rgba(203,214,232,0.85)'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    nodes.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]));
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(246,245,242,0.85)';
+    for (const q of nodes) { ctx.beginPath(); ctx.arc(q[0], q[1], 2.1, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    for (let i = 0; i <= 200; i++) {
+      const t = 1 - i / 200, y = Y0 + i / 200 * (Y1 - Y0);
+      const a = this.state.maskStrength * (1 - Math.pow(t, maskP));
+      ctx.fillStyle = 'rgba(8,8,8,' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
+      ctx.fillRect(CB, y, cbW, (Y1 - Y0) / 200 + 1);
     }
     ctx.strokeStyle = '#8E897D'; ctx.strokeRect(CB, Y0, cbW, Y1 - Y0);
     ctx.fillStyle = '#E8E4D8'; ctx.font = '600 13px Inter, sans-serif'; ctx.textAlign = 'left';
@@ -1747,25 +1703,15 @@ class Component extends DCLogic {
     return {
       latText: s.latText, lonText: s.lonText, date: s.date, thrText: s.thrText, showMoon: s.showMoon,
       showPlanets: s.showPlanets,
-      heatPct: String(Math.round(s.heat * 100)),
-      heatLabel: Math.round(s.heat * 100) + '%',
       milkyPct: String(Math.round(s.milkyway * 100)),
       milkyLabel: Math.round(s.milkyway * 100) + '%',
       starsPct: String(Math.round(s.stars * 100)),
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
-      modeMask: s.mask,
-      modeHighlight: !s.mask,
       maskPct: String(Math.round(s.maskStrength * 100)),
       maskLabel: Math.round(s.maskStrength * 100) + '%',
       falloffPct: String(Math.round(s.maskFalloff * 100)),
       falloffLabel: Math.round(s.maskFalloff * 100) + '%',
-      fieldOptions: [{ id: false, label: 'Highlight' }, { id: true, label: 'Mask' }].map(o => ({
-        label: o.label,
-        bg: s.mask === o.id ? '#D9A960' : '#161616',
-        fg: s.mask === o.id ? '#0A0A0A' : '#C9C4B7',
-        pick: () => this.setState({ mask: o.id }),
-      })),
       opUsable: s.showUsable ? '1' : '0.32',
       opFullDark: s.showFullDark ? '1' : '0.32',
       opEcliptic: s.showEcliptic ? '1' : '0.32',
@@ -1818,7 +1764,6 @@ class Component extends DCLogic {
       toggleUsable: () => this.setState({ showUsable: !this.state.showUsable }),
       toggleFullDark: () => this.setState({ showFullDark: !this.state.showFullDark }),
       toggleEcliptic: () => this.setState({ showEcliptic: !this.state.showEcliptic }),
-      onHeat: e => this.setState({ heat: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onStars: e => this.setState({ stars: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onMilky: e => this.setState({ milkyway: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onMaskStrength: e => this.setState({ maskStrength: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
