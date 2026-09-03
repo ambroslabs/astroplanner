@@ -554,7 +554,7 @@
       <button sc-camel-on-click="{{ exportHeatPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
-    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> for usable hours at a point</div>
+    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> for usable hours at a point</div>
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -906,21 +906,29 @@ class Component extends DCLogic {
     const view = () => this._view || (() => { const a = this._axis;
       return { raStart: a.axStart, raLen: a.axSpan, decMin: a.dBot, decMax: a.dTop }; })();
 
-    // Wheel zooms about the cursor, so the sky under the pointer stays put.
+    // Shift-wheel zooms about the cursor, so the sky under the pointer stays
+    // put. A bare wheel is left alone and scrolls the page: the chart is tall
+    // enough that owning the wheel outright made it a trap on the way past.
     el.addEventListener('wheel', e => {
+      if (!e.shiftKey) return;
       const p = pos(e);
       if (!inPlot(p)) return;
       const a = this._axis, v = view();
-      const f = e.deltaY < 0 ? 1 / 1.2 : 1.2;
+      // Holding shift turns a vertical wheel into horizontal scroll on most
+      // platforms, so the delta can arrive on either axis. Take whichever one
+      // actually moved; the sign convention is the same on both.
+      const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (!d) return;
+      const f = d < 0 ? 1 / 1.2 : 1.2;
       const u = 1 - (p.x - a.X0) / (a.X1 - a.X0);   // fraction from the right edge
       const w = (p.y - a.Y0) / (a.Y1 - a.Y0);
       const raC = v.raStart + u * v.raLen;
       const decC = v.decMax - w * (v.decMax - v.decMin);
       const raLen = Math.max(0.5, Math.min(24, v.raLen * f));
       const dSpan = Math.max(5, Math.min(180, (v.decMax - v.decMin) * f));
-      // The chart owns the wheel while the pointer is over it, including at the
-      // ends of the zoom range, where it is simply a no-op. Letting the event
-      // through there meant a scroll that ran out of zoom jumped the page.
+      // The chart owns shift-wheel while the pointer is over it, including at
+      // the ends of the zoom range, where it is simply a no-op. Letting the
+      // event through there meant a zoom that ran out jumped the page instead.
       e.preventDefault();
       if (Math.abs(raLen - v.raLen) < 1e-6 && Math.abs(dSpan - (v.decMax - v.decMin)) < 1e-6) return;
       const top = decC + w * dSpan;
