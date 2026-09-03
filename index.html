@@ -405,6 +405,7 @@
   .planet-table > div > span:first-child { flex: 0 0 74px !important; }
   .heat-col input[type="range"] { width: 100% !important; min-height: 44px !important; }
   .heat-col { flex: 1 1 100% !important; }
+  .layers button { min-height: 44px !important; }
   .moon-check { min-height: 44px !important; padding: 0 !important; }
   .moon-check input { width: 22px !important; height: 22px !important; }
 }
@@ -477,7 +478,7 @@
       <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Usable dark hours by RA / Dec</div>
       <div class="dark-info" style="font-size: 16px; color: #D9A960; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;">{{ darkInfo }}</div>
     </div>
-    <div class="controls" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #2E2C27;">
+    <div class="controls" style="display: flex; align-items: flex-end; gap: 13px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #2E2C27;">
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label for="date-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Date</label>
         <div style="display: flex; align-items: stretch; gap: 4px;">
@@ -500,38 +501,29 @@
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Highlight</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
-          <input aria-label="Highlight intensity" type="range" min="0" max="100" step="5" value="{{ heatPct }}" sc-camel-on-input="{{ onHeat }}" style="width: 96px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <input aria-label="Highlight intensity" type="range" min="0" max="100" step="5" value="{{ heatPct }}" sc-camel-on-input="{{ onHeat }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ heatLabel }}</span>
         </div>
       </div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Constellations</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
-          <input aria-label="Constellation opacity" type="range" min="0" max="100" step="5" value="{{ starsPct }}" sc-camel-on-input="{{ onStars }}" style="width: 96px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <input aria-label="Constellation opacity" type="range" min="0" max="100" step="5" value="{{ starsPct }}" sc-camel-on-input="{{ onStars }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starsLabel }}</span>
         </div>
       </div>
-      <label class="moon-check" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
-        <input type="checkbox" checked="{{ showMoon }}" sc-camel-on-change="{{ onMoon }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
-        Moon
-      </label>
-      <label class="moon-check" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
-        <input type="checkbox" checked="{{ showSun }}" sc-camel-on-change="{{ onSun }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
-        Sun
-      </label>
-      <label class="moon-check" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
-        <input type="checkbox" checked="{{ showPlanets }}" sc-camel-on-change="{{ onPlanets }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
-        Planets
-      </label>
       <div style="flex: 1;"></div>
       <button sc-camel-on-click="{{ exportHeatPng }}" style="margin-left: auto; background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
-    <div style="display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 12px; font-size: 13.5px; color: #C9C4B7;">
-      <span><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960; vertical-align: middle; margin-right: 7px;"></span>any usable time boundary</span>
-      <span><span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 12px; background: rgb(96,178,116); vertical-align: middle; margin-right: 7px;"><span style="display: inline-block; width: 24px; height: 0; border-top: 3px dashed #0A0A0A;"></span></span>full dark window boundary</span>
-      <span><span style="display: inline-block; width: 26px; height: 0; border-top: 2px dotted #C9C4B7; vertical-align: middle; margin-right: 7px;"></span>ecliptic</span>
-      <sc-if value="{{ showMoon }}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; gap: 7px;"><span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px dotted rgba(246,245,242,0.75); border-radius: 50%;"><span style="width: 7px; height: 7px; background: #F6F5F2; border-radius: 50%;"></span></span>Moon ± 30° dimming radius</span></sc-if>
+    <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
+      <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>any usable time boundary</button>
+      <button sc-camel-on-click="{{ toggleFullDark }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opFullDark }};" style-hover="color: #F6F5F2;"><span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 12px; background: rgb(96,178,116);"><span style="display: inline-block; width: 24px; height: 0; border-top: 3px dashed #0A0A0A;"></span></span>full dark window boundary</button>
+      <button sc-camel-on-click="{{ toggleEcliptic }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opEcliptic }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 0; border-top: 2px dotted #C9C4B7;"></span>ecliptic</button>
+      <button sc-camel-on-click="{{ toggleMoon }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opMoon }};" style-hover="color: #F6F5F2;"><span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px dotted rgba(246,245,242,0.75); border-radius: 50%;"><span style="width: 7px; height: 7px; background: #F6F5F2; border-radius: 50%;"></span></span>Moon &#177; 30&#176; dimming radius</button>
+      <button sc-camel-on-click="{{ toggleSun }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opSun }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 15px; height: 15px; background: #F5C36A; border-radius: 50%;"></span>Sun</button>
+      <button sc-camel-on-click="{{ togglePlanets }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opPlanets }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 10px; height: 10px; background: #93C4EE; border-radius: 50%; margin: 0 2px;"></span>Planets</button>
     </div>
     <sc-if value="{{ showPlanets }}" hint-placeholder-val="{{ true }}">
     <div class="planet-table" style="margin-top: 16px; border-top: 1px solid #2E2C27; padding-top: 12px;">
@@ -562,7 +554,8 @@ class Component extends DCLogic {
   state = {
     lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
     date: new Date().toISOString().slice(0, 10),
-    thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, heat: 0.8, stars: 0.35, geoMsg: '', obsSel: 'starfront', tab: 'heat',
+    thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
+    showEcliptic: true, heat: 0.8, stars: 0.35, geoMsg: '', obsSel: 'starfront', tab: 'heat',
   };
   OBSERVATORIES = [
     { id: 'starfront', name: 'Starfront Observatories \u2014 Rockwood, TX', lat: 31.55, lon: -99.38 },
@@ -1006,7 +999,7 @@ class Component extends DCLogic {
       ecl.push([ra, Math.asin(this.sd(e) * this.sd(lam)) / this.D2R]);
     }
     ecl.sort((a, b) => a[0] - b[0]);
-    drawWrapped(ecl, { color: 'rgba(142,137,125,0.95)', w: 2, dash: [2, 5] });
+    if (this.state.showEcliptic) drawWrapped(ecl, { color: 'rgba(142,137,125,0.95)', w: 2, dash: [2, 5] });
     // contours (typical case only)
     if (L > 0 && L < 24) {
       const any1 = [], any2 = [], full1 = [], full2 = [];
@@ -1015,10 +1008,14 @@ class Component extends DCLogic {
         if (H > 0 && H < 12) { any1.push([((dark.dusk - H) % 24 + 24) % 24, d]); any2.push([((dark.dawn + H) % 24 + 24) % 24, d]); }
         if (H < 12 && 2 * H >= L) { full1.push([((dark.dawn - H) % 24 + 24) % 24, d]); full2.push([((dark.dusk + H) % 24 + 24) % 24, d]); }
       }
-      drawWrapped(any1, { color: '#D9A960', w: 2.5 });
-      drawWrapped(any2, { color: '#D9A960', w: 2.5 });
-      drawWrapped(full1, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
-      drawWrapped(full2, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
+      if (this.state.showUsable) {
+        drawWrapped(any1, { color: '#D9A960', w: 2.5 });
+        drawWrapped(any2, { color: '#D9A960', w: 2.5 });
+      }
+      if (this.state.showFullDark) {
+        drawWrapped(full1, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
+        drawWrapped(full2, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
+      }
     }
     // moon
     if (this.state.showMoon) {
@@ -1137,7 +1134,15 @@ class Component extends DCLogic {
     const dt = new Date(Date.UTC(y, m - 1, d + n));
     this.setState({ date: dt.toISOString().slice(0, 10) });
   }
-  componentDidMount() { this.drawHeatmap(this.canvas); }
+  componentDidMount() {
+    this.drawHeatmap(this.canvas);
+    // Canvas text takes no part in font-fallback swaps, so a mount that beats
+    // Inter's load leaves the chart lettered in the fallback face until the
+    // next redraw. exportHeatPng already awaits this; the on-screen draw must too.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => this.drawHeatmap(this.canvas));
+    }
+  }
   componentDidUpdate() { this.drawHeatmap(this.canvas); }
   // ---------- render ----------
   renderVals() {
@@ -1195,6 +1200,12 @@ class Component extends DCLogic {
       starsPct: String(Math.round(s.stars * 100)),
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
+      opUsable: s.showUsable ? '1' : '0.32',
+      opFullDark: s.showFullDark ? '1' : '0.32',
+      opEcliptic: s.showEcliptic ? '1' : '0.32',
+      opMoon: s.showMoon ? '1' : '0.32',
+      opSun: s.showSun ? '1' : '0.32',
+      opPlanets: s.showPlanets ? '1' : '0.32',
       planetRows: this.planetData()
         .sort((a, b) => b.hours - a.hours)
         .map(p => ({
@@ -1213,11 +1224,14 @@ class Component extends DCLogic {
       onDate: e => { if (e.target.value) this.setState({ date: e.target.value }); },
       prevDay: () => this.shiftDay(-1),
       nextDay: () => this.shiftDay(1),
-      onMoon: e => this.setState({ showMoon: e.target.checked }),
-      onPlanets: e => this.setState({ showPlanets: e.target.checked }),
+      toggleMoon: () => this.setState({ showMoon: !this.state.showMoon }),
+      togglePlanets: () => this.setState({ showPlanets: !this.state.showPlanets }),
+      toggleUsable: () => this.setState({ showUsable: !this.state.showUsable }),
+      toggleFullDark: () => this.setState({ showFullDark: !this.state.showFullDark }),
+      toggleEcliptic: () => this.setState({ showEcliptic: !this.state.showEcliptic }),
       onHeat: e => this.setState({ heat: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onStars: e => this.setState({ stars: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
-      onSun: e => this.setState({ showSun: e.target.checked }),
+      toggleSun: () => this.setState({ showSun: !this.state.showSun }),
       geoMsg: this.state.geoMsg,
       obsSel: this.state.obsSel,
       showChartTab: this.state.tab === 'chart',
