@@ -424,6 +424,16 @@
     </div>
     <button sc-camel-on-click="{{ useMyLocation }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Use my location</button>
       <button sc-camel-on-click="{{ resetSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Reset site</button>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="site-name" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Save these coordinates as</label>
+        <div style="display: flex; align-items: stretch; gap: 8px;">
+          <input id="site-name" type="text" placeholder="Site name" value="{{ siteName }}" sc-camel-on-input="{{ onSiteName }}" style="width: 190px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;">
+          <button sc-camel-on-click="{{ saveSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Save</button>
+          <sc-if value="{{ isSavedSite }}" hint-placeholder-val="{{ false }}">
+            <button sc-camel-on-click="{{ deleteSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Delete</button>
+          </sc-if>
+        </div>
+      </div>
     <sc-if value="{{ geoMsg }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #8E897D; padding-bottom: 12px;">{{ geoMsg }}</span></sc-if>
   </div>
   <div class="tabs" style="width: 100%; max-width: 1160px; display: flex; gap: 8px; border-bottom: 1px solid #2E2C27;">
@@ -613,7 +623,12 @@ class Component extends DCLogic {
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     crop: null, autoCrop: true,
   };
-  // Class fields initialise in order, so both defaults exist by the time this runs.
+  // Persisted, but deliberately in neither reset group: Reset site restores
+  // Starfront's coordinates and must not delete the saved list.
+  KEPT_DEFAULTS = { sites: [] };
+  // Class fields initialise in order, so every defaults group above exists by
+  // the time this runs. Declaring one below meant initialState could not see it:
+  // the key was written on save and never looked for on load.
   state = this.initialState();
   OBSERVATORIES = [
     { id: 'starfront', name: 'Starfront Observatories: Rockwood, TX', lat: 31.55, lon: -99.38 },
@@ -996,7 +1011,23 @@ class Component extends DCLogic {
     const t = new Date(), p = n => String(n).padStart(2, '0');
     return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
   }
-  allDefaults() { return Object.assign({}, this.SITE_DEFAULTS, this.CHART_DEFAULTS); }
+  allDefaults() { return Object.assign({}, this.SITE_DEFAULTS, this.CHART_DEFAULTS, this.KEPT_DEFAULTS); }
+  allSites() { return this.OBSERVATORIES.concat(Array.isArray(this.state.sites) ? this.state.sites : []); }
+  slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'site'; }
+  saveSite() {
+    const name = (this.state.siteName || '').trim();
+    if (!name) return;
+    const s = this.state, id = 'user:' + this.slug(name);
+    // Saving the same name again replaces it rather than piling up duplicates.
+    const sites = (s.sites || []).filter(x => x.id !== id);
+    sites.push({ id, name, lat: s.lat, lon: s.lon });
+    this.setState({ sites, obsSel: id, siteName: '' });
+  }
+  deleteSite() {
+    const id = this.state.obsSel;
+    if (String(id).indexOf('user:') !== 0) return;
+    this.setState({ sites: (this.state.sites || []).filter(x => x.id !== id), obsSel: 'custom' });
+  }
   loadSaved() {
     // Storage can throw outright in private mode, and its contents are not
     // ours to trust, so a value is only accepted when it matches the type of
@@ -1015,7 +1046,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', probe: null }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', probe: null, siteName: '' }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
@@ -1771,6 +1802,11 @@ class Component extends DCLogic {
       prevDay: () => this.shiftDay(-1),
       nextDay: () => this.shiftDay(1),
       resetChart: () => this.resetChart(),
+      siteName: s.siteName || '',
+      isSavedSite: String(s.obsSel).indexOf('user:') === 0,
+      onSiteName: e => this.setState({ siteName: e.target.value }),
+      saveSite: () => this.saveSite(),
+      deleteSite: () => this.deleteSite(),
       fitCropNow: () => this.applyFit(),
       clearCrop: () => this.setState({ crop: null, autoCrop: false }),
       autoCrop: s.autoCrop,
@@ -1807,9 +1843,9 @@ class Component extends DCLogic {
         fg: this.state.tab === t.id ? '#F6F5F2' : '#8E897D',
         pick: () => this.setState({ tab: t.id }),
       })),
-      obsOptions: [{ value: 'custom', label: 'Custom / my location' }].concat(this.OBSERVATORIES.map(o => ({ value: o.id, label: o.name }))),
+      obsOptions: [{ value: 'custom', label: 'Custom / my location' }].concat(this.allSites().map(o => ({ value: o.id, label: o.name }))),
       onObs: e => {
-        const o = this.OBSERVATORIES.find(x => x.id === e.target.value);
+        const o = this.allSites().find(x => x.id === e.target.value);
         if (o) this.setState({ obsSel: o.id, lat: o.lat, latText: String(o.lat), lon: o.lon, lonText: String(o.lon), geoMsg: '' });
         else this.setState({ obsSel: 'custom' });
       },
@@ -1857,7 +1893,7 @@ class Component extends DCLogic {
   // lat or lon switches obsSel to 'custom', so the name only ever appears
   // alongside the coordinates it actually belongs to.
   obsName() {
-    const o = this.OBSERVATORIES.find(x => x.id === this.state.obsSel);
+    const o = this.allSites().find(x => x.id === this.state.obsSel);
     return o ? o.name + ' \u00B7 ' : '';
   }
   locFooter() {
