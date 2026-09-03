@@ -1813,6 +1813,62 @@ class Component extends DCLogic {
     ctx.strokeStyle = '#2E2C27'; ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
     return { cv, ctx, W, PAD };
   }
+  // The legend as drawn on the export. Only layers that are actually on the
+  // chart are listed, so a saved image never explains a line it does not show.
+  // Returns the height used, since the footer sits below it.
+  exportLegend(ctx, W, PAD, y) {
+    const s = this.state, items = [];
+    if (s.showUsable) items.push({ kind: 'solid', color: '#D9A960', label: 'usable boundary' });
+    if (s.showFullDark) items.push({ kind: 'twotone', label: 'all-night boundary' });
+    if (s.showEcliptic) items.push({ kind: 'dotted', color: 'rgba(142,137,125,0.95)', label: 'ecliptic' });
+    if (s.showMoon) items.push({ kind: 'moon', label: 'Moon \u00B1 30\u00B0 dimming radius' });
+    if (s.showSun) items.push({ kind: 'dot', color: '#F5C36A', r: 7, label: 'Sun' });
+    if (s.showPlanets) items.push({ kind: 'dot', color: '#93C4EE', r: 5, label: 'Planets' });
+    if (!items.length) return 0;
+
+    ctx.font = '600 14px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    const SW = 30, GAP = 9, SEP = 26, LH = 26;
+    let x = PAD, row = 0;
+    for (const it of items) {
+      const wid = SW + GAP + ctx.measureText(it.label).width;
+      if (x > PAD && x + wid > W - PAD) { row++; x = PAD; }
+      const cy = y + row * LH;
+      const cx = x + SW / 2;
+      ctx.save();
+      if (it.kind === 'solid') {
+        ctx.strokeStyle = it.color; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + SW, cy); ctx.stroke();
+      } else if (it.kind === 'twotone') {
+        // same construction as the chart: pale underlay, dark dashes over it
+        ctx.strokeStyle = 'rgba(246,245,242,0.92)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + SW, cy); ctx.stroke();
+        ctx.strokeStyle = '#0A0A0A'; ctx.setLineDash([8, 6]);
+        ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + SW, cy); ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (it.kind === 'dotted') {
+        ctx.strokeStyle = it.color; ctx.lineWidth = 2; ctx.setLineDash([2, 5]);
+        ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + SW, cy); ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (it.kind === 'moon') {
+        ctx.strokeStyle = 'rgba(246,245,242,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([3, 5]);
+        ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#F6F5F2';
+        ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillStyle = it.color;
+        ctx.beginPath(); ctx.arc(cx, cy, it.r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+      ctx.fillStyle = '#C9C4B7';
+      ctx.fillText(it.label, x + SW + GAP, cy + 5);
+      x += wid + SEP;
+    }
+    return (row + 1) * LH;
+  }
+
   exportFooter(ctx, W, PAD, yFoot, text) {
     ctx.strokeStyle = '#2E2C27'; ctx.beginPath(); ctx.moveTo(PAD, yFoot); ctx.lineTo(W - PAD, yFoot); ctx.stroke();
     ctx.fillStyle = '#8E897D'; ctx.font = '600 14px Inter, sans-serif'; ctx.textAlign = 'left';
@@ -1861,7 +1917,12 @@ class Component extends DCLogic {
     await document.fonts.ready;
     const s = this.state, dark = this.darkWindow();
     const chartW = 1160 - 72, sc = chartW / 992, hmH = 620 * sc;
-    const yFoot = 92 + hmH;
+    // Measure the legend first: it sits between the chart and the footer, and
+    // its height decides how tall the image has to be.
+    const probe = document.createElement('canvas').getContext('2d');
+    const yLegend = 92 + hmH + 30;
+    const legendH = this.exportLegend(probe, 1160, 36, 0);
+    const yFoot = yLegend + legendH + 4;
     const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44);
     const darkInfo = dark.L <= 0 ? 'NO ASTRONOMICAL DARKNESS' :
       dark.L >= 24 ? 'DARK 24.0H' :
@@ -1871,6 +1932,7 @@ class Component extends DCLogic {
     ctx.fillStyle = '#D9A960'; ctx.font = '700 15px Inter, sans-serif'; ctx.textAlign = 'right';
     ctx.fillText(darkInfo, W - PAD, 58); ctx.textAlign = 'left';
     if (this.canvas) ctx.drawImage(this.canvas, PAD, 92, chartW, hmH);
+    this.exportLegend(ctx, W, PAD, yLegend);
     this.exportFooter(ctx, W, PAD, yFoot, this.locFooter() + ' \u00B7 threshold Alt > ' + s.thr + '\u00B0 \u00B7 Sun below \u221218\u00B0');
     this.download(cv, 'dark-hours-map-' + s.date + '-lat' + s.lat + '.png');
   }
