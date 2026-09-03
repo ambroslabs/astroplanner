@@ -1423,9 +1423,17 @@ class Component extends DCLogic {
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     });
   }
+  // Name the site on the export when one of the presets is selected. Editing
+  // lat or lon switches obsSel to 'custom', so the name only ever appears
+  // alongside the coordinates it actually belongs to.
+  obsName() {
+    const o = this.OBSERVATORIES.find(x => x.id === this.state.obsSel);
+    return o ? o.name + ' \u00B7 ' : '';
+  }
   locFooter() {
     const s = this.state;
-    return s.date + ' \u00B7 \u03C6 ' + Math.abs(s.lat).toFixed(1) + '\u00B0 ' + (s.lat < 0 ? 'S' : 'N') +
+    return s.date + ' \u00B7 ' + this.obsName() +
+      '\u03C6 ' + Math.abs(s.lat).toFixed(1) + '\u00B0 ' + (s.lat < 0 ? 'S' : 'N') +
       ' \u00B7 \u03BB ' + Math.abs(s.lon).toFixed(1) + '\u00B0 ' + (s.lon < 0 ? 'W' : 'E');
   }
   async exportChartPng() {
@@ -1442,7 +1450,7 @@ class Component extends DCLogic {
     ctx.save(); ctx.translate(PAD, 92); ctx.scale(sc, sc);
     this.drawChart(ctx, data, null, lat);
     ctx.restore();
-    this.exportFooter(ctx, W, PAD, yFoot, '\u03C6 ' + Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N') + ' \u00B7 hours per sidereal day above each altitude threshold');
+    this.exportFooter(ctx, W, PAD, yFoot, this.obsName() + '\u03C6 ' + Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N') + ' \u00B7 hours per sidereal day above each altitude threshold');
     this.download(cv, 'hours-above-altitude-lat' + lat + '.png');
   }
   async exportHeatPng() {
