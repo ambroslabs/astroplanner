@@ -691,8 +691,11 @@ class Component extends DCLogic {
     return { ra, dec };
   }
   // Simplified constellation figures for orientation: the twelve zodiac
-  // constellations plus the well-known non-zodiac ones. J2000 RA (hours) /
-  // Dec (degrees), with l listing the index pairs joined by a line.
+  // constellations plus the well-known non-zodiac ones, and the large faint
+  // ones that a list of famous figures leaves out - Eridanus, Camelopardalis
+  // and Lynx were each a 20-30 degree hole in the sky with nothing drawn in
+  // it. J2000 RA (hours) / Dec (degrees), from SIMBAD, with l listing the
+  // index pairs joined by a line.
   CONSTELLATIONS = [
     { n: "ARIES",
       s: [[2.119,23.46],[1.911,20.81],[1.892,19.29]],
@@ -848,6 +851,21 @@ class Component extends DCLogic {
     { n: "GRUS",
       s: [[22.137,-46.961],[22.711,-46.885],[21.899,-37.365],[22.487,-43.496],[22.807,-51.317],[23.171,-45.247]],
       l: [[2,3],[3,0],[0,1],[1,4],[1,5]] },
+    { n: "ERIDANUS",
+      s: [[5.131,-5.09],[4.882,-5.45],[4.758,-3.25],[4.605,-3.35],[4.198,-6.84],[3.967,-13.51],[3.769,-12.10],[3.721,-9.76],[3.549,-9.46],[2.940,-8.90],[2.752,-18.57],[3.325,-21.76],[3.563,-21.63],[3.999,-24.02],[4.558,-29.77],[4.593,-30.56],[4.401,-34.02],[2.971,-40.30],[2.678,-39.86],[2.450,-47.70],[2.275,-51.51],[1.933,-51.61],[1.629,-57.24]],
+      l: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13],[13,14],[14,15],[15,16],[16,17],[17,18],[18,19],[19,20],[20,21],[21,22]] },
+    { n: "CAMELOPARDALIS",
+      s: [[3.484,59.94],[3.839,71.33],[4.901,66.34],[5.057,60.44],[4.955,53.75]],
+      l: [[0,1],[1,2],[2,3],[3,4]] },
+    { n: "LYNX",
+      s: [[9.351,34.39],[9.314,36.80],[9.011,41.78],[8.381,43.19],[7.445,49.21],[6.955,58.42],[6.327,59.01]],
+      l: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]] },
+    { n: "COMA BERENICES",
+      s: [[12.449,28.27],[13.198,27.88],[13.166,17.53]],
+      l: [[0,1],[1,2]] },
+    { n: "CANES VENATICI",
+      s: [[12.934,38.32],[12.562,41.36]],
+      l: [[0,1]] },
   ];
 
   // ---------- framing ----------
