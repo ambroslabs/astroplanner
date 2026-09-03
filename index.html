@@ -493,10 +493,10 @@
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 320px; min-width: 0;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Time <span style="color: #4A463E;">&#183; {{ timeFrom }} &#8594; {{ timeTo }}</span></span>
         <div style="display: flex; align-items: center; gap: 8px; height: 38px;">
-          <button sc-camel-on-click="{{ timeBack }}" aria-label="Back three months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#171;</button>
+          <button sc-camel-on-click="{{ timeBack }}" aria-label="Back four months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#171;</button>
           <!-- max must equal TSPAN -->
-          <input aria-label="Date within the year shown" type="range" min="0" max="366" step="1" value="{{ timeVal }}" ref="{{ timeRef }}" sc-camel-on-input="{{ onTime }}" style="flex: 1 1 auto; min-width: 0; accent-color: #D9A960; background: transparent; cursor: pointer;">
-          <button sc-camel-on-click="{{ timeFwd }}" aria-label="Forward three months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#187;</button>
+          <input aria-label="Date within the span shown" type="range" min="0" max="732" step="1" value="{{ timeVal }}" ref="{{ timeRef }}" sc-camel-on-input="{{ onTime }}" style="flex: 1 1 auto; min-width: 0; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <button sc-camel-on-click="{{ timeFwd }}" aria-label="Forward four months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#187;</button>
         </div>
       </div>
       <!-- when, on a row of its own -->
@@ -618,11 +618,11 @@ class Component extends DCLogic {
   // two separate by hue and not only by brightness.
   MW = [95, 150, 255];
   // ---------- time slider ----------
-  // Time has no ends, so the slider shows a year of it and the year itself
-  // moves. 366 days because it makes the sixths whole numbers of days.
-  TSPAN = 366;
-  TLO = 61;    // 1/6
-  THI = 305;   // 5/6
+  // Time has no ends, so the slider shows two years of it and the two years
+  // themselves move. 732 days because it makes the sixths whole numbers of days.
+  TSPAN = 732;
+  TLO = 122;   // 1/6
+  THI = 610;   // 5/6
   MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
@@ -2037,8 +2037,8 @@ class Component extends DCLogic {
         el.addEventListener('change', () =>
           this.setState({ winStart: this.reWindow(this.state.date, this.winStart()) }));
       },
-      timeBack: () => this.jumpMonths(-3),
-      timeFwd: () => this.jumpMonths(3),
+      timeBack: () => this.jumpMonths(-4),
+      timeFwd: () => this.jumpMonths(4),
       prevDay: () => this.shiftDay(-1),
       nextDay: () => this.shiftDay(1),
       resetChart: () => this.resetChart(),
