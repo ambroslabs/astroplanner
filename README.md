@@ -20,12 +20,16 @@ runtime.
 
 Live at <https://astroplanner.ambroslabs.io>, on Cloudflare Pages.
 
-The site is fully static. `scripts/build.sh` assembles the deployable tree into
-`dist/`; deploys are currently made by hand from there. The source tree makes no
-external requests — React and the fonts are vendored — so a clone runs
-standalone and offline, and the analytics beacon is injected only at build time
-when `CF_WEB_ANALYTICS_TOKEN` is set. A fork therefore never reports to someone
-else's account.
+The site is fully static. `.github/workflows/deploy.yml` runs
+`scripts/build.sh` on every push to `main` and uploads the resulting `dist/`
+to Cloudflare Pages. The source tree makes no external requests — React and
+the fonts are vendored — so a clone runs standalone and offline, and the
+analytics beacon is injected only at build time when `CF_WEB_ANALYTICS_TOKEN`
+is set. A fork therefore never reports to someone else's account.
+
+CI needs two repository secrets, `CLOUDFLARE_API_TOKEN` (Account → Cloudflare
+Pages: Edit) and `CLOUDFLARE_ACCOUNT_ID`, plus the `CF_WEB_ANALYTICS_TOKEN`
+variable. A fork with none of them set still builds; only the deploy step fails.
 
 ## Local preview
 

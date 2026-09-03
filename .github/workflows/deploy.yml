@@ -1,0 +1,38 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://astroplanner.ambroslabs.io
+    steps:
+      - uses: actions/checkout@v4
+
+      # Assembles dist/. The analytics beacon is injected here rather than
+      # committed, so the repository stays free of external requests; see
+      # scripts/build.sh. CF_WEB_ANALYTICS_TOKEN is a repository variable, not
+      # a secret - it is a site tag that ships in the served HTML anyway.
+      - name: Build
+        env:
+          CF_WEB_ANALYTICS_TOKEN: ${{ vars.CF_WEB_ANALYTICS_TOKEN }}
+        run: ./scripts/build.sh
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=astroplanner --branch=main
