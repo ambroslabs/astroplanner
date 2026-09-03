@@ -1678,9 +1678,17 @@ class Component extends DCLogic {
     // readouts hide the numbers they were opened to compare. A box that had to
     // travel to find room is joined to its point by a leader, since at that
     // distance nothing else says which box belongs to which.
+    // A framed chart shows part of the sky, and this runs outside the clip, so
+    // a point that has been cropped out would otherwise still put its crosshair
+    // and readout on screen - in the margins, or pinned to an edge it has no
+    // business being on. The points themselves are kept: zoom back out and they
+    // are all still there.
+    const inView = q => { const x = xOf(q.ra), y = yOf(q.dec);
+      return x >= X0 && x <= X1 && y >= Y0 && y <= Y1; };
+    const shown = this.state.probes.filter(inView);
     const placed = [];
-    const markers = this.state.probes.map(q => ({ x: xOf(q.ra), y: yOf(q.dec) }));
-    for (const pr of this.state.probes) {
+    const markers = shown.map(q => ({ x: xOf(q.ra), y: yOf(q.dec) }));
+    for (const pr of shown) {
       const px = xOf(pr.ra), py = yOf(pr.dec);
       const hrs = Math.max(0, this.usable(pr.ra, pr.dec, dark));
       ctx.strokeStyle = '#D9A960'; ctx.lineWidth = 1.5;
