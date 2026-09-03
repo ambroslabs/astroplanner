@@ -1488,7 +1488,10 @@ class Component extends DCLogic {
       ctx.fillStyle = '#C9C4B7'; ctx.font = '600 13px Inter, sans-serif';
       ctx.fillText(small, bx + 11, by + 38);
     }
-    if (this._drag) {
+    // Only a box-select draws a marquee. A pan keeps _drag set too, and
+    // repaints on every move, so without this check dragging to pan drew a
+    // selection rectangle from the grab point.
+    if (this._drag && this._drag.mode === 'select' && !this._drag.touch) {
       const d = this._drag;
       ctx.strokeStyle = '#D9A960'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
       ctx.strokeRect(Math.min(d.x0, d.x1), Math.min(d.y0, d.y1),
