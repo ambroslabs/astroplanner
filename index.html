@@ -914,13 +914,15 @@ class Component extends DCLogic {
     // Centered mode rotates the RA axis to start at the Sun, which puts the
     // anti-solar point - where tonight's best targets transit - mid-chart.
     const raOrg = this.state.centered ? dark.sun.ra : 0;
-    const xOf = ra => X0 + ((((ra - raOrg) % 24) + 24) % 24) / 24 * (X1 - X0);
+    // RA increases to the LEFT, matching the sky as seen and the north-up /
+    // east-left convention used for astronomical images.
+    const xOf = ra => X0 + (1 - ((((ra - raOrg) % 24) + 24) % 24) / 24) * (X1 - X0);
     const yOf = dec => Y0 + (90 - dec) / 180 * (Y1 - Y0);
     // Ticks stay on whole hours of real RA so the labels remain readable when
     // the axis no longer starts at zero.
     const raTicks = [];
     for (let t = 0; t < 24; t += 2) raTicks.push({ ra: t, x: xOf(t) });
-    if (!this.state.centered) raTicks.push({ ra: 24, x: X1 });
+    if (!this.state.centered) raTicks.push({ ra: 24, x: X0 });
     ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, HH);
 
     // heat field
@@ -931,8 +933,9 @@ class Component extends DCLogic {
       const dec = 90 - r * 180 / (rows - 1);
       const H = this.hoursAbove(lat, thr, dec) / 2;
       for (let c = 0; c < cols; c++) {
-        // column position is a chart offset, so it carries the axis rotation
-        const ra = raOrg + c * 24 / cols;
+        // column position is a chart offset, so it carries both the axis
+        // rotation and the east-left direction
+        const ra = raOrg + (1 - c / cols) * 24;
         const u = L >= 24 ? Math.min(2 * H, 24) : (L <= 0 ? 0 : this.arcOverlap(ra - H, 2 * H, dark.dusk, L));
         const denom = L >= 24 ? 24 : L;
         const [rr, gg, bb] = this.heatColor(denom > 0 ? u / denom : 0);
