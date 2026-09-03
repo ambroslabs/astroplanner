@@ -490,6 +490,17 @@
         <button sc-camel-on-click="{{ nextDay }}" aria-label="Next day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&gt;</button>
         </div>
       </div>
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 320px; min-width: 0;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Time <span style="color: #4A463E;">&#183; {{ timeFrom }} &#8594; {{ timeTo }}</span></span>
+        <div style="display: flex; align-items: center; gap: 8px; height: 38px;">
+          <button sc-camel-on-click="{{ timeBack }}" aria-label="Back three months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#171;</button>
+          <!-- max must equal TSPAN -->
+          <input aria-label="Date within the year shown" type="range" min="0" max="366" step="1" value="{{ timeVal }}" ref="{{ timeRef }}" sc-camel-on-input="{{ onTime }}" style="flex: 1 1 auto; min-width: 0; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <button sc-camel-on-click="{{ timeFwd }}" aria-label="Forward three months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&#187;</button>
+        </div>
+      </div>
+      <!-- when, on a row of its own -->
+      <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Altitude threshold</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
@@ -518,9 +529,6 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ contrastLabel }}</span>
         </div>
       </div>
-      <!-- 7 controls never fit one row at the 1160px panel width, so break where
-           it means something: the field above, the sky layers over it below -->
-      <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Milky way</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
@@ -609,12 +617,21 @@ class Component extends DCLogic {
   // The band's own light, added on top. Cool against the warm ground, so the
   // two separate by hue and not only by brightness.
   MW = [95, 150, 255];
+  // ---------- time slider ----------
+  // Time has no ends, so the slider shows a year of it and the year itself
+  // moves. 366 days because it makes the sixths whole numbers of days.
+  TSPAN = 366;
+  TLO = 61;    // 1/6
+  THI = 305;   // 5/6
+  MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
     stars: 1, milkyway: 0.25, contrast: 0.35, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     frame: null, autoFrame: true,
+    // start of the year the time slider spans; '' means centre it on the date
+    winStart: '',
     // marked points ride along with the rest of the chart: they survive a
     // reload, and Reset chart clears them like everything else here
     probes: [],
@@ -1837,6 +1854,40 @@ class Component extends DCLogic {
       ctx.fillText('NO ASTRONOMICAL DARKNESS ON THIS DATE', (X0 + X1) / 2, (Y0 + Y1) / 2);
     }
   }
+  dayNum(str) { const [y, m, d] = str.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86400000; }
+  dayStr(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+  addDays(str, n) { return this.dayStr(this.dayNum(str) + n); }
+  addMonths(str, n) {
+    const [y, m, d] = str.split('-').map(Number);
+    // clamp to the target month's length, so 31 Jan + 1 month is 28 Feb, not 3 Mar
+    const last = new Date(Date.UTC(y, m + n, 0)).getUTCDate();
+    return this.dayStr(Date.UTC(y, m - 1 + n, Math.min(d, last)) / 86400000);
+  }
+  monthLabel(str) { const [y, m] = str.split('-').map(Number); return this.MONTHS[m - 1] + ' ' + y; }
+  // The stored window is honoured only while the date is inside it. That heals
+  // a stale or hand-edited value on its own, and covers the date being moved
+  // somewhere far off by the date field while the window stayed where it was.
+  winStart() {
+    const w = this.state.winStart, d = this.dayNum(this.state.date);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(w || '')) {
+      const st = this.dayNum(w);
+      if (d >= st && d <= st + this.TSPAN) return w;
+    }
+    return this.dayStr(d - Math.floor(this.TSPAN / 2));
+  }
+  // Settle the window after a date lands: inside the middle four sixths it stays
+  // put, past either sixth it slides by exactly enough to leave the date back on
+  // that edge - so a sixth of headroom always remains the way you are going.
+  reWindow(date, start) {
+    const v = this.dayNum(date) - this.dayNum(start);
+    if (v > this.THI) return this.addDays(start, v - this.THI);
+    if (v < this.TLO) return this.addDays(start, v - this.TLO);
+    return start;
+  }
+  jumpMonths(n) {
+    const start = this.winStart(), date = this.addMonths(this.state.date, n);
+    this.setState({ date, winStart: this.reWindow(date, start) });
+  }
   shiftDay(n) {
     const [y, m, d] = this.state.date.split('-').map(Number);
     const dt = new Date(Date.UTC(y, m - 1, d + n));
@@ -1913,6 +1964,9 @@ class Component extends DCLogic {
     return {
       latText: s.latText, lonText: s.lonText, date: s.date, thrText: s.thrText, showMoon: s.showMoon,
       showPlanets: s.showPlanets,
+      timeVal: String(this.dayNum(s.date) - this.dayNum(this.winStart())),
+      timeFrom: this.monthLabel(this.winStart()),
+      timeTo: this.monthLabel(this.addDays(this.winStart(), this.TSPAN)),
       milkyPct: String(Math.round(s.milkyway * 100)),
       milkyLabel: Math.round(s.milkyway * 100) + '%',
       contrastPct: String(Math.round(s.contrast * 100)),
@@ -1950,6 +2004,24 @@ class Component extends DCLogic {
       onThr: e => { const v = Math.max(0, Math.min(85, Number(e.target.value)));
         this.setState({ thr: v, thrText: String(v) }); },
       onDate: e => { if (e.target.value) this.setState({ date: e.target.value }); },
+      // Dragging moves the date live but leaves the window alone, so the thumb
+      // tracks the finger. The window only settles on release.
+      onTime: e => { const st = this.winStart();
+        this.setState({ date: this.addDays(st, Number(e.target.value)), winStart: st }); },
+      // The window settles on release, and only on release. It cannot ride on
+      // an on-change binding: this runtime is React underneath, where onChange
+      // is really the input event, so it fired on every step of the drag and
+      // the window crept forward under the thumb. A real DOM 'change' on a
+      // range input is what fires when the drag is let go, so it is attached
+      // directly, the same way the chart takes its own pointer events.
+      timeRef: el => {
+        if (!el || el.__timeBound) return;
+        el.__timeBound = true;
+        el.addEventListener('change', () =>
+          this.setState({ winStart: this.reWindow(this.state.date, this.winStart()) }));
+      },
+      timeBack: () => this.jumpMonths(-3),
+      timeFwd: () => this.jumpMonths(3),
       prevDay: () => this.shiftDay(-1),
       nextDay: () => this.shiftDay(1),
       resetChart: () => this.resetChart(),
