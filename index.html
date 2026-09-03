@@ -416,11 +416,11 @@
     </div>
     <div style="display: flex; flex-direction: column; gap: 6px;">
       <label for="lat-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Latitude (°N)</label>
-      <input id="lat-in" type="number" min="-90" max="90" step="0.5" value="{{ latText }}" sc-camel-on-change="{{ onLat }}" style="width: 84px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 10px; outline: none;">
+      <input id="lat-in" type="number" min="-90" max="90" step="0.5" sc-camel-value="{{ latText }}" sc-camel-on-change="{{ onLat }}" style="width: 84px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 10px; outline: none;">
     </div>
     <div style="display: flex; flex-direction: column; gap: 6px;">
       <label for="lon-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Longitude (°E)</label>
-      <input id="lon-in" type="number" min="-180" max="180" step="0.5" value="{{ lonText }}" sc-camel-on-change="{{ onLon }}" style="width: 90px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 10px; outline: none;">
+      <input id="lon-in" type="number" min="-180" max="180" step="0.5" sc-camel-value="{{ lonText }}" sc-camel-on-change="{{ onLon }}" style="width: 90px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 10px; outline: none;">
     </div>
     <button sc-camel-on-click="{{ useMyLocation }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Read latitude and longitude from this device">Use my location</button>
       <button sc-camel-on-click="{{ resetSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Go back to the default site, keeping any you have saved">Reset site</button>
@@ -486,7 +486,7 @@
         <label for="date-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Date</label>
         <div style="display: flex; align-items: stretch; gap: 4px;">
         <button sc-camel-on-click="{{ prevDay }}" aria-label="Previous day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Back one day">&lt;</button>
-        <input id="date-in" type="date" value="{{ date }}" sc-camel-on-change="{{ onDate }}" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none; color-scheme: dark;">
+        <input id="date-in" type="date" sc-camel-value="{{ date }}" sc-camel-on-change="{{ onDate }}" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none; color-scheme: dark;">
         <button sc-camel-on-click="{{ nextDay }}" aria-label="Next day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Forward one day">&gt;</button>
         </div>
       </div>
