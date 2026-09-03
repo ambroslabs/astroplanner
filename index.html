@@ -842,6 +842,10 @@ class Component extends DCLogic {
              decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) };
   }
   applyFit() { const c = this.fitCrop(); if (c) this.setState({ crop: c }); }
+  xOfProbe(p) { const a = this._axis;
+    return a.X0 + (1 - ((((p.ra - a.axStart) % 24) + 24) % 24) / a.axSpan) * (a.X1 - a.X0); }
+  yOfProbe(p) { const a = this._axis;
+    return a.Y0 + (a.dTop - p.dec) / (a.dTop - a.dBot) * (a.Y1 - a.Y0); }
   cropSignature() { const s = this.state; return [s.lat, s.lon, s.date, s.thr].join('|'); }
   // Drag-select on the canvas. Bound through the ref rather than a template
   // attribute so pointer events work regardless of the runtime's event map.
@@ -855,28 +859,47 @@ class Component extends DCLogic {
                y: (e.clientY - r.top) * (el.height / r.height) / S };
     };
     const inPlot = p => p.x >= 64 && p.x <= 900 && p.y >= 16 && p.y <= 546;
-    el.style.touchAction = 'none';
     el.addEventListener('pointerdown', e => {
       const p = pos(e);
       if (!inPlot(p)) return;
-      this._drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
-      try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-      e.preventDefault();
+      this._drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: e.pointerType === 'touch' };
+      // Touch keeps its default gestures so the page still scrolls under a
+      // swipe that starts on the chart; a tap has no movement to swallow and
+      // still reads out. Box-select is therefore mouse and pen only, with the
+      // Fit usable button covering the same ground on a phone.
+      if (!this._drag.touch) {
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+      }
     });
     el.addEventListener('pointermove', e => {
       if (!this._drag) return;
       const p = pos(e);
+      // Track the end point even for touch, which draws no selection: without
+      // it a swipe looks like a zero-movement tap and leaves a readout behind.
       this._drag.x1 = Math.max(64, Math.min(900, p.x));
       this._drag.y1 = Math.max(16, Math.min(546, p.y));
+      if (this._drag.touch) return;
       this.drawHeatmap(el);
     });
     const finish = () => {
       const d = this._drag;
       this._drag = null;
       if (!d) return;
-      // too small to be deliberate - treat as a stray click
-      if (Math.abs(d.x1 - d.x0) < 14 || Math.abs(d.y1 - d.y0) < 14) { this.drawHeatmap(el); return; }
       const a = this._axis;
+      // Too small to be a crop, so read it as a click: report the usable hours
+      // at that point. Clicking the existing readout again dismisses it.
+      if (Math.abs(d.x1 - d.x0) < 14 && Math.abs(d.y1 - d.y0) < 14) {
+        const ra = a.axStart + (1 - (d.x0 - a.X0) / (a.X1 - a.X0)) * a.axSpan;
+        const dec = a.dTop - (d.y0 - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
+        const p = this.state.probe;
+        const near = p && Math.abs(this.xOfProbe(p) - d.x0) < 10 && Math.abs(this.yOfProbe(p) - d.y0) < 10;
+        this.setState({ probe: near ? null : { ra: ((ra % 24) + 24) % 24, dec } });
+        return;
+      }
+      // a drag along only one axis is ambiguous, so ignore it rather than guess
+      if (d.touch) { this.drawHeatmap(el); return; }
+      if (Math.abs(d.x1 - d.x0) < 14 || Math.abs(d.y1 - d.y0) < 14) { this.drawHeatmap(el); return; }
       const raAt = x => a.axStart + (1 - (x - a.X0) / (a.X1 - a.X0)) * a.axSpan;
       const decAt = y => a.dTop - (y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
       const raRight = raAt(Math.max(d.x0, d.x1)), raLeft = raAt(Math.min(d.x0, d.x1));
@@ -888,7 +911,9 @@ class Component extends DCLogic {
       } });
     };
     el.addEventListener('pointerup', finish);
-    el.addEventListener('pointercancel', finish);
+    // A cancel is the browser taking the gesture over to scroll: drop it
+    // outright rather than letting it land as a tap.
+    el.addEventListener('pointercancel', () => { this._drag = null; this.drawHeatmap(el); });
   }
 
   // ---------- settings persistence ----------
@@ -915,7 +940,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '' }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', probe: null }, this.loadSaved());
   }
   persist() {
     const s = this.state, out = {};
@@ -925,7 +950,7 @@ class Component extends DCLogic {
     if (s.date !== this.todayStr()) out.date = s.date;
     try { localStorage.setItem(this.STORE_KEY, JSON.stringify(out)); } catch (e) { /* full or blocked */ }
   }
-  resetChart() { this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr() })); }
+  resetChart() { this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr(), probe: null })); }
   resetSite() { this.setState(Object.assign({}, this.SITE_DEFAULTS, { geoMsg: '' })); }
 
   // ---------- planets ----------
@@ -1358,6 +1383,36 @@ class Component extends DCLogic {
     }
     if (!this.state.mask) { drawMoon(); drawBodies(); }
     if (crop) ctx.restore();
+    // Click readout, drawn last so it sits above the field either way.
+    if (this.state.probe) {
+      const pr = this.state.probe, px = xOf(pr.ra), py = yOf(pr.dec);
+      const hrs = Math.max(0, this.usable(pr.ra, pr.dec, dark));
+      ctx.strokeStyle = '#D9A960'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(px - 13, py); ctx.lineTo(px - 8, py); ctx.moveTo(px + 8, py); ctx.lineTo(px + 13, py);
+      ctx.moveTo(px, py - 13); ctx.lineTo(px, py - 8); ctx.moveTo(px, py + 8); ctx.lineTo(px, py + 13);
+      ctx.stroke();
+      const big = hrs > 0.05 ? hrs.toFixed(1) + 'h usable' : 'not usable';
+      const small = 'RA ' + this.fmtLST(pr.ra) + '  \u03B4 ' + (pr.dec >= 0 ? '+' : '\u2212') +
+        Math.abs(pr.dec).toFixed(1) + '\u00B0';
+      ctx.font = '700 15px Inter, sans-serif';
+      const w1 = ctx.measureText(big).width;
+      ctx.font = '600 13px Inter, sans-serif';
+      const w2 = ctx.measureText(small).width;
+      const bw = Math.max(w1, w2) + 22, bh = 46;
+      let bx = px + 16, by = py - bh - 10;
+      if (bx + bw > X1 - 4) bx = px - 16 - bw;
+      if (by < Y0 + 4) by = py + 16;
+      ctx.fillStyle = 'rgba(10,10,10,0.90)'; ctx.strokeStyle = '#4A463E'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+      ctx.textAlign = 'left';
+      ctx.fillStyle = hrs > 0.05 ? '#D9A960' : '#8E897D';
+      ctx.font = '700 15px Inter, sans-serif';
+      ctx.fillText(big, bx + 11, by + 20);
+      ctx.fillStyle = '#C9C4B7'; ctx.font = '600 13px Inter, sans-serif';
+      ctx.fillText(small, bx + 11, by + 38);
+    }
     if (this._drag) {
       const d = this._drag;
       ctx.strokeStyle = '#D9A960'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
