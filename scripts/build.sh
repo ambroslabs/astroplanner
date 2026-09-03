@@ -6,8 +6,15 @@
 # not committed - it is injected here, only when a token is supplied, so the
 # repository stays neutral and a fork never reports to someone else's account.
 #
-#   CF_WEB_ANALYTICS_TOKEN   Cloudflare Web Analytics site tag. Optional;
-#                            without it the build is byte-identical to source.
+#   CF_WEB_ANALYTICS_TOKEN   Cloudflare Web Analytics *site token* - the value
+#                            inside data-cf-beacon in the snippet the dashboard
+#                            shows you, NOT the site tag. They are two different
+#                            fields on the same site record and the tag is
+#                            silently rejected by the beacon endpoint.
+#                            Optional; without it the build is byte-identical
+#                            to source. Leave it unset when the zone already has
+#                            automatic installation enabled - the edge injects
+#                            its own beacon and a second one breaks both.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$ROOT/dist"
