@@ -598,7 +598,11 @@ class Component extends DCLogic {
   sd(x) { return Math.sin(x * this.D2R); } cd(x) { return Math.cos(x * this.D2R); }
   daysJ2000() {
     const [y, m, d] = this.state.date.split('-').map(Number);
-    return Date.UTC(y, m - 1, d) / 864e5 - 10957.5 - this.state.lon / 360; // local midnight
+    // The date names the night that BEGINS that evening, the way observers use
+    // it, so the midnight to compute for is the one at the start of the next
+    // day. Using d directly pointed at the previous night, which barely moved
+    // the dark window (~4 min) but put the Moon a full day out, about 13 deg.
+    return Date.UTC(y, m - 1, d + 1) / 864e5 - 10957.5 - this.state.lon / 360; // local midnight of that night
   }
   eps(n) { return 23.439 - 4e-7 * n; }
   sunPos(n) {
