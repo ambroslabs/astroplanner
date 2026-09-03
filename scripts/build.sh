@@ -14,6 +14,7 @@ OUT="$ROOT/dist"
 
 rm -rf "$OUT"; mkdir -p "$OUT"
 cp "$ROOT/index.html" "$OUT/index.html"
+cp "$ROOT/_worker.js" "$OUT/_worker.js"
 cp -r "$ROOT/assets" "$OUT/assets"
 
 if [[ -n "${CF_WEB_ANALYTICS_TOKEN:-}" ]]; then

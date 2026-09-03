@@ -31,6 +31,10 @@ CI needs two repository secrets, `CLOUDFLARE_API_TOKEN` (Account → Cloudflare
 Pages: Edit) and `CLOUDFLARE_ACCOUNT_ID`, plus the `CF_WEB_ANALYTICS_TOKEN`
 variable. A fork with none of them set still builds; only the deploy step fails.
 
+`_worker.js` runs in front of the static assets and does one thing: 301 the
+project's canonical `astroplanner.pages.dev` URL to the custom domain, so the
+site has a single address. Per-deployment preview URLs are left alone.
+
 ## Local preview
 
 ```sh
@@ -45,6 +49,8 @@ scripts and fonts over HTTP.
 
 ```
 index.html                     markup + component logic (x-dc format)
+_worker.js                     Pages worker: pages.dev -> custom domain
+scripts/build.sh               assembles dist/, injects the analytics beacon
 assets/js/dc-runtime.js        renderer for the x-dc document
 assets/js/react*.min.js        React 18.3.1 UMD builds, vendored
 assets/fonts/*.woff2           Inter and Archivo subsets, vendored
