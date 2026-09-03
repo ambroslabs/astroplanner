@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Imaging Planner</title>
+<meta name="description" content="Astrophotography session planner: usable dark hours by RA/Dec for a given site, date and altitude threshold.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230A0A0A'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%2360B274'/%3E%3Ccircle cx='25' cy='7' r='2.5' fill='%23D9A960'/%3E%3C/svg%3E">
+<script>window.__resources = {"https://unpkg.com/react@18.3.1/umd/react.production.min.js": "assets/js/react.production.min.js", "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "assets/js/react-dom.production.min.js"};</script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="assets/js/dc-runtime.js"></script>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("assets/fonts/archivo-500-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek-ext.woff2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek-ext.woff2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek-ext.woff2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic-ext.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek-ext.woff2") format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-greek.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-vietnamese.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/inter-400-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+  html, body { margin: 0; padding: 0; background: #0A0A0A; }
+  a { color: #D9A960; text-decoration: none; }
+  a:hover { color: #E8C288; text-decoration: underline; }
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2;">
+  <div style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 18px 36px; box-sizing: border-box; display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;">
+    <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #D9A960; padding-bottom: 10px;">Observer</span>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="obs-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Remote observatory</label>
+      <sc-raw-select id="obs-in" value="{{ obsSel }}" sc-camel-on-change="{{ onObs }}" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;">
+        <sc-for list="{{ obsOptions }}" as="o" hint-placeholder-count="7">
+          <option value="{{ o.value }}">{{ o.label }}</option>
+        </sc-for>
+      </sc-raw-select>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="lat-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Latitude (°N)</label>
+      <input id="lat-in" type="number" min="-90" max="90" step="0.5" value="{{ latText }}" sc-camel-on-change="{{ onLat }}" style="width: 84px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 10px; outline: none;">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="lon-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Longitude (°E)</label>
+      <input id="lon-in" type="number" min="-180" max="180" step="0.5" value="{{ lonText }}" sc-camel-on-change="{{ onLon }}" style="width: 90px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 10px; outline: none;">
+    </div>
+    <button sc-camel-on-click="{{ useMyLocation }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Use my location</button>
+    <sc-if value="{{ geoMsg }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #8E897D; padding-bottom: 12px;">{{ geoMsg }}</span></sc-if>
+  </div>
+  <div style="width: 100%; max-width: 1160px; display: flex; gap: 8px; border-bottom: 1px solid #2E2C27;">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+      <button sc-camel-on-click="{{ t.pick }}" style="background: none; border: none; border-bottom: 2px solid {{ t.line }}; color: {{ t.fg }}; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 18px; cursor: pointer;">{{ t.label }}</button>
+    </sc-for>
+  </div>
+  <sc-if value="{{ showChartTab }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Reference chart" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 28px 36px 24px; box-sizing: border-box;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px;">
+      <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Hours above altitude threshold</div>
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div style="font-size: 17px; letter-spacing: 0.12em; text-transform: uppercase; color: #D9A960; font-weight: 700; white-space: nowrap;">Latitude {{ latLabel }}</div>
+        <button sc-camel-on-click="{{ exportChartPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
+      </div>
+    </div>
+    <svg sc-camel-view-box="0 0 992 560" style="width: 100%; height: auto; display: block;">
+      <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="7">
+        <line x1="64" x2="968" y1="{{ t.y }}" y2="{{ t.y }}" stroke="#2A2926" stroke-width="1"></line>
+      </sc-for>
+      <sc-for list="{{ xTicks }}" as="t" hint-placeholder-count="13">
+        <line y1="496" y2="502" x1="{{ t.x }}" x2="{{ t.x }}" stroke="#8E897D" stroke-width="1"></line>
+      </sc-for>
+      <sc-for list="{{ peaks }}" as="p" hint-placeholder-count="5">
+        <line y1="16" y2="496" x1="{{ p.x }}" x2="{{ p.x }}" stroke="{{ p.color }}" stroke-width="2" stroke-dasharray="7 6" opacity="0.9"></line>
+      </sc-for>
+      <sc-for list="{{ series }}" as="s" hint-placeholder-count="5">
+        <path d="{{ s.path }}" fill="none" stroke="{{ s.color }}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"></path>
+      </sc-for>
+      <sc-for list="{{ peaks }}" as="p" hint-placeholder-count="5">
+        <circle cx="{{ p.x }}" cy="{{ p.y }}" r="6" fill="{{ p.color }}" stroke="#161616" stroke-width="2"></circle>
+      </sc-for>
+      <line x1="64" x2="968" y1="496" y2="496" stroke="#C9C4B7" stroke-width="1.5"></line>
+      <line x1="64" x2="64" y1="16" y2="496" stroke="#C9C4B7" stroke-width="1.5"></line>
+      <text x="516" y="554" text-anchor="middle" style="font-size: 17px; fill: #F6F5F2; font-weight: 700; font-family: Inter, sans-serif; letter-spacing: 0.06em;">DECLINATION (°)</text>
+      <text x="14" y="256" text-anchor="middle" transform="rotate(-90 14 256)" style="font-size: 17px; fill: #F6F5F2; font-weight: 700; font-family: Inter, sans-serif; letter-spacing: 0.06em;">HOURS ABOVE ALTITUDE</text>
+      <g>{{ tickLabels }}</g>
+      <g>{{ svgLegend }}</g>
+    </svg>
+  </div>
+  </sc-if>
+  <sc-if value="{{ showHeatTab }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Dark-sky heatmap" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 28px 36px 20px; box-sizing: border-box;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap;">
+      <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Usable dark hours by RA / Dec</div>
+      <div style="font-size: 16px; color: #D9A960; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;">{{ darkInfo }}</div>
+    </div>
+    <div style="display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #2E2C27;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="date-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Date</label>
+        <div style="display: flex; align-items: stretch; gap: 4px;">
+        <button sc-camel-on-click="{{ prevDay }}" aria-label="Previous day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&lt;</button>
+        <input id="date-in" type="date" value="{{ date }}" sc-camel-on-change="{{ onDate }}" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none; color-scheme: dark;">
+        <button sc-camel-on-click="{{ nextDay }}" aria-label="Next day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&gt;</button>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Altitude threshold</span>
+        <div style="display: flex; align-items: stretch; gap: 8px;">
+          <div style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
+            <sc-for list="{{ thrOptions }}" as="o" hint-placeholder-count="5">
+              <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 14px; cursor: pointer;">{{ o.label }}</button>
+            </sc-for>
+          </div>
+          <input aria-label="Custom threshold" type="number" min="0" max="89" step="1" value="{{ thrText }}" sc-camel-on-change="{{ onThr }}" style="width: 64px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;">
+        </div>
+      </div>
+      <label style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
+        <input type="checkbox" checked="{{ showMoon }}" sc-camel-on-change="{{ onMoon }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
+        Moon
+      </label>
+      <div style="flex: 1;"></div>
+      <button sc-camel-on-click="{{ exportHeatPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
+    </div>
+    <canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 12px; font-size: 13.5px; color: #C9C4B7;">
+      <span><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960; vertical-align: middle; margin-right: 7px;"></span>any usable time boundary</span>
+      <span><span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 12px; background: rgb(96,178,116); vertical-align: middle; margin-right: 7px;"><span style="display: inline-block; width: 24px; height: 0; border-top: 3px dashed #0A0A0A;"></span></span>full dark window boundary</span>
+      <span><span style="display: inline-block; width: 26px; height: 0; border-top: 2px dotted #C9C4B7; vertical-align: middle; margin-right: 7px;"></span>ecliptic</span>
+      <sc-if value="{{ showMoon }}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; gap: 7px;"><span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px dotted rgba(246,245,242,0.75); border-radius: 50%;"><span style="width: 7px; height: 7px; background: #F6F5F2; border-radius: 50%;"></span></span>Moon ± 30° dimming radius</span></sc-if>
+    </div>
+  </div>
+  </sc-if>
+  <div style="width: 100%; max-width: 1160px; font-size: 13px; color: #5A5751;">cos H = (sin alt − sin φ sin δ) / (cos φ cos δ) · usable = overlap of [RA − H, RA + H] with the astronomical dark window (Sun below −18°), in local sidereal time</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1280, &quot;height&quot;: 1600}}">
+class Component extends DCLogic {
+  state = {
+    lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
+    date: new Date().toISOString().slice(0, 10),
+    thr: 40, thrText: '40', showMoon: true, geoMsg: '', obsSel: 'starfront', tab: 'heat',
+  };
+  OBSERVATORIES = [
+    { id: 'starfront', name: 'Starfront Observatories \u2014 Rockwood, TX', lat: 31.55, lon: -99.38 },
+    { id: 'deathvalley', name: 'Death Valley Observatories \u2014 Amargosa Valley, NV', lat: 36.57, lon: -116.46 },
+    { id: 'utahdesert', name: 'Utah Desert Remote \u2014 Beryl, UT', lat: 37.74, lon: -113.7 },
+    { id: 'sierra', name: 'Sierra Remote Observatories \u2014 Auberry, CA', lat: 37.07, lon: -119.41 },
+    { id: 'dsnm', name: 'Dark Sky New Mexico \u2014 Animas, NM', lat: 31.95, lon: -108.9 },
+    { id: 'dschile', name: 'Deep Sky Chile \u2014 R\u00EDo Hurtado, Chile', lat: -30.53, lon: -70.85 },
+  ];
+  // ---------- astronomy ----------
+  D2R = Math.PI / 180;
+  sd(x) { return Math.sin(x * this.D2R); } cd(x) { return Math.cos(x * this.D2R); }
+  daysJ2000() {
+    const [y, m, d] = this.state.date.split('-').map(Number);
+    return Date.UTC(y, m - 1, d) / 864e5 - 10957.5 - this.state.lon / 360; // local midnight
+  }
+  eps(n) { return 23.439 - 4e-7 * n; }
+  sunPos(n) {
+    const L = 280.460 + 0.9856474 * n, g = 357.528 + 0.9856003 * n;
+    const lam = L + 1.915 * this.sd(g) + 0.020 * this.sd(2 * g), e = this.eps(n);
+    const ra = ((Math.atan2(this.cd(e) * this.sd(lam), this.cd(lam)) / this.D2R / 15) % 24 + 24) % 24;
+    return { ra, dec: Math.asin(this.sd(e) * this.sd(lam)) / this.D2R };
+  }
+  moonPos(n) {
+    const Lm = 218.316 + 13.176396 * n, Mm = 134.963 + 13.064993 * n, F = 93.272 + 13.229350 * n;
+    const lam = Lm + 6.289 * this.sd(Mm), beta = 5.128 * this.sd(F), e = this.eps(n);
+    const dec = Math.asin(this.sd(beta) * this.cd(e) + this.cd(beta) * this.sd(e) * this.sd(lam)) / this.D2R;
+    const ra = ((Math.atan2(this.sd(lam) * this.cd(e) - Math.tan(beta * this.D2R) * this.sd(e), this.cd(lam)) / this.D2R / 15) % 24 + 24) % 24;
+    return { ra, dec };
+  }
+  hoursAbove(lat, alt, dec) {
+    const c = (this.sd(alt) - this.sd(lat) * this.sd(dec)) / (this.cd(lat) * this.cd(dec));
+    if (c <= -1) return 24;
+    if (c >= 1 || !isFinite(c)) return 0;
+    return 2 * Math.acos(c) / this.D2R / 15;
+  }
+  darkWindow() {
+    const lat = this.state.lat, n = this.daysJ2000(), sun = this.sunPos(n);
+    const c = (this.sd(-18) - this.sd(lat) * this.sd(sun.dec)) / (this.cd(lat) * this.cd(sun.dec));
+    if (c >= 1) return { L: 24, dusk: 0, dawn: 0, sun };        // sun never above -18
+    if (c <= -1) return { L: 0, dusk: 0, dawn: 0, sun };        // no astronomical darkness
+    const H18 = Math.acos(c) / this.D2R / 15;
+    return { L: 24 - 2 * H18, dusk: ((sun.ra + H18) % 24 + 24) % 24, dawn: ((sun.ra - H18) % 24 + 24) % 24, sun };
+  }
+  arcOverlap(a1, l1, a2, l2) { // arcs on 24h circle: start, length
+    if (l1 <= 0 || l2 <= 0) return 0;
+    if (l1 >= 24) return Math.min(l2, 24);
+    if (l2 >= 24) return Math.min(l1, 24);
+    const e = ((a2 - a1) % 24 + 24) % 24;
+    let ov = Math.max(0, Math.min(l1, e + l2) - e);
+    ov += Math.max(0, Math.min(l1, e - 24 + l2));
+    return ov;
+  }
+  usable(ra, dec, dark) {
+    const H = this.hoursAbove(this.state.lat, this.state.thr, dec) / 2;
+    if (dark.L >= 24) return Math.min(2 * H, 24);
+    return this.arcOverlap(ra - H, 2 * H, dark.dusk, dark.L);
+  }
+  fmtLST(h) {
+    h = ((h % 24) + 24) % 24;
+    const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+    return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  }
+  // ---------- reference chart data ----------
+  geom() {
+    const X0 = 64, X1 = 968, Y0 = 16, Y1 = 496;
+    return { X0, X1, Y0, Y1, xOf: d => X0 + (d + 90) / 180 * (X1 - X0), yOf: h => Y1 - h / 24 * (Y1 - Y0) };
+  }
+  compute(lat) {
+    const { xOf, yOf } = this.geom();
+    const colors = ['#F3EDDC', '#F5C36A', '#F49E85', '#96D7A0', '#93C4EE'];
+    return [0, 20, 40, 60, 80].map((alt, i) => {
+      let path = '', maxH = -1, maxDec = 0;
+      for (let dec = -90; dec <= 90.001; dec += 0.25) {
+        const d = Math.min(dec, 90), h = this.hoursAbove(lat, alt, d);
+        if (h > maxH) { maxH = h; maxDec = d; }
+        path += (path ? ' L' : 'M') + xOf(d).toFixed(1) + ' ' + yOf(h).toFixed(1);
+      }
+      let circ = null;
+      if (maxH >= 23.999) {
+        const dc = 90 - Math.abs(lat) + alt;
+        if (dc <= 90.001) circ = Math.min(dc, 90) * (lat < 0 ? -1 : 1);
+      }
+      const peakDec = circ !== null ? circ : maxDec, peakH = circ !== null ? 24 : maxH;
+      return {
+        alt, color: colors[i], path, peakDec, peakH,
+        hoursLabel: circ !== null ? '24h' : (maxH <= 0 ? '0h' : maxH.toFixed(1) + 'h'),
+        decLabel: maxH <= 0 ? '\u2014' : '\u03B4 ' + (circ !== null ? (lat < 0 ? '\u2264 ' : '\u2265 ') : '') + peakDec.toFixed(1) + '\u00B0',
+        show: maxH > 0,
+      };
+    });
+  }
+  // ---------- heatmap ----------
+  heatColor(t) {
+    const stops = [[16, 18, 16], [36, 84, 52], [96, 178, 116], [198, 240, 206]], pos = [0, 0.4, 0.75, 1];
+    t = Math.max(0, Math.min(1, t));
+    let i = 0; while (i < pos.length - 2 && t > pos[i + 1]) i++;
+    const f = (t - pos[i]) / (pos[i + 1] - pos[i]);
+    return stops[i].map((a, k) => Math.round(a + (stops[i + 1][k] - a) * f));
+  }
+  drawHeatmap(canvas) {
+    if (!canvas) return;
+    const S = 2, W = 992, HH = 620;
+    canvas.width = W * S; canvas.height = HH * S;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(S, S);
+    const X0 = 64, X1 = 900, Y0 = 16, Y1 = 546;
+    const xOf = ra => X0 + (((ra % 24) + 24) % 24) / 24 * (X1 - X0);
+    const yOf = dec => Y0 + (90 - dec) / 180 * (Y1 - Y0);
+    const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
+    ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, HH);
+    // heat field
+    const cols = 384, rows = 181;
+    const off = document.createElement('canvas'); off.width = cols; off.height = rows;
+    const octx = off.getContext('2d'), img = octx.createImageData(cols, rows);
+    for (let r = 0; r < rows; r++) {
+      const dec = 90 - r * 180 / (rows - 1);
+      const H = this.hoursAbove(lat, thr, dec) / 2;
+      for (let c = 0; c < cols; c++) {
+        const ra = c * 24 / cols;
+        const u = L >= 24 ? Math.min(2 * H, 24) : (L <= 0 ? 0 : this.arcOverlap(ra - H, 2 * H, dark.dusk, L));
+        const denom = L >= 24 ? 24 : L;
+        const [rr, gg, bb] = this.heatColor(denom > 0 ? u / denom : 0);
+        const k = (r * cols + c) * 4;
+        img.data[k] = rr; img.data[k + 1] = gg; img.data[k + 2] = bb; img.data[k + 3] = 255;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, X0, Y0, X1 - X0, Y1 - Y0);
+    // gridlines
+    ctx.strokeStyle = 'rgba(246,245,242,0.12)'; ctx.lineWidth = 1;
+    for (let ra = 0; ra <= 24; ra += 2) { ctx.beginPath(); ctx.moveTo(xOf(ra === 24 ? 23.9999 : ra), Y0); ctx.lineTo(xOf(ra === 24 ? 23.9999 : ra), Y1); ctx.stroke(); }
+    for (let d = -60; d <= 60; d += 30) { ctx.beginPath(); ctx.moveTo(X0, yOf(d)); ctx.lineTo(X1, yOf(d)); ctx.stroke(); }
+    const drawWrapped = (pts, style) => { // pts: [ra, dec]
+      ctx.strokeStyle = style.color; ctx.lineWidth = style.w;
+      ctx.setLineDash(style.dash || []);
+      ctx.beginPath();
+      let px = null;
+      for (const [ra, dec] of pts) {
+        const x = xOf(ra), y = yOf(dec);
+        if (px !== null && Math.abs(x - px) > (X1 - X0) / 2) ctx.moveTo(x, y);
+        else if (px === null) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        px = x;
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+    };
+    // ecliptic
+    const n = this.daysJ2000(), e = this.eps(n), ecl = [];
+    for (let lam = 0; lam <= 360; lam += 2) {
+      const ra = ((Math.atan2(this.cd(e) * this.sd(lam), this.cd(lam)) / this.D2R / 15) % 24 + 24) % 24;
+      ecl.push([ra, Math.asin(this.sd(e) * this.sd(lam)) / this.D2R]);
+    }
+    ecl.sort((a, b) => a[0] - b[0]);
+    drawWrapped(ecl, { color: 'rgba(142,137,125,0.95)', w: 2, dash: [2, 5] });
+    // contours (typical case only)
+    if (L > 0 && L < 24) {
+      const any1 = [], any2 = [], full1 = [], full2 = [];
+      for (let dec = -90; dec <= 90.001; dec += 0.5) {
+        const d = Math.min(dec, 90), H = this.hoursAbove(lat, thr, d) / 2;
+        if (H > 0 && H < 12) { any1.push([((dark.dusk - H) % 24 + 24) % 24, d]); any2.push([((dark.dawn + H) % 24 + 24) % 24, d]); }
+        if (H < 12 && 2 * H >= L) { full1.push([((dark.dawn - H) % 24 + 24) % 24, d]); full2.push([((dark.dusk + H) % 24 + 24) % 24, d]); }
+      }
+      drawWrapped(any1, { color: '#D9A960', w: 2.5 });
+      drawWrapped(any2, { color: '#D9A960', w: 2.5 });
+      drawWrapped(full1, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
+      drawWrapped(full2, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
+    }
+    // moon
+    if (this.state.showMoon) {
+      const m = this.moonPos(n + 0.5 - (dark.L < 24 && dark.L > 0 ? 0 : 0)); // ~local midnight
+      const mx = xOf(m.ra), my = yOf(m.dec);
+      ctx.fillStyle = '#F6F5F2'; ctx.strokeStyle = '#161616'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#F6F5F2'; ctx.font = '700 13px Inter, sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('MOON', mx + 12, my + 4);
+      const ring = [], r0 = 30;
+      for (let th = 0; th <= 360; th += 5) {
+        const sD = this.sd(m.dec) * this.cd(r0) + this.cd(m.dec) * this.sd(r0) * this.cd(th);
+        const dec2 = Math.asin(Math.max(-1, Math.min(1, sD))) / this.D2R;
+        const dra = Math.atan2(this.sd(th) * this.sd(r0) * this.cd(m.dec), this.cd(r0) - this.sd(m.dec) * sD) / this.D2R / 15;
+        ring.push([((m.ra + dra) % 24 + 24) % 24, dec2]);
+      }
+      drawWrapped(ring, { color: 'rgba(246,245,242,0.75)', w: 2, dash: [3, 5] });
+    }
+    // frame + ticks + labels
+    ctx.strokeStyle = '#C9C4B7'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.fillStyle = '#E8E4D8'; ctx.font = '600 16px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1;
+    for (let ra = 0; ra <= 24; ra += 2) {
+      const x = X0 + ra / 24 * (X1 - X0);
+      ctx.beginPath(); ctx.moveTo(x, Y1); ctx.lineTo(x, Y1 + 6); ctx.stroke();
+      ctx.fillText(String(ra), x, Y1 + 26);
+    }
+    ctx.textAlign = 'right';
+    for (let d = -90; d <= 90; d += 30) {
+      ctx.beginPath(); ctx.moveTo(X0 - 6, yOf(d)); ctx.lineTo(X0, yOf(d)); ctx.stroke();
+      ctx.fillText(String(d), X0 - 12, yOf(d) + 5);
+    }
+    ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
+    ctx.save(); ctx.translate(14, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText('DECLINATION (\u00B0)', 0, 0); ctx.restore();
+    // colorbar
+    const CB = 928, cbW = 18;
+    const denomL = L >= 24 ? 24 : L;
+    for (let i = 0; i <= 200; i++) {
+      const t = 1 - i / 200, y = Y0 + i / 200 * (Y1 - Y0);
+      const [rr, gg, bb] = this.heatColor(t);
+      ctx.fillStyle = 'rgb(' + rr + ',' + gg + ',' + bb + ')';
+      ctx.fillRect(CB, y, cbW, (Y1 - Y0) / 200 + 1);
+    }
+    ctx.strokeStyle = '#8E897D'; ctx.strokeRect(CB, Y0, cbW, Y1 - Y0);
+    ctx.fillStyle = '#E8E4D8'; ctx.font = '600 13px Inter, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(denomL > 0 ? denomL.toFixed(1) + 'h' : '\u2014', CB + cbW + 6, Y0 + 12);
+    ctx.fillText('best', CB + cbW + 6, Y0 + 28);
+    ctx.fillText('0h', CB + cbW + 6, Y1 - 16);
+    ctx.fillText('none', CB + cbW + 6, Y1);
+    ctx.save(); ctx.translate(CB - 8, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.font = '700 12px Inter, sans-serif'; ctx.fillStyle = '#8E897D';
+    ctx.fillText('USABLE DARK HOURS', 0, 0); ctx.restore();
+    if (L <= 0) {
+      ctx.fillStyle = 'rgba(10,10,10,0.6)'; ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+      ctx.fillStyle = '#F6F5F2'; ctx.font = '800 24px Archivo, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('NO ASTRONOMICAL DARKNESS ON THIS DATE', (X0 + X1) / 2, (Y0 + Y1) / 2);
+    }
+  }
+  shiftDay(n) {
+    const [y, m, d] = this.state.date.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d + n));
+    this.setState({ date: dt.toISOString().slice(0, 10) });
+  }
+  componentDidMount() { this.drawHeatmap(this.canvas); }
+  componentDidUpdate() { this.drawHeatmap(this.canvas); }
+  // ---------- render ----------
+  renderVals() {
+    const s = this.state, lat = s.lat;
+    const { xOf, yOf } = this.geom();
+    const data = this.compute(lat);
+    const series = data.map(d => ({ path: d.path, color: d.color }));
+    const peaks = data.filter(d => d.show).map(d => ({ x: xOf(d.peakDec), y: yOf(d.peakH), color: d.color }));
+    const xTicks = [], yTicks = [];
+    for (let d = -90; d <= 90; d += 15) xTicks.push({ x: xOf(d), label: String(d) });
+    for (let h = 0; h <= 24; h += 4) yTicks.push({ y: yOf(h), ty: yOf(h) + 4, label: String(h) });
+    const fam = 'Inter, sans-serif';
+    const lblStyle = { fontSize: 16, fill: '#E8E4D8', fontWeight: 600, fontFamily: fam };
+    const tickLabels = React.createElement('g', null,
+      yTicks.map((t, i) => React.createElement('text', { key: 'y' + i, x: 52, y: t.ty, textAnchor: 'end', style: lblStyle }, t.label)),
+      xTicks.map((t, i) => React.createElement('text', { key: 'x' + i, x: t.x, y: 520, textAnchor: 'middle', style: lblStyle }, t.label))
+    );
+    const hdrStyle = { fontSize: 13, fontWeight: 700, fill: '#8E897D', letterSpacing: '0.1em', fontFamily: fam };
+    const lx = lat >= 0 ? 92 : 560;
+    const svgLegend = React.createElement('g', null,
+      React.createElement('rect', { x: lx - 12, y: 20, width: 350, height: 220, fill: '#161616', opacity: 0.88 }),
+      React.createElement('text', { x: lx + 172, y: 44, textAnchor: 'end', style: hdrStyle }, 'PEAK'),
+      React.createElement('text', { x: lx + 196, y: 44, style: hdrStyle }, 'DECLINATION'),
+      data.map((d, i) => {
+        const ly = 76 + i * 33;
+        return React.createElement('g', { key: i },
+          React.createElement('line', { x1: lx, x2: lx + 30, y1: ly - 5, y2: ly - 5, stroke: d.color, strokeWidth: 4.5, strokeLinecap: 'round' }),
+          React.createElement('text', { x: lx + 40, y: ly, style: { fontSize: 16.5, fontWeight: 700, fill: '#F6F5F2', fontFamily: fam } }, 'Alt > ' + d.alt + '\u00B0'),
+          React.createElement('text', { x: lx + 172, y: ly, textAnchor: 'end', style: { fontSize: 16.5, fontWeight: 600, fill: '#E8E4D8', fontFamily: fam } }, d.hoursLabel),
+          React.createElement('text', { x: lx + 196, y: ly, style: { fontSize: 16.5, fontWeight: 500, fill: '#C9C4B7', fontFamily: fam } }, d.decLabel)
+        );
+      })
+    );
+    const dark = this.darkWindow();
+    const darkInfo = dark.L <= 0 ? 'No astronomical darkness' :
+      dark.L >= 24 ? 'Dark all day \u00B7 24.0h' :
+      'Dark: LST ' + this.fmtLST(dark.dusk) + ' \u2192 ' + this.fmtLST(dark.dawn) + ' \u00B7 ' + dark.L.toFixed(1) + 'h \u00B7 Alt > ' + s.thr + '\u00B0';
+    const numHandler = (key, textKey, lo, hi) => e => {
+      const raw = e.target.value, v = parseFloat(raw), st = { [textKey]: raw };
+      if (isFinite(v)) st[key] = Math.max(lo, Math.min(hi, v));
+      if (key === 'lat' || key === 'lon') st.obsSel = 'custom';
+      this.setState(st);
+    };
+    const thrOptions = [0, 20, 40, 60, 80].map(v => ({
+      label: '>' + v + '\u00B0',
+      bg: s.thr === v ? '#D9A960' : '#161616',
+      fg: s.thr === v ? '#0A0A0A' : '#C9C4B7',
+      pick: () => this.setState({ thr: v, thrText: String(v) }),
+    }));
+    return {
+      latText: s.latText, lonText: s.lonText, date: s.date, thrText: s.thrText, showMoon: s.showMoon,
+      latLabel: Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N'),
+      darkInfo, series, peaks, xTicks, yTicks, tickLabels, svgLegend, thrOptions,
+      hmRef: el => { this.canvas = el; if (el) this.drawHeatmap(el); },
+      onLat: numHandler('lat', 'latText', -90, 90),
+      onLon: numHandler('lon', 'lonText', -180, 180),
+      onThr: numHandler('thr', 'thrText', 0, 89),
+      onDate: e => { if (e.target.value) this.setState({ date: e.target.value }); },
+      prevDay: () => this.shiftDay(-1),
+      nextDay: () => this.shiftDay(1),
+      onMoon: e => this.setState({ showMoon: e.target.checked }),
+      geoMsg: this.state.geoMsg,
+      obsSel: this.state.obsSel,
+      showChartTab: this.state.tab === 'chart',
+      showHeatTab: this.state.tab === 'heat',
+      tabs: [
+        { id: 'heat', label: 'Usable dark hours' },
+        { id: 'chart', label: 'Hours above altitude' },
+      ].map(t => ({
+        label: t.label,
+        line: this.state.tab === t.id ? '#D9A960' : 'transparent',
+        fg: this.state.tab === t.id ? '#F6F5F2' : '#8E897D',
+        pick: () => this.setState({ tab: t.id }),
+      })),
+      obsOptions: [{ value: 'custom', label: 'Custom / my location' }].concat(this.OBSERVATORIES.map(o => ({ value: o.id, label: o.name }))),
+      onObs: e => {
+        const o = this.OBSERVATORIES.find(x => x.id === e.target.value);
+        if (o) this.setState({ obsSel: o.id, lat: o.lat, latText: String(o.lat), lon: o.lon, lonText: String(o.lon), geoMsg: '' });
+        else this.setState({ obsSel: 'custom' });
+      },
+      useMyLocation: () => {
+        if (!navigator.geolocation) { this.setState({ geoMsg: 'Geolocation not supported' }); return; }
+        this.setState({ geoMsg: 'Locating\u2026' });
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const la = Math.round(pos.coords.latitude * 100) / 100, lo = Math.round(pos.coords.longitude * 100) / 100;
+            this.setState({ lat: la, latText: String(la), lon: lo, lonText: String(lo), geoMsg: '', obsSel: 'custom' });
+          },
+          err => this.setState({ geoMsg: err.code === 1 ? 'Permission denied' : 'Location unavailable' }),
+          { timeout: 10000 }
+        );
+      },
+      exportChartPng: () => this.exportChartPng(),
+      exportHeatPng: () => this.exportHeatPng(),
+    };
+  }
+  // ---------- export ----------
+  exportSetup(bodyH) {
+    const W = 1160, PAD = 36, S = 2;
+    const H = Math.round(bodyH);
+    const cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
+    const ctx = cv.getContext('2d'); ctx.scale(S, S);
+    ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#2E2C27'; ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+    return { cv, ctx, W, PAD };
+  }
+  exportFooter(ctx, W, PAD, yFoot, text) {
+    ctx.strokeStyle = '#2E2C27'; ctx.beginPath(); ctx.moveTo(PAD, yFoot); ctx.lineTo(W - PAD, yFoot); ctx.stroke();
+    ctx.fillStyle = '#8E897D'; ctx.font = '600 14px Inter, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(text, PAD, yFoot + 28);
+  }
+  download(cv, name) {
+    cv.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    });
+  }
+  locFooter() {
+    const s = this.state;
+    return s.date + ' \u00B7 \u03C6 ' + Math.abs(s.lat).toFixed(1) + '\u00B0 ' + (s.lat < 0 ? 'S' : 'N') +
+      ' \u00B7 \u03BB ' + Math.abs(s.lon).toFixed(1) + '\u00B0 ' + (s.lon < 0 ? 'W' : 'E');
+  }
+  async exportChartPng() {
+    await document.fonts.ready;
+    const s = this.state, lat = s.lat, data = this.compute(lat);
+    const chartW = 1160 - 72, sc = chartW / 992, chartH = 560 * sc;
+    const yFoot = 92 + chartH + 12;
+    const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44);
+    ctx.fillStyle = '#F6F5F2'; ctx.font = '800 28px Archivo, sans-serif';
+    ctx.fillText('HOURS ABOVE ALTITUDE THRESHOLD', PAD, 58);
+    ctx.fillStyle = '#D9A960'; ctx.font = '700 15px Inter, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText('LATITUDE ' + Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N'), W - PAD, 58);
+    ctx.textAlign = 'left';
+    ctx.save(); ctx.translate(PAD, 92); ctx.scale(sc, sc);
+    this.drawChart(ctx, data, null, lat);
+    ctx.restore();
+    this.exportFooter(ctx, W, PAD, yFoot, '\u03C6 ' + Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N') + ' \u00B7 hours per sidereal day above each altitude threshold');
+    this.download(cv, 'hours-above-altitude-lat' + lat + '.png');
+  }
+  async exportHeatPng() {
+    await document.fonts.ready;
+    const s = this.state, dark = this.darkWindow();
+    const chartW = 1160 - 72, sc = chartW / 992, hmH = 620 * sc;
+    const yFoot = 92 + hmH;
+    const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44);
+    const darkInfo = dark.L <= 0 ? 'NO ASTRONOMICAL DARKNESS' :
+      dark.L >= 24 ? 'DARK 24.0H' :
+      'DARK: LST ' + this.fmtLST(dark.dusk) + ' \u2192 ' + this.fmtLST(dark.dawn) + ' \u00B7 ' + dark.L.toFixed(1) + 'H';
+    ctx.fillStyle = '#F6F5F2'; ctx.font = '800 28px Archivo, sans-serif';
+    ctx.fillText('USABLE DARK HOURS BY RA / DEC', PAD, 58);
+    ctx.fillStyle = '#D9A960'; ctx.font = '700 15px Inter, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(darkInfo, W - PAD, 58); ctx.textAlign = 'left';
+    if (this.canvas) ctx.drawImage(this.canvas, PAD, 92, chartW, hmH);
+    this.exportFooter(ctx, W, PAD, yFoot, this.locFooter() + ' \u00B7 threshold Alt > ' + s.thr + '\u00B0 \u00B7 Sun below \u221218\u00B0');
+    this.download(cv, 'dark-hours-map-' + s.date + '-lat' + s.lat + '.png');
+  }
+  drawChart(ctx, data, dark, lat) { // draws 992x560 reference chart at ctx origin
+    const { xOf, yOf } = this.geom();
+    ctx.strokeStyle = '#2A2926'; ctx.lineWidth = 1;
+    for (let h = 0; h <= 24; h += 4) { const y = yOf(h); ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(968, y); ctx.stroke(); }
+    ctx.strokeStyle = '#8E897D';
+    for (let d = -90; d <= 90; d += 15) { const x = xOf(d); ctx.beginPath(); ctx.moveTo(x, 496); ctx.lineTo(x, 502); ctx.stroke(); }
+    ctx.setLineDash([7, 6]); ctx.lineWidth = 2; ctx.globalAlpha = 0.9;
+    for (const d of data) if (d.show) { const x = xOf(d.peakDec); ctx.strokeStyle = d.color; ctx.beginPath(); ctx.moveTo(x, 16); ctx.lineTo(x, 496); ctx.stroke(); }
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (const d of data) {
+      ctx.strokeStyle = d.color; ctx.beginPath();
+      let first = true;
+      for (let dec = -90; dec <= 90.001; dec += 0.25) {
+        const dd = Math.min(dec, 90), x = xOf(dd), y = yOf(this.hoursAbove(lat, d.alt, dd));
+        if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    for (const d of data) if (d.show) {
+      ctx.fillStyle = d.color; ctx.strokeStyle = '#161616'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(xOf(d.peakDec), yOf(d.peakH), 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.strokeStyle = '#C9C4B7'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(64, 496); ctx.lineTo(968, 496); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(64, 16); ctx.lineTo(64, 496); ctx.stroke();
+    ctx.fillStyle = '#E8E4D8'; ctx.font = '600 16px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    for (let h = 0; h <= 24; h += 4) ctx.fillText(String(h), 52, yOf(h) + 4);
+    ctx.textAlign = 'center';
+    for (let d = -90; d <= 90; d += 15) ctx.fillText(String(d), xOf(d), 520);
+    ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif';
+    ctx.fillText('DECLINATION (\u00B0)', 516, 554);
+    ctx.save(); ctx.translate(14, 256); ctx.rotate(-Math.PI / 2);
+    ctx.fillText('HOURS ABOVE ALTITUDE', 0, 0); ctx.restore();
+    const lx = lat >= 0 ? 92 : 560;
+    ctx.globalAlpha = 0.88; ctx.fillStyle = '#161616'; ctx.fillRect(lx - 12, 20, 350, 220); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#8E897D'; ctx.font = '700 13px Inter, sans-serif';
+    ctx.textAlign = 'right'; ctx.fillText('PEAK', lx + 172, 44);
+    ctx.textAlign = 'left'; ctx.fillText('DECLINATION', lx + 196, 44);
+    data.forEach((d, i) => {
+      const ly = 76 + i * 33;
+      ctx.strokeStyle = d.color; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(lx, ly - 5); ctx.lineTo(lx + 30, ly - 5); ctx.stroke();
+      ctx.fillStyle = '#F6F5F2'; ctx.font = '700 16.5px Inter, sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('Alt > ' + d.alt + '\u00B0', lx + 40, ly);
+      ctx.fillStyle = '#E8E4D8'; ctx.font = '600 16.5px Inter, sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText(d.hoursLabel, lx + 172, ly);
+      ctx.fillStyle = '#C9C4B7'; ctx.font = '500 16.5px Inter, sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(d.decLabel, lx + 196, ly);
+    });
+    ctx.textAlign = 'left';
+  }
+}
+</script>
+
+
+</body></html>
