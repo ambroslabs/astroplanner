@@ -555,6 +555,7 @@
       <button sc-camel-on-click="{{ exportHeatPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
+    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan once zoomed &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> for usable hours at a point</div>
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>any usable time boundary</button>
@@ -842,6 +843,8 @@ class Component extends DCLogic {
              decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) };
   }
   applyFit() { const c = this.fitCrop(); if (c) this.setState({ crop: c }); }
+  // where the RA axis starts when nothing is cropped
+  raOrigin() { return this.state.centered ? this.darkWindow().sun.ra : 0; }
   xOfProbe(p) { const a = this._axis;
     return a.X0 + (1 - ((((p.ra - a.axStart) % 24) + 24) % 24) / a.axSpan) * (a.X1 - a.X0); }
   yOfProbe(p) { const a = this._axis;
@@ -849,9 +852,38 @@ class Component extends DCLogic {
   cropSignature() { const s = this.state; return [s.lat, s.lon, s.date, s.thr].join('|'); }
   // Drag-select on the canvas. Bound through the ref rather than a template
   // attribute so pointer events work regardless of the runtime's event map.
-  attachCrop(el) {
-    if (el.__cropBound) return;
-    el.__cropBound = true;
+  // Normalise a requested view: clamp the zoom range, keep declination inside
+  // the poles by shifting rather than wrapping (a view straddling the pole
+  // reads as nonsense), and collapse a full-sky request back to no crop.
+  normalizeCrop(c) {
+    const raLen = Math.max(0.5, Math.min(24, c.raLen));
+    const dSpan = Math.max(5, Math.min(180, c.decMax - c.decMin));
+    const mid = (c.decMax + c.decMin) / 2;
+    let decMax = mid + dSpan / 2, decMin = mid - dSpan / 2;
+    if (decMax > 90) { decMin -= decMax - 90; decMax = 90; }
+    if (decMin < -90) { decMax += -90 - decMin; decMin = -90; }
+    decMax = Math.min(90, decMax); decMin = Math.max(-90, decMin);
+    if (raLen >= 23.999 && decMax - decMin >= 179.99) return null;
+    return { raStart: ((c.raStart % 24) + 24) % 24, raLen, decMin, decMax };
+  }
+  // Any hand-made crop turns Auto off: otherwise the next change to latitude,
+  // date or threshold would silently throw the view away.
+  setCrop(c) {
+    const n = this.normalizeCrop(c);
+    // Hold the view we just asked for. A burst of wheel events arrives faster
+    // than the redraw that publishes the new axis, so without this each event
+    // recomputes from the same stale base and only the last one counts.
+    // Full sky is held explicitly rather than as absence: leaving it null sent
+    // the next event in a burst back to the stale drawn axis, which resurrected
+    // the view that had just been zoomed away.
+    this._view = n ? { raStart: n.raStart, raLen: n.raLen, decMin: n.decMin, decMax: n.decMax }
+                   : { raStart: this.raOrigin(), raLen: 24, decMin: -90, decMax: 90 };
+    this.setState({ crop: n, autoCrop: false });
+  }
+
+  attachChartInput(el) {
+    if (el.__navBound) return;
+    el.__navBound = true;
     const S = 2;
     const pos = e => {
       const r = el.getBoundingClientRect();
@@ -859,56 +891,92 @@ class Component extends DCLogic {
                y: (e.clientY - r.top) * (el.height / r.height) / S };
     };
     const inPlot = p => p.x >= 64 && p.x <= 900 && p.y >= 16 && p.y <= 546;
+    const view = () => this._view || (() => { const a = this._axis;
+      return { raStart: a.axStart, raLen: a.axSpan, decMin: a.dBot, decMax: a.dTop }; })();
+
+    // Wheel zooms about the cursor, so the sky under the pointer stays put.
+    el.addEventListener('wheel', e => {
+      const p = pos(e);
+      if (!inPlot(p)) return;
+      e.preventDefault();
+      const a = this._axis, v = view();
+      const f = e.deltaY < 0 ? 1 / 1.2 : 1.2;
+      const u = 1 - (p.x - a.X0) / (a.X1 - a.X0);   // fraction from the right edge
+      const w = (p.y - a.Y0) / (a.Y1 - a.Y0);
+      const raC = v.raStart + u * v.raLen;
+      const decC = v.decMax - w * (v.decMax - v.decMin);
+      const raLen = Math.max(0.5, Math.min(24, v.raLen * f));
+      const dSpan = Math.max(5, Math.min(180, (v.decMax - v.decMin) * f));
+      const top = decC + w * dSpan;
+      this.setCrop({ raStart: raC - u * raLen, raLen, decMax: top, decMin: top - dSpan });
+    }, { passive: false });
+
+    // Ctrl-click is a context menu on some platforms; suppress it over the plot
+    // so the box-select modifier is usable.
+    el.addEventListener('contextmenu', e => { if (e.ctrlKey || e.metaKey) e.preventDefault(); });
+
     el.addEventListener('pointerdown', e => {
       const p = pos(e);
       if (!inPlot(p)) return;
-      this._drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: e.pointerType === 'touch' };
+      this._drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, px: p.x, py: p.y,
+                     touch: e.pointerType === 'touch',
+                     mode: (e.ctrlKey || e.metaKey) ? 'select' : 'pan' };
       // Touch keeps its default gestures so the page still scrolls under a
       // swipe that starts on the chart; a tap has no movement to swallow and
-      // still reads out. Box-select is therefore mouse and pen only, with the
-      // Fit usable button covering the same ground on a phone.
+      // still reads out.
       if (!this._drag.touch) {
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         e.preventDefault();
       }
     });
+
     el.addEventListener('pointermove', e => {
-      if (!this._drag) return;
+      const d = this._drag;
+      if (!d) return;
       const p = pos(e);
-      // Track the end point even for touch, which draws no selection: without
-      // it a swipe looks like a zero-movement tap and leaves a readout behind.
-      this._drag.x1 = Math.max(64, Math.min(900, p.x));
-      this._drag.y1 = Math.max(16, Math.min(546, p.y));
-      if (this._drag.touch) return;
-      this.drawHeatmap(el);
+      // Tracked even for touch, which draws nothing: without it a swipe reads
+      // as a zero-movement tap and strands a readout.
+      d.x1 = Math.max(64, Math.min(900, p.x));
+      d.y1 = Math.max(16, Math.min(546, p.y));
+      if (d.touch) return;
+      if (d.mode === 'select') { this.drawHeatmap(el); return; }
+      // Pan. There is nothing to pan at full sky, so it waits for a zoom.
+      if (!this.state.crop) return;
+      const a = this._axis, v = view();
+      const dx = p.x - d.px, dy = p.y - d.py;
+      d.px = p.x; d.py = p.y;
+      const dSpan = v.decMax - v.decMin;
+      // RA wraps, declination is clamped by normalizeCrop
+      this.setCrop({ raStart: v.raStart + (dx / (a.X1 - a.X0)) * v.raLen, raLen: v.raLen,
+                     decMax: v.decMax + (dy / (a.Y1 - a.Y0)) * dSpan,
+                     decMin: v.decMin + (dy / (a.Y1 - a.Y0)) * dSpan });
     });
+
     const finish = () => {
       const d = this._drag;
       this._drag = null;
       if (!d) return;
       const a = this._axis;
-      // Too small to be a crop, so read it as a click: report the usable hours
-      // at that point. Clicking the existing readout again dismisses it.
-      if (Math.abs(d.x1 - d.x0) < 14 && Math.abs(d.y1 - d.y0) < 14) {
+      // Barely moved, so read it as a click: report the usable hours there.
+      // Clicking the existing readout again dismisses it.
+      if (Math.abs(d.x1 - d.x0) < 6 && Math.abs(d.y1 - d.y0) < 6) {
         const ra = a.axStart + (1 - (d.x0 - a.X0) / (a.X1 - a.X0)) * a.axSpan;
         const dec = a.dTop - (d.y0 - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
-        const p = this.state.probe;
-        const near = p && Math.abs(this.xOfProbe(p) - d.x0) < 10 && Math.abs(this.yOfProbe(p) - d.y0) < 10;
+        const q = this.state.probe;
+        const near = q && Math.abs(this.xOfProbe(q) - d.x0) < 10 && Math.abs(this.yOfProbe(q) - d.y0) < 10;
         this.setState({ probe: near ? null : { ra: ((ra % 24) + 24) % 24, dec } });
         return;
       }
-      // a drag along only one axis is ambiguous, so ignore it rather than guess
-      if (d.touch) { this.drawHeatmap(el); return; }
+      // panning already applied itself as it went; touch never selects
+      if (d.touch || d.mode !== 'select') { this.drawHeatmap(el); return; }
+      // a box along only one axis is ambiguous, so ignore it rather than guess
       if (Math.abs(d.x1 - d.x0) < 14 || Math.abs(d.y1 - d.y0) < 14) { this.drawHeatmap(el); return; }
       const raAt = x => a.axStart + (1 - (x - a.X0) / (a.X1 - a.X0)) * a.axSpan;
       const decAt = y => a.dTop - (y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
       const raRight = raAt(Math.max(d.x0, d.x1)), raLeft = raAt(Math.min(d.x0, d.x1));
-      this.setState({ crop: {
-        raStart: ((raRight % 24) + 24) % 24,
-        raLen: Math.max(0.25, Math.min(24, raLeft - raRight)),
-        decMin: Math.max(-90, Math.min(decAt(d.y0), decAt(d.y1))),
-        decMax: Math.min(90, Math.max(decAt(d.y0), decAt(d.y1))),
-      } });
+      this.setCrop({ raStart: raRight, raLen: Math.max(0.5, Math.min(24, raLeft - raRight)),
+                     decMin: Math.min(decAt(d.y0), decAt(d.y1)),
+                     decMax: Math.max(decAt(d.y0), decAt(d.y1)) });
     };
     el.addEventListener('pointerup', finish);
     // A cancel is the browser taking the gesture over to scroll: drop it
@@ -943,6 +1011,11 @@ class Component extends DCLogic {
     return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', probe: null }, this.loadSaved());
   }
   persist() {
+    // Pan and zoom change state continuously, so coalesce the writes.
+    clearTimeout(this._persistT);
+    this._persistT = setTimeout(() => this.persistNow(), 250);
+  }
+  persistNow() {
     const s = this.state, out = {};
     for (const k of Object.keys(this.allDefaults())) out[k] = s[k];
     // A date only counts as a choice while it differs from today; otherwise
@@ -1126,6 +1199,8 @@ class Component extends DCLogic {
     const yOf = dec => Y0 + (dTop - dec) / (dTop - dBot) * (Y1 - Y0);
     // remembered for the drag-to-crop handler, which has to invert this mapping
     this._axis = { axStart, axSpan, dTop, dBot, X0, X1, Y0, Y1 };
+    this._view = crop ? { raStart: crop.raStart, raLen: crop.raLen, decMin: crop.decMin, decMax: crop.decMax }
+                      : { raStart: raOrg, raLen: 24, decMin: -90, decMax: 90 };
     // A full 24h of RA in pixels. Equal to the plot width only when the axis
     // spans the whole sky; under a crop it is wider, and anything that wraps
     // the RA seam has to step by this rather than by the plot width.
@@ -1609,7 +1684,7 @@ class Component extends DCLogic {
       darkInfo, series, peaks, xTicks, yTicks, tickLabels, svgLegend,
       thrPct: String(s.thr),
       thrLabel: '>' + s.thr + '\u00B0',
-      hmRef: el => { this.canvas = el; if (el) { this.attachCrop(el); this.drawHeatmap(el); } },
+      hmRef: el => { this.canvas = el; if (el) { this.attachChartInput(el); this.drawHeatmap(el); } },
       onLat: numHandler('lat', 'latText', -90, 90),
       onLon: numHandler('lon', 'lonText', -180, 180),
       onThr: e => { const v = Math.max(0, Math.min(85, Number(e.target.value)));
