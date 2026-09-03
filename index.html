@@ -423,6 +423,7 @@
       <input id="lon-in" type="number" min="-180" max="180" step="0.5" value="{{ lonText }}" sc-camel-on-change="{{ onLon }}" style="width: 90px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 10px; outline: none;">
     </div>
     <button sc-camel-on-click="{{ useMyLocation }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Use my location</button>
+      <button sc-camel-on-click="{{ resetSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Reset site</button>
     <sc-if value="{{ geoMsg }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #8E897D; padding-bottom: 12px;">{{ geoMsg }}</span></sc-if>
   </div>
   <div class="tabs" style="width: 100%; max-width: 1160px; display: flex; gap: 8px; border-bottom: 1px solid #2E2C27;">
@@ -535,7 +536,8 @@
         </div>
       </div>
       <div style="flex: 1;"></div>
-      <button sc-camel-on-click="{{ exportHeatPng }}" style="margin-left: auto; background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
+      <button sc-camel-on-click="{{ resetChart }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-left: auto;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Reset chart</button>
+      <button sc-camel-on-click="{{ exportHeatPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
@@ -573,18 +575,21 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1280, &quot;height&quot;: 1600}}">
 class Component extends DCLogic {
-  state = {
-    lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
-    // toISOString() is UTC, so west of Greenwich the default rolled to tomorrow
-    // as soon as local evening crossed UTC midnight - 7pm in US Central.
-    date: (() => {
-      const t = new Date(), p = n => String(n).padStart(2, '0');
-      return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
-    })(),
+  // Declared before `state`: class fields initialise in order, and the field
+  // initialiser below reads this key. Declaring it later left the load path
+  // reading localStorage under the key `undefined` while saves went to the
+  // real one, so settings stored fine and never came back.
+  STORE_KEY = 'imaging-planner/v1';
+  // Everything here is persisted and restored. Split into the two groups the
+  // reset buttons act on, so each button can restore exactly its own half.
+  SITE_DEFAULTS = { lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38', obsSel: 'starfront' };
+  CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
     showEcliptic: true, centered: true, mask: true, maskStrength: 0.85, maskFalloff: 0.5,
-    heat: 0.8, stars: 1, geoMsg: '', obsSel: 'starfront', tab: 'heat',
+    heat: 0.8, stars: 1, tab: 'heat',
   };
+  // Class fields initialise in order, so both defaults exist by the time this runs.
+  state = this.initialState();
   OBSERVATORIES = [
     { id: 'starfront', name: 'Starfront Observatories \u2014 Rockwood, TX', lat: 31.55, lon: -99.38 },
     { id: 'deathvalley', name: 'Death Valley Observatories \u2014 Amargosa Valley, NV', lat: 36.57, lon: -116.46 },
@@ -777,6 +782,43 @@ class Component extends DCLogic {
       s: [[22.137,-46.961],[22.711,-46.885],[21.899,-37.365],[22.487,-43.496],[22.807,-51.317],[23.171,-45.247]],
       l: [[2,3],[3,0],[0,1],[1,4],[1,5]] },
   ];
+
+  // ---------- settings persistence ----------
+  todayStr() {
+    const t = new Date(), p = n => String(n).padStart(2, '0');
+    return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+  }
+  allDefaults() { return Object.assign({}, this.SITE_DEFAULTS, this.CHART_DEFAULTS); }
+  loadSaved() {
+    // Storage can throw outright in private mode, and its contents are not
+    // ours to trust, so a value is only accepted when it matches the type of
+    // the default it replaces.
+    let raw = null;
+    try { raw = localStorage.getItem(this.STORE_KEY); } catch (e) { return {}; }
+    if (!raw) return {};
+    let saved;
+    try { saved = JSON.parse(raw); } catch (e) { return {}; }
+    if (!saved || typeof saved !== 'object') return {};
+    const defs = this.allDefaults(), out = {};
+    for (const k of Object.keys(defs)) {
+      if (k in saved && typeof saved[k] === typeof defs[k]) out[k] = saved[k];
+    }
+    if (typeof saved.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(saved.date)) out.date = saved.date;
+    return out;
+  }
+  initialState() {
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '' }, this.loadSaved());
+  }
+  persist() {
+    const s = this.state, out = {};
+    for (const k of Object.keys(this.allDefaults())) out[k] = s[k];
+    // A date only counts as a choice while it differs from today; otherwise
+    // tomorrow's visit would be pinned to a date that has since gone stale.
+    if (s.date !== this.todayStr()) out.date = s.date;
+    try { localStorage.setItem(this.STORE_KEY, JSON.stringify(out)); } catch (e) { /* full or blocked */ }
+  }
+  resetChart() { this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr() })); }
+  resetSite() { this.setState(Object.assign({}, this.SITE_DEFAULTS, { geoMsg: '' })); }
 
   // ---------- planets ----------
   // JPL approximate Keplerian elements, mean ecliptic and equinox of J2000,
@@ -1245,7 +1287,7 @@ class Component extends DCLogic {
       document.fonts.ready.then(() => this.drawHeatmap(this.canvas));
     }
   }
-  componentDidUpdate() { this.drawHeatmap(this.canvas); }
+  componentDidUpdate() { this.drawHeatmap(this.canvas); this.persist(); }
   // ---------- render ----------
   renderVals() {
     const s = this.state, lat = s.lat;
@@ -1341,6 +1383,8 @@ class Component extends DCLogic {
       onDate: e => { if (e.target.value) this.setState({ date: e.target.value }); },
       prevDay: () => this.shiftDay(-1),
       nextDay: () => this.shiftDay(1),
+      resetChart: () => this.resetChart(),
+      resetSite: () => this.resetSite(),
       toggleMoon: () => this.setState({ showMoon: !this.state.showMoon }),
       togglePlanets: () => this.setState({ showPlanets: !this.state.showPlanets }),
       toggleUsable: () => this.setState({ showUsable: !this.state.showUsable }),
