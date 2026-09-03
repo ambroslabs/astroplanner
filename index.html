@@ -903,12 +903,11 @@ class Component extends DCLogic {
       const decC = v.decMax - w * (v.decMax - v.decMin);
       const raLen = Math.max(0.5, Math.min(24, v.raLen * f));
       const dSpan = Math.max(5, Math.min(180, (v.decMax - v.decMin) * f));
-      // At the ends of the zoom range there is nothing left to give, so let the
-      // wheel through to the page instead of swallowing it. The chart covers
-      // most of the window; capturing scroll there with nothing to show for it
-      // strands the reader.
-      if (Math.abs(raLen - v.raLen) < 1e-6 && Math.abs(dSpan - (v.decMax - v.decMin)) < 1e-6) return;
+      // The chart owns the wheel while the pointer is over it, including at the
+      // ends of the zoom range, where it is simply a no-op. Letting the event
+      // through there meant a scroll that ran out of zoom jumped the page.
       e.preventDefault();
+      if (Math.abs(raLen - v.raLen) < 1e-6 && Math.abs(dSpan - (v.decMax - v.decMin)) < 1e-6) return;
       const top = decC + w * dSpan;
       this.setFrame({ raStart: raC - u * raLen, raLen, decMax: top, decMin: top - dSpan });
     }, { passive: false });
