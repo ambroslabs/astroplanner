@@ -504,9 +504,20 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ heatLabel }}</span>
         </div>
       </div>
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Constellations</span>
+        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+          <input aria-label="Constellation opacity" type="range" min="0" max="100" step="5" value="{{ starsPct }}" sc-camel-on-input="{{ onStars }}" style="width: 96px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starsLabel }}</span>
+        </div>
+      </div>
       <label class="moon-check" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
         <input type="checkbox" checked="{{ showMoon }}" sc-camel-on-change="{{ onMoon }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
         Moon
+      </label>
+      <label class="moon-check" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
+        <input type="checkbox" checked="{{ showSun }}" sc-camel-on-change="{{ onSun }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
+        Sun
       </label>
       <label class="moon-check" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #C9C4B7;">
         <input type="checkbox" checked="{{ showPlanets }}" sc-camel-on-change="{{ onPlanets }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
@@ -551,7 +562,7 @@ class Component extends DCLogic {
   state = {
     lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
     date: new Date().toISOString().slice(0, 10),
-    thr: 40, thrText: '40', showMoon: true, showPlanets: true, heat: 0.8, geoMsg: '', obsSel: 'starfront', tab: 'heat',
+    thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, heat: 0.8, stars: 0.35, geoMsg: '', obsSel: 'starfront', tab: 'heat',
   };
   OBSERVATORIES = [
     { id: 'starfront', name: 'Starfront Observatories \u2014 Rockwood, TX', lat: 31.55, lon: -99.38 },
@@ -774,9 +785,31 @@ class Component extends DCLogic {
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
     ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, HH);
 
-    // Zodiac figures sit under the heat field, so the highlight's own
-    // transparency is what lets them read as a background reference.
+    // heat field
+    const cols = 384, rows = 181;
+    const off = document.createElement('canvas'); off.width = cols; off.height = rows;
+    const octx = off.getContext('2d'), img = octx.createImageData(cols, rows);
+    for (let r = 0; r < rows; r++) {
+      const dec = 90 - r * 180 / (rows - 1);
+      const H = this.hoursAbove(lat, thr, dec) / 2;
+      for (let c = 0; c < cols; c++) {
+        const ra = c * 24 / cols;
+        const u = L >= 24 ? Math.min(2 * H, 24) : (L <= 0 ? 0 : this.arcOverlap(ra - H, 2 * H, dark.dusk, L));
+        const denom = L >= 24 ? 24 : L;
+        const [rr, gg, bb] = this.heatColor(denom > 0 ? u / denom : 0);
+        const k = (r * cols + c) * 4;
+        img.data[k] = rr; img.data[k + 1] = gg; img.data[k + 2] = bb; img.data[k + 3] = 255;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = this.state.heat;
+    ctx.drawImage(off, X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.globalAlpha = 1;
+    // Zodiac figures ride above the heat field with their own opacity, so
+    // the two fades are independent: neither slider affects the other layer.
     ctx.save();
+    ctx.globalAlpha = this.state.stars;
     ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
     {
       const spanW = X1 - X0;
@@ -810,27 +843,6 @@ class Component extends DCLogic {
       }
     }
     ctx.restore();
-    // heat field
-    const cols = 384, rows = 181;
-    const off = document.createElement('canvas'); off.width = cols; off.height = rows;
-    const octx = off.getContext('2d'), img = octx.createImageData(cols, rows);
-    for (let r = 0; r < rows; r++) {
-      const dec = 90 - r * 180 / (rows - 1);
-      const H = this.hoursAbove(lat, thr, dec) / 2;
-      for (let c = 0; c < cols; c++) {
-        const ra = c * 24 / cols;
-        const u = L >= 24 ? Math.min(2 * H, 24) : (L <= 0 ? 0 : this.arcOverlap(ra - H, 2 * H, dark.dusk, L));
-        const denom = L >= 24 ? 24 : L;
-        const [rr, gg, bb] = this.heatColor(denom > 0 ? u / denom : 0);
-        const k = (r * cols + c) * 4;
-        img.data[k] = rr; img.data[k + 1] = gg; img.data[k + 2] = bb; img.data[k + 3] = 255;
-      }
-    }
-    octx.putImageData(img, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = this.state.heat;
-    ctx.drawImage(off, X0, Y0, X1 - X0, Y1 - Y0);
-    ctx.globalAlpha = 1;
     // gridlines
     ctx.strokeStyle = 'rgba(246,245,242,0.12)'; ctx.lineWidth = 1;
     for (let ra = 0; ra <= 24; ra += 2) { ctx.beginPath(); ctx.moveTo(xOf(ra === 24 ? 23.9999 : ra), Y0); ctx.lineTo(xOf(ra === 24 ? 23.9999 : ra), Y1); ctx.stroke(); }
@@ -888,8 +900,8 @@ class Component extends DCLogic {
       drawWrapped(ring, { color: 'rgba(246,245,242,0.75)', w: 2, dash: [3, 5] });
     }
 
-    // sun and planets
-    if (this.state.showPlanets) {
+    // sun and planets, drawn together so their labels share one collision pass
+    if (this.state.showSun || this.state.showPlanets) {
       ctx.font = '700 13px Inter, sans-serif';
       // Bodies cluster on the ecliptic, so labels are nudged off their
       // preferred spot until they stop colliding with one already placed.
@@ -901,10 +913,15 @@ class Component extends DCLogic {
       const hits = (a) => taken.some(b =>
         a.x < b.x + b.w + 4 && a.x + a.w + 4 > b.x && a.y - a.h < b.y && a.y > b.y - b.h);
 
-      const bodies = [{ ra: this.bodyPos(null, n + 0.5).ra, dec: this.bodyPos(null, n + 0.5).dec,
-                        label: 'SUN', color: '#F5C36A', r: 9 }];
-      for (const p of this.planetData())
-        bodies.push({ ra: p.ra, dec: p.dec, label: p.id.toUpperCase(), color: '#93C4EE', r: 5 });
+      const bodies = [];
+      if (this.state.showSun) {
+        const sun = this.bodyPos(null, n + 0.5);
+        bodies.push({ ra: sun.ra, dec: sun.dec, label: 'SUN', color: '#F5C36A', r: 9 });
+      }
+      if (this.state.showPlanets) {
+        for (const p of this.planetData())
+          bodies.push({ ra: p.ra, dec: p.dec, label: p.id.toUpperCase(), color: '#93C4EE', r: 5 });
+      }
 
       for (const b of bodies) {
         const px = xOf(b.ra), py = yOf(b.dec), w = ctx.measureText(b.label).width;
@@ -1037,6 +1054,9 @@ class Component extends DCLogic {
       showPlanets: s.showPlanets,
       heatPct: String(Math.round(s.heat * 100)),
       heatLabel: Math.round(s.heat * 100) + '%',
+      starsPct: String(Math.round(s.stars * 100)),
+      starsLabel: Math.round(s.stars * 100) + '%',
+      showSun: s.showSun,
       planetRows: this.planetData()
         .sort((a, b) => b.hours - a.hours)
         .map(p => ({
@@ -1058,6 +1078,8 @@ class Component extends DCLogic {
       onMoon: e => this.setState({ showMoon: e.target.checked }),
       onPlanets: e => this.setState({ showPlanets: e.target.checked }),
       onHeat: e => this.setState({ heat: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
+      onStars: e => this.setState({ stars: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
+      onSun: e => this.setState({ showSun: e.target.checked }),
       geoMsg: this.state.geoMsg,
       obsSel: this.state.obsSel,
       showChartTab: this.state.tab === 'chart',
