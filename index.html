@@ -1092,6 +1092,10 @@ class Component extends DCLogic {
     const yOf = dec => Y0 + (dTop - dec) / (dTop - dBot) * (Y1 - Y0);
     // remembered for the drag-to-crop handler, which has to invert this mapping
     this._axis = { axStart, axSpan, dTop, dBot, X0, X1, Y0, Y1 };
+    // A full 24h of RA in pixels. Equal to the plot width only when the axis
+    // spans the whole sky; under a crop it is wider, and anything that wraps
+    // the RA seam has to step by this rather than by the plot width.
+    const wrapPx = (X1 - X0) * 24 / axSpan;
     // Ticks stay on whole hours of real RA so the labels remain readable when
     // the axis no longer starts at zero.
     const raTicks = [], decTicks = [];
@@ -1124,18 +1128,17 @@ class Component extends DCLogic {
       ctx.globalAlpha = this.state.stars;
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
       {
-        const spanW = X1 - X0;
         const conTaken = [];
         for (const con of this.CONSTELLATIONS) {
           const pts = con.s.map(([ra, dec]) => [xOf(ra), yOf(dec)]);
           // A figure straddling RA 0 has points at both edges; draw it at each
           // offset and let the clip discard the copy that falls outside.
-          for (const off of [0, -spanW, spanW]) {
+          for (const off of [0, -wrapPx, wrapPx]) {
             ctx.strokeStyle = 'rgba(203,214,232,0.7)'; ctx.lineWidth = 1;
             ctx.beginPath();
             for (const [i, j] of con.l) {
               let x1 = pts[i][0], x2 = pts[j][0];
-              if (Math.abs(x1 - x2) > spanW / 2) { if (x1 < x2) x1 += spanW; else x2 += spanW; }
+              if (Math.abs(x1 - x2) > wrapPx / 2) { if (x1 < x2) x1 += wrapPx; else x2 += wrapPx; }
               ctx.moveTo(x1 + off, pts[i][1]); ctx.lineTo(x2 + off, pts[j][1]);
             }
             ctx.stroke();
@@ -1176,7 +1179,7 @@ class Component extends DCLogic {
       let px = null;
       for (const [ra, dec] of pts) {
         const x = xOf(ra), y = yOf(dec);
-        if (px !== null && Math.abs(x - px) > (X1 - X0) / 2) ctx.moveTo(x, y);
+        if (px !== null && Math.abs(x - px) > wrapPx / 2) ctx.moveTo(x, y);
         else if (px === null) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
         px = x;
