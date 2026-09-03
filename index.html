@@ -550,6 +550,7 @@
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Frame</span>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button sc-camel-on-click="{{ fullSky }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Full sky</button>
+          <button sc-camel-on-click="{{ centerDark }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Center dark</button>
           <button sc-camel-on-click="{{ fitFrameNow }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Fit usable</button>
           <label class="moon-check" style="display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; font-weight: 600; color: #C9C4B7; white-space: nowrap;">
             <input type="checkbox" checked="{{ autoFrame }}" sc-camel-on-change="{{ onAutoFrame }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
@@ -913,7 +914,6 @@ class Component extends DCLogic {
     el.addEventListener('wheel', e => {
       const p = pos(e);
       if (!inPlot(p)) return;
-      e.preventDefault();
       const a = this._axis, v = view();
       const f = e.deltaY < 0 ? 1 / 1.2 : 1.2;
       const u = 1 - (p.x - a.X0) / (a.X1 - a.X0);   // fraction from the right edge
@@ -922,6 +922,12 @@ class Component extends DCLogic {
       const decC = v.decMax - w * (v.decMax - v.decMin);
       const raLen = Math.max(0.5, Math.min(24, v.raLen * f));
       const dSpan = Math.max(5, Math.min(180, (v.decMax - v.decMin) * f));
+      // At the ends of the zoom range there is nothing left to give, so let the
+      // wheel through to the page instead of swallowing it. The chart covers
+      // most of the window; capturing scroll there with nothing to show for it
+      // strands the reader.
+      if (Math.abs(raLen - v.raLen) < 1e-6 && Math.abs(dSpan - (v.decMax - v.decMin)) < 1e-6) return;
+      e.preventDefault();
       const top = decC + w * dSpan;
       this.setFrame({ raStart: raC - u * raLen, raLen, decMax: top, decMin: top - dSpan });
     }, { passive: false });
@@ -1254,9 +1260,10 @@ class Component extends DCLogic {
     // A frame narrows what the axes span. axStart is the RA at the RIGHT edge,
     // since RA runs leftward, and the span shrinks with it.
     const frame = this.state.frame;
-    // A frame spanning the full turn carries no RA information, so the origin
-    // stays wherever the RA axis mode puts it and Center on dark keeps working.
-    const axStart = frame && frame.raLen < 23.999 ? frame.raStart : raOrg;
+    // A full turn is a real position now, not the absence of one, so its origin
+    // is honoured like any other. Ignoring it here was why zooming out to full
+    // sky kept the rotation in state but drew the axis from RA 0.
+    const axStart = frame ? frame.raStart : raOrg;
     const axSpan = frame ? frame.raLen : 24;
     const dTop = frame ? frame.decMax : 90;
     const dBot = frame ? frame.decMin : -90;
@@ -1795,6 +1802,8 @@ class Component extends DCLogic {
       fitFrameNow: () => this.applyFit(),
       // back to the canonical turn: whole sky, starting at RA 0
       fullSky: () => this.setState({ frame: null, autoFrame: false }),
+      // the whole sky, translated so tonight's dark window sits in the middle
+      centerDark: () => this.setFrame({ raStart: this.darkWindow().sun.ra, raLen: 24, decMin: -90, decMax: 90 }),
       autoFrame: s.autoFrame,
       onAutoFrame: e => {
         const on = e.target.checked;
