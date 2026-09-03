@@ -380,18 +380,8 @@
   #obs-in { width: 100% !important; max-width: 100% !important; }
   .card-head { flex-wrap: wrap !important; align-items: flex-start !important; gap: 6px !important; }
   .dark-info { white-space: normal !important; }
-  /* 5 equal columns that fit the width, rather than wrapping to a
-     ragged 4+1 and stretching the custom input to two rows tall */
-  .thr-col { flex: 1 1 100% !important; min-width: 0 !important; }
   .axis-group { width: 100% !important; }
   .axis-group button { flex: 1 1 0 !important; min-height: 44px !important; }
-  .thr-row { width: 100% !important; }
-  .thr-group { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-               flex: 1 1 200px !important; min-width: 0 !important; }
-  .thr-group button { padding-left: 2px !important; padding-right: 2px !important; text-align: center !important;
-                      font-size: 13px !important; letter-spacing: 0 !important; }
-  /* narrow enough that the five buttons still clear their text at 320px */
-  .thr-row input { width: 34px !important; flex: 0 0 auto !important; }
 
   /* the chart pans at a readable size instead of shrinking to ~250px, where
      its baked-in 12-16px labels scaled down to roughly 3px */
@@ -401,7 +391,7 @@
   .chart-scroll::-webkit-scrollbar-thumb { background: #2E2C27; border-radius: 5px; }
 
   /* 44px minimum tap targets (were 34-39px, and 16px for the checkbox) */
-  .bar button, .tabs button, .controls button, .thr-group button,
+  .bar button, .tabs button, .controls button,
   .bar input, .controls input, #obs-in { min-height: 44px !important; }
   .planet-table span { font-size: 13px !important; }
   .planet-table > div > span:first-child { flex: 0 0 74px !important; }
@@ -489,15 +479,11 @@
         <button sc-camel-on-click="{{ nextDay }}" aria-label="Next day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">&gt;</button>
         </div>
       </div>
-      <div class="thr-col" style="display: flex; flex-direction: column; gap: 6px;">
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Altitude threshold</span>
-        <div class="thr-row" style="display: flex; align-items: stretch; gap: 8px;">
-          <div class="thr-group" style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
-            <sc-for list="{{ thrOptions }}" as="o" hint-placeholder-count="5">
-              <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 14px; cursor: pointer;">{{ o.label }}</button>
-            </sc-for>
-          </div>
-          <input aria-label="Custom threshold" type="number" min="0" max="89" step="1" value="{{ thrText }}" sc-camel-on-change="{{ onThr }}" style="width: 64px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;">
+        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+          <input aria-label="Altitude threshold" type="range" min="0" max="85" step="5" value="{{ thrPct }}" sc-camel-on-input="{{ onThr }}" style="width: 104px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ thrLabel }}</span>
         </div>
       </div>
       <sc-if value="{{ modeHighlight }}" hint-placeholder-val="{{ true }}">
@@ -1298,12 +1284,6 @@ class Component extends DCLogic {
       if (key === 'lat' || key === 'lon') st.obsSel = 'custom';
       this.setState(st);
     };
-    const thrOptions = [0, 20, 40, 60, 80].map(v => ({
-      label: '>' + v + '\u00B0',
-      bg: s.thr === v ? '#D9A960' : '#161616',
-      fg: s.thr === v ? '#0A0A0A' : '#C9C4B7',
-      pick: () => this.setState({ thr: v, thrText: String(v) }),
-    }));
     return {
       latText: s.latText, lonText: s.lonText, date: s.date, thrText: s.thrText, showMoon: s.showMoon,
       showPlanets: s.showPlanets,
@@ -1346,11 +1326,14 @@ class Component extends DCLogic {
           hoursColor: p.hours > 0 ? '#D9A960' : '#5A5751',
         })),
       latLabel: Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N'),
-      darkInfo, series, peaks, xTicks, yTicks, tickLabels, svgLegend, thrOptions,
+      darkInfo, series, peaks, xTicks, yTicks, tickLabels, svgLegend,
+      thrPct: String(s.thr),
+      thrLabel: '>' + s.thr + '\u00B0',
       hmRef: el => { this.canvas = el; if (el) this.drawHeatmap(el); },
       onLat: numHandler('lat', 'latText', -90, 90),
       onLon: numHandler('lon', 'lonText', -180, 180),
-      onThr: numHandler('thr', 'thrText', 0, 89),
+      onThr: e => { const v = Math.max(0, Math.min(85, Number(e.target.value)));
+        this.setState({ thr: v, thrText: String(v) }); },
       onDate: e => { if (e.target.value) this.setState({ date: e.target.value }); },
       prevDay: () => this.shiftDay(-1),
       nextDay: () => this.shiftDay(1),
