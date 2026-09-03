@@ -452,19 +452,19 @@
     </div>
     <div class="chart-scroll"><svg sc-camel-view-box="0 0 992 560" style="width: 100%; height: auto; display: block;">
       <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="7">
-        <line x1="64" x2="968" y1="{{ t.y }}" y2="{{ t.y }}" stroke="#2A2926" stroke-width="1"></line>
+        <line x1="64" x2="968" sc-camel-y1="{{ t.y }}" sc-camel-y2="{{ t.y }}" stroke="#2A2926" stroke-width="1"></line>
       </sc-for>
       <sc-for list="{{ xTicks }}" as="t" hint-placeholder-count="13">
-        <line y1="496" y2="502" x1="{{ t.x }}" x2="{{ t.x }}" stroke="#8E897D" stroke-width="1"></line>
+        <line y1="496" y2="502" sc-camel-x1="{{ t.x }}" sc-camel-x2="{{ t.x }}" stroke="#8E897D" stroke-width="1"></line>
       </sc-for>
       <sc-for list="{{ peaks }}" as="p" hint-placeholder-count="5">
-        <line y1="16" y2="496" x1="{{ p.x }}" x2="{{ p.x }}" stroke="{{ p.color }}" stroke-width="2" stroke-dasharray="7 6" opacity="0.9"></line>
+        <line y1="16" y2="496" sc-camel-x1="{{ p.x }}" sc-camel-x2="{{ p.x }}" stroke="{{ p.color }}" stroke-width="2" stroke-dasharray="7 6" opacity="0.9"></line>
       </sc-for>
       <sc-for list="{{ series }}" as="s" hint-placeholder-count="5">
-        <path d="{{ s.path }}" fill="none" stroke="{{ s.color }}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"></path>
+        <path sc-camel-d="{{ s.path }}" fill="none" stroke="{{ s.color }}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"></path>
       </sc-for>
       <sc-for list="{{ peaks }}" as="p" hint-placeholder-count="5">
-        <circle cx="{{ p.x }}" cy="{{ p.y }}" r="6" fill="{{ p.color }}" stroke="#161616" stroke-width="2"></circle>
+        <circle sc-camel-cx="{{ p.x }}" sc-camel-cy="{{ p.y }}" r="6" fill="{{ p.color }}" stroke="#161616" stroke-width="2"></circle>
       </sc-for>
       <line x1="64" x2="968" y1="496" y2="496" stroke="#C9C4B7" stroke-width="1.5"></line>
       <line x1="64" x2="64" y1="16" y2="496" stroke="#C9C4B7" stroke-width="1.5"></line>
