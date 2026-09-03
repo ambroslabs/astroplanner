@@ -691,11 +691,13 @@ class Component extends DCLogic {
     return { ra, dec };
   }
   // Simplified constellation figures for orientation: the twelve zodiac
-  // constellations plus the well-known non-zodiac ones, and the large faint
-  // ones that a list of famous figures leaves out - Eridanus, Camelopardalis
-  // and Lynx were each a 20-30 degree hole in the sky with nothing drawn in
-  // it. J2000 RA (hours) / Dec (degrees), from SIMBAD, with l listing the
-  // index pairs joined by a line.
+  // The whole sky, not the famous half of it. A list of well-known figures
+  // leaves out the large faint ones - Eridanus, Camelopardalis, Lynx - and
+  // everything around the south celestial pole, which between them were
+  // 20-30 degree holes with nothing drawn in them. The tool runs from any
+  // latitude, so the southern cap is somebody's whole sky: the Magellanic
+  // Clouds sit in Dorado, Mensa and Tucana. J2000 RA (hours) / Dec (degrees),
+  // from SIMBAD, with l listing the index pairs joined by a line.
   CONSTELLATIONS = [
     { n: "ARIES",
       s: [[2.119,23.46],[1.911,20.81],[1.892,19.29]],
@@ -866,6 +868,42 @@ class Component extends DCLogic {
     { n: "CANES VENATICI",
       s: [[12.934,38.32],[12.562,41.36]],
       l: [[0,1]] },
+    { n: "OCTANS",
+      s: [[21.691,-77.39],[22.768,-81.38],[14.449,-83.67]],
+      l: [[0,1],[1,2],[2,0]] },
+    { n: "HYDRUS",
+      s: [[0.429,-77.25],[1.979,-61.57],[3.787,-74.24]],
+      l: [[0,1],[1,2],[2,0]] },
+    { n: "TUCANA",
+      s: [[22.308,-60.26],[23.290,-58.24],[0.526,-62.96],[0.335,-64.87],[23.999,-65.58],[22.456,-64.97]],
+      l: [[0,5],[5,1],[1,2],[2,3],[3,4],[4,0]] },
+    { n: "PAVO",
+      s: [[20.427,-56.74],[20.749,-66.20],[20.145,-66.18],[20.010,-72.91],[18.717,-71.43],[17.762,-64.72],[18.949,-67.23],[18.870,-62.19],[18.143,-63.67],[18.387,-61.49]],
+      l: [[0,1],[1,2],[2,3],[3,4],[2,7],[7,6],[6,8],[8,5],[2,9]] },
+    { n: "APUS",
+      s: [[14.798,-79.04],[16.339,-78.70],[16.558,-78.90],[16.718,-77.52]],
+      l: [[0,1],[1,2],[2,3]] },
+    { n: "CHAMAELEON",
+      s: [[8.309,-76.92],[10.591,-78.61],[12.306,-79.31],[10.763,-80.54]],
+      l: [[0,1],[1,2],[1,3]] },
+    { n: "MUSCA",
+      s: [[11.760,-66.73],[12.293,-67.96],[12.620,-69.14],[12.541,-72.13],[12.771,-68.11],[13.038,-71.55]],
+      l: [[0,1],[1,2],[2,3],[2,4],[4,5]] },
+    { n: "VOLANS",
+      s: [[9.041,-66.40],[8.429,-66.14],[8.132,-68.62],[7.146,-70.50],[7.697,-72.61],[7.281,-67.96]],
+      l: [[0,1],[1,2],[2,3],[3,4],[3,5]] },
+    { n: "MENSA",
+      s: [[6.171,-74.75],[5.531,-76.34],[4.920,-74.94],[5.045,-71.31]],
+      l: [[0,1],[1,2],[0,3]] },
+    { n: "DORADO",
+      s: [[4.267,-51.49],[4.567,-55.04],[5.092,-57.47],[5.560,-62.49],[5.746,-65.74]],
+      l: [[0,1],[1,2],[1,3],[3,4]] },
+    { n: "RETICULUM",
+      s: [[4.240,-62.47],[3.737,-64.81],[3.979,-61.40],[4.275,-59.30]],
+      l: [[0,1],[1,2],[2,3],[3,0]] },
+    { n: "TRIANGULUM AUSTRALE",
+      s: [[16.811,-69.03],[15.919,-63.43],[15.315,-68.68]],
+      l: [[0,1],[1,2],[2,0]] },
   ];
 
   // ---------- framing ----------
