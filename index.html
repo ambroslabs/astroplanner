@@ -615,6 +615,9 @@ class Component extends DCLogic {
     stars: 1, milkyway: 0.25, contrast: 0.35, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     frame: null, autoFrame: true,
+    // marked points ride along with the rest of the chart: they survive a
+    // reload, and Reset chart clears them like everything else here
+    probes: [],
   };
   // Persisted, but deliberately in neither reset group: Reset site restores
   // Starfront's coordinates and must not delete the saved list.
@@ -1051,13 +1054,20 @@ class Component extends DCLogic {
     if (!saved || typeof saved !== 'object') return {};
     const defs = this.allDefaults(), out = {};
     for (const k of Object.keys(defs)) {
-      if (k in saved && typeof saved[k] === typeof defs[k]) out[k] = saved[k];
+      if (!(k in saved)) continue;
+      // typeof reports 'object' for arrays, plain objects and null alike, and
+      // the array-valued settings are read straight into .map and .concat
+      if (Array.isArray(defs[k])) { if (Array.isArray(saved[k])) out[k] = saved[k]; continue; }
+      if (typeof saved[k] === typeof defs[k]) out[k] = saved[k];
     }
+    // and the points are drawn as coordinates, so a bad entry would paint NaN
+    if (out.probes) out.probes = out.probes.filter(q => q && typeof q.ra === 'number' &&
+      typeof q.dec === 'number' && isFinite(q.ra) && isFinite(q.dec) && Math.abs(q.dec) <= 90);
     if (typeof saved.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(saved.date)) out.date = saved.date;
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', probes: [], siteName: '' }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '' }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
