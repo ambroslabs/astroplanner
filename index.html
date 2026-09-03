@@ -536,7 +536,7 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starsLabel }}</span>
         </div>
       </div>
-      <!-- forces Field, RA axis and Crop onto a row of their own -->
+      <!-- forces Field, RA axis and Frame onto a row of their own -->
       <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Field</span>
@@ -547,22 +547,12 @@
         </div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">RA axis</span>
-        <div class="axis-group" style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
-          <sc-for list="{{ axisOptions }}" as="o" hint-placeholder-count="2">
-            <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 12px; cursor: pointer; white-space: nowrap;">{{ o.label }}</button>
-          </sc-for>
-        </div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Crop</span>
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Frame</span>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <button sc-camel-on-click="{{ fitCropNow }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Fit usable</button>
-          <sc-if value="{{ cropped }}" hint-placeholder-val="{{ true }}">
-            <button sc-camel-on-click="{{ clearCrop }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Full sky</button>
-          </sc-if>
+          <button sc-camel-on-click="{{ fullSky }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Full sky</button>
+          <button sc-camel-on-click="{{ fitFrameNow }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Fit usable</button>
           <label class="moon-check" style="display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; font-weight: 600; color: #C9C4B7; white-space: nowrap;">
-            <input type="checkbox" checked="{{ autoCrop }}" sc-camel-on-change="{{ onAutoCrop }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
+            <input type="checkbox" checked="{{ autoFrame }}" sc-camel-on-change="{{ onAutoFrame }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
             Auto
           </label>
         </div>
@@ -572,7 +562,7 @@
       <button sc-camel-on-click="{{ exportHeatPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
-    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan once zoomed &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> for usable hours at a point</div>
+    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> for usable hours at a point</div>
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>any usable time boundary</button>
@@ -618,10 +608,10 @@ class Component extends DCLogic {
   SITE_DEFAULTS = { lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38', obsSel: 'starfront' };
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
-    showEcliptic: true, centered: true, mask: true, maskStrength: 0.85, maskFalloff: 0.5,
+    showEcliptic: true, mask: true, maskStrength: 0.85, maskFalloff: 0.5,
     heat: 0.8, stars: 1, milkyway: 0.5, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
-    crop: null, autoCrop: true,
+    frame: null, autoFrame: true,
   };
   // Persisted, but deliberately in neither reset group: Reset site restores
   // Starfront's coordinates and must not delete the saved list.
@@ -823,10 +813,10 @@ class Component extends DCLogic {
       l: [[2,3],[3,0],[0,1],[1,4],[1,5]] },
   ];
 
-  // ---------- cropping ----------
+  // ---------- framing ----------
   // Bounding box of the sky that gets any usable dark time, plus a margin.
-  // Returns null when nothing is usable, so callers can leave the crop alone.
-  fitCrop() {
+  // Returns null when nothing is usable, so callers can leave the frame alone.
+  fitFrame() {
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
     const N = 288, M = 181;
     const hit = new Array(N).fill(false);
@@ -851,8 +841,10 @@ class Component extends DCLogic {
     // Below a modest threshold every RA has some usable sky, because the
     // circumpolar cap is usable all night at any RA. There is no arc to fit
     // then, and adding a margin to a full turn would only rotate the axis to
-    // an arbitrary origin - so leave RA alone and crop declination only.
-    let raStart = 0, raLen = 24;
+    // an arbitrary origin - so leave RA alone and frame declination only.
+    // With no gap the whole sky is usable, so there is no arc to fit; centre
+    // the turn on the dark window instead of leaving it at RA 0.
+    let raStart = ((dark.sun.ra % 24) + 24) % 24, raLen = 24;
     if (gapLen > 0 && gapLen < N) {
       raStart = (((gapStart + gapLen) % N) + N) % N * 24 / N;
       raLen = (N - gapLen) * 24 / N;
@@ -864,20 +856,22 @@ class Component extends DCLogic {
     return { raStart, raLen,
              decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) };
   }
-  applyFit() { const c = this.fitCrop(); if (c) this.setState({ crop: c }); }
-  // where the RA axis starts when nothing is cropped
-  raOrigin() { return this.state.centered ? this.darkWindow().sun.ra : 0; }
+  applyFit() { const c = this.fitFrame(); if (c) this.setState({ frame: c }); }
+  // where the RA axis starts when nothing is framed
+  // The canonical frame starts at RA 0; every other position is a frame that
+  // has been translated away from it.
+  raOrigin() { return 0; }
   xOfProbe(p) { const a = this._axis;
     return a.X0 + (1 - ((((p.ra - a.axStart) % 24) + 24) % 24) / a.axSpan) * (a.X1 - a.X0); }
   yOfProbe(p) { const a = this._axis;
     return a.Y0 + (a.dTop - p.dec) / (a.dTop - a.dBot) * (a.Y1 - a.Y0); }
-  cropSignature() { const s = this.state; return [s.lat, s.lon, s.date, s.thr].join('|'); }
+  frameSignature() { const s = this.state; return [s.lat, s.lon, s.date, s.thr].join('|'); }
   // Drag-select on the canvas. Bound through the ref rather than a template
   // attribute so pointer events work regardless of the runtime's event map.
   // Normalise a requested view: clamp the zoom range, keep declination inside
   // the poles by shifting rather than wrapping (a view straddling the pole
-  // reads as nonsense), and collapse a full-sky request back to no crop.
-  normalizeCrop(c) {
+  // reads as nonsense), and collapse a full-sky request back to no frame.
+  normalizeFrame(c) {
     const raLen = Math.max(0.5, Math.min(24, c.raLen));
     const dSpan = Math.max(5, Math.min(180, c.decMax - c.decMin));
     const mid = (c.decMax + c.decMin) / 2;
@@ -885,13 +879,12 @@ class Component extends DCLogic {
     if (decMax > 90) { decMin -= decMax - 90; decMax = 90; }
     if (decMin < -90) { decMax += -90 - decMin; decMin = -90; }
     decMax = Math.min(90, decMax); decMin = Math.max(-90, decMin);
-    if (raLen >= 23.999 && decMax - decMin >= 179.99) return null;
     return { raStart: ((c.raStart % 24) + 24) % 24, raLen, decMin, decMax };
   }
-  // Any hand-made crop turns Auto off: otherwise the next change to latitude,
+  // Any hand-made frame turns Auto off: otherwise the next change to latitude,
   // date or threshold would silently throw the view away.
-  setCrop(c) {
-    const n = this.normalizeCrop(c);
+  setFrame(c) {
+    const n = this.normalizeFrame(c);
     // Hold the view we just asked for. A burst of wheel events arrives faster
     // than the redraw that publishes the new axis, so without this each event
     // recomputes from the same stale base and only the last one counts.
@@ -900,7 +893,7 @@ class Component extends DCLogic {
     // the view that had just been zoomed away.
     this._view = n ? { raStart: n.raStart, raLen: n.raLen, decMin: n.decMin, decMax: n.decMax }
                    : { raStart: this.raOrigin(), raLen: 24, decMin: -90, decMax: 90 };
-    this.setState({ crop: n, autoCrop: false });
+    this.setState({ frame: n, autoFrame: false });
   }
 
   attachChartInput(el) {
@@ -930,7 +923,7 @@ class Component extends DCLogic {
       const raLen = Math.max(0.5, Math.min(24, v.raLen * f));
       const dSpan = Math.max(5, Math.min(180, (v.decMax - v.decMin) * f));
       const top = decC + w * dSpan;
-      this.setCrop({ raStart: raC - u * raLen, raLen, decMax: top, decMin: top - dSpan });
+      this.setFrame({ raStart: raC - u * raLen, raLen, decMax: top, decMin: top - dSpan });
     }, { passive: false });
 
     // Ctrl-click is a context menu on some platforms; suppress it over the plot
@@ -962,14 +955,14 @@ class Component extends DCLogic {
       d.y1 = Math.max(16, Math.min(546, p.y));
       if (d.touch) return;
       if (d.mode === 'select') { this.drawHeatmap(el); return; }
-      // Pan. There is nothing to pan at full sky, so it waits for a zoom.
-      if (!this.state.crop) return;
+      // Pan. Full sky is a frame like any other, so this works there too and
+      // simply translates the whole turn.
       const a = this._axis, v = view();
       const dx = p.x - d.px, dy = p.y - d.py;
       d.px = p.x; d.py = p.y;
       const dSpan = v.decMax - v.decMin;
-      // RA wraps, declination is clamped by normalizeCrop
-      this.setCrop({ raStart: v.raStart + (dx / (a.X1 - a.X0)) * v.raLen, raLen: v.raLen,
+      // RA wraps, declination is clamped by normalizeFrame
+      this.setFrame({ raStart: v.raStart + (dx / (a.X1 - a.X0)) * v.raLen, raLen: v.raLen,
                      decMax: v.decMax + (dy / (a.Y1 - a.Y0)) * dSpan,
                      decMin: v.decMin + (dy / (a.Y1 - a.Y0)) * dSpan });
     });
@@ -996,7 +989,7 @@ class Component extends DCLogic {
       const raAt = x => a.axStart + (1 - (x - a.X0) / (a.X1 - a.X0)) * a.axSpan;
       const decAt = y => a.dTop - (y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
       const raRight = raAt(Math.max(d.x0, d.x1)), raLeft = raAt(Math.min(d.x0, d.x1));
-      this.setCrop({ raStart: raRight, raLen: Math.max(0.5, Math.min(24, raLeft - raRight)),
+      this.setFrame({ raStart: raRight, raLen: Math.max(0.5, Math.min(24, raLeft - raRight)),
                      decMin: Math.min(decAt(d.y0), decAt(d.y1)),
                      decMax: Math.max(decAt(d.y0), decAt(d.y1)) });
     };
@@ -1063,8 +1056,8 @@ class Component extends DCLogic {
   }
   resetChart() {
     // The watched settings have not changed, so the signature would suppress
-    // the re-fit and leave Auto ticked over an uncropped chart.
-    this._cropSig = null;
+    // the re-fit and leave Auto ticked over an unframed chart.
+    this._frameSig = null;
     this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr(), probe: null }));
   }
   resetSite() { this.setState(Object.assign({}, this.SITE_DEFAULTS, { geoMsg: '' })); }
@@ -1255,34 +1248,34 @@ class Component extends DCLogic {
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
     // Centered mode rotates the RA axis to start at the Sun, which puts the
     // anti-solar point - where tonight's best targets transit - mid-chart.
-    const raOrg = this.state.centered ? dark.sun.ra : 0;
+    const raOrg = 0;
     // RA increases to the LEFT, matching the sky as seen and the north-up /
     // east-left convention used for astronomical images.
-    // A crop narrows what the axes span. axStart is the RA at the RIGHT edge,
+    // A frame narrows what the axes span. axStart is the RA at the RIGHT edge,
     // since RA runs leftward, and the span shrinks with it.
-    const crop = this.state.crop;
-    // A crop spanning the full turn carries no RA information, so the origin
+    const frame = this.state.frame;
+    // A frame spanning the full turn carries no RA information, so the origin
     // stays wherever the RA axis mode puts it and Center on dark keeps working.
-    const axStart = crop && crop.raLen < 23.999 ? crop.raStart : raOrg;
-    const axSpan = crop ? crop.raLen : 24;
-    const dTop = crop ? crop.decMax : 90;
-    const dBot = crop ? crop.decMin : -90;
+    const axStart = frame && frame.raLen < 23.999 ? frame.raStart : raOrg;
+    const axSpan = frame ? frame.raLen : 24;
+    const dTop = frame ? frame.decMax : 90;
+    const dBot = frame ? frame.decMin : -90;
     const xOf = ra => X0 + (1 - ((((ra - axStart) % 24) + 24) % 24) / axSpan) * (X1 - X0);
     const yOf = dec => Y0 + (dTop - dec) / (dTop - dBot) * (Y1 - Y0);
-    // remembered for the drag-to-crop handler, which has to invert this mapping
+    // remembered for the drag-to-frame handler, which has to invert this mapping
     this._axis = { axStart, axSpan, dTop, dBot, X0, X1, Y0, Y1 };
-    this._view = crop ? { raStart: crop.raStart, raLen: crop.raLen, decMin: crop.decMin, decMax: crop.decMax }
+    this._view = frame ? { raStart: frame.raStart, raLen: frame.raLen, decMin: frame.decMin, decMax: frame.decMax }
                       : { raStart: raOrg, raLen: 24, decMin: -90, decMax: 90 };
     // A full 24h of RA in pixels. Equal to the plot width only when the axis
-    // spans the whole sky; under a crop it is wider, and anything that wraps
+    // spans the whole sky; under a frame it is wider, and anything that wraps
     // the RA seam has to step by this rather than by the plot width.
     const wrapPx = (X1 - X0) * 24 / axSpan;
     // Ticks stay on whole hours of real RA so the labels remain readable when
     // the axis no longer starts at zero.
     const raTicks = [], decTicks = [];
-    if (!crop) {
+    if (!frame) {
       for (let t = 0; t < 24; t += 2) raTicks.push({ ra: t, x: xOf(t), label: String(t) });
-      if (!this.state.centered) raTicks.push({ ra: 24, x: X0, label: '24' });
+      raTicks.push({ ra: 24, x: X0, label: '24' });
       for (let d = -90; d <= 90; d += 30) decTicks.push({ dec: d, grid: d > -90 && d < 90 });
     } else {
       // pick a step that lands 5-12 ticks across whatever range is on screen
@@ -1296,10 +1289,10 @@ class Component extends DCLogic {
       for (let v = Math.ceil(dBot / dStep) * dStep; v < dTop + 1e-9; v += dStep) decTicks.push({ dec: v, grid: true });
     }
     ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, HH);
-    // A crop leaves data outside the axes, so everything drawn in the plot has
-    // to be clipped to it. Uncropped the clip is skipped entirely, which keeps
+    // A frame leaves data outside the axes, so everything drawn in the plot has
+    // to be clipped to it. Unframed the clip is skipped entirely, which keeps
     // that path byte-for-byte what it was - markers may still overhang an edge.
-    if (crop) { ctx.save(); ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip(); }
+    if (frame) { ctx.save(); ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip(); }
 
     // Constellation figures. In highlight mode they sit above the field; in
     // mask mode they sit below it, so the veil genuinely hides what is out of
@@ -1554,7 +1547,7 @@ class Component extends DCLogic {
       }
     }
     if (!this.state.mask) { drawMoon(); drawBodies(); }
-    if (crop) ctx.restore();
+    if (frame) ctx.restore();
     // Click readout, drawn last so it sits above the field either way.
     if (this.state.probe) {
       const pr = this.state.probe, px = xOf(pr.ra), py = yOf(pr.dec);
@@ -1613,9 +1606,7 @@ class Component extends DCLogic {
       ctx.fillText(String(t.dec), X0 - 12, yOf(t.dec) + 5);
     }
     ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(this.state.centered
-      ? 'RIGHT ASCENSION (H) \u00B7 CENTERED ON TONIGHT\u2019S DARK WINDOW'
-      : 'RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
+    ctx.fillText('RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
     ctx.save(); ctx.translate(14, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
     ctx.fillText('DECLINATION (\u00B0)', 0, 0); ctx.restore();
     // colorbar
@@ -1680,11 +1671,11 @@ class Component extends DCLogic {
   }
   componentDidMount() {
     // componentDidUpdate does the re-fitting, but it never runs for the first
-    // render - without this, a fresh load shows Auto ticked and no crop.
-    if (this.state.autoCrop) {
-      this._cropSig = this.cropSignature();
-      const c = this.fitCrop();
-      if (c) this.setState({ crop: c });
+    // render - without this, a fresh load shows Auto ticked and no frame.
+    if (this.state.autoFrame) {
+      this._frameSig = this.frameSignature();
+      const c = this.fitFrame();
+      if (c) this.setState({ frame: c });
     }
     this.drawHeatmap(this.canvas);
     // Canvas text takes no part in font-fallback swaps, so a mount that beats
@@ -1697,9 +1688,9 @@ class Component extends DCLogic {
   componentDidUpdate() {
     // Re-fit only when something that moves the usable region actually changed,
     // so the setState here settles instead of looping.
-    if (this.state.autoCrop) {
-      const sig = this.cropSignature();
-      if (sig !== this._cropSig) { this._cropSig = sig; const c = this.fitCrop(); if (c) { this.setState({ crop: c }); return; } }
+    if (this.state.autoFrame) {
+      const sig = this.frameSignature();
+      if (sig !== this._frameSig) { this._frameSig = sig; const c = this.fitFrame(); if (c) { this.setState({ frame: c }); return; } }
     }
     this.drawHeatmap(this.canvas);
     this.persist();
@@ -1768,12 +1759,6 @@ class Component extends DCLogic {
         fg: s.mask === o.id ? '#0A0A0A' : '#C9C4B7',
         pick: () => this.setState({ mask: o.id }),
       })),
-      axisOptions: [{ id: false, label: 'RA 0\u201324h' }, { id: true, label: 'Center on dark' }].map(o => ({
-        label: o.label,
-        bg: s.centered === o.id ? '#D9A960' : '#161616',
-        fg: s.centered === o.id ? '#0A0A0A' : '#C9C4B7',
-        pick: () => this.setState({ centered: o.id }),
-      })),
       opUsable: s.showUsable ? '1' : '0.32',
       opFullDark: s.showFullDark ? '1' : '0.32',
       opEcliptic: s.showEcliptic ? '1' : '0.32',
@@ -1807,16 +1792,16 @@ class Component extends DCLogic {
       onSiteName: e => this.setState({ siteName: e.target.value }),
       saveSite: () => this.saveSite(),
       deleteSite: () => this.deleteSite(),
-      fitCropNow: () => this.applyFit(),
-      clearCrop: () => this.setState({ crop: null, autoCrop: false }),
-      autoCrop: s.autoCrop,
-      cropped: !!s.crop,
-      onAutoCrop: e => {
+      fitFrameNow: () => this.applyFit(),
+      // back to the canonical turn: whole sky, starting at RA 0
+      fullSky: () => this.setState({ frame: null, autoFrame: false }),
+      autoFrame: s.autoFrame,
+      onAutoFrame: e => {
         const on = e.target.checked;
         // turning it on should fit straight away, not wait for the next change
-        if (on) { const c = this.fitCrop(); this._cropSig = this.cropSignature();
-          this.setState(c ? { autoCrop: true, crop: c } : { autoCrop: true }); }
-        else this.setState({ autoCrop: false });
+        if (on) { const c = this.fitFrame(); this._frameSig = this.frameSignature();
+          this.setState(c ? { autoFrame: true, frame: c } : { autoFrame: true }); }
+        else this.setState({ autoFrame: false });
       },
       resetSite: () => this.resetSite(),
       toggleMoon: () => this.setState({ showMoon: !this.state.showMoon }),
