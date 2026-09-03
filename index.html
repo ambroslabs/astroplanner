@@ -1892,9 +1892,18 @@ class Component extends DCLogic {
     if (v < this.TLO) return this.addDays(start, v - this.TLO);
     return start;
   }
+  // The arrows scroll the window, not the date: three months of calendar slides
+  // past and the date you were looking at stays put, just sitting further along
+  // the track. It only moves when the window would carry it outside the middle
+  // band, and then only as far as the edge - so holding an arrow eventually
+  // tows the date along at the sixth mark rather than leaving it behind.
   jumpMonths(n) {
-    const start = this.winStart(), date = this.addMonths(this.state.date, n);
-    this.setState({ date, winStart: this.reWindow(date, start) });
+    const start = this.addMonths(this.winStart(), n);
+    const v = this.dayNum(this.state.date) - this.dayNum(start);
+    const date = v < this.TLO ? this.addDays(start, this.TLO)
+               : v > this.THI ? this.addDays(start, this.THI)
+               : this.state.date;
+    this.setState({ date, winStart: start });
   }
   shiftDay(n) {
     const [y, m, d] = this.state.date.split('-').map(Number);
