@@ -383,6 +383,8 @@
   /* 5 equal columns that fit the width, rather than wrapping to a
      ragged 4+1 and stretching the custom input to two rows tall */
   .thr-col { flex: 1 1 100% !important; min-width: 0 !important; }
+  .axis-group { width: 100% !important; }
+  .axis-group button { flex: 1 1 0 !important; min-height: 44px !important; }
   .thr-row { width: 100% !important; }
   .thr-group { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
                flex: 1 1 200px !important; min-width: 0 !important; }
@@ -512,6 +514,14 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starsLabel }}</span>
         </div>
       </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">RA axis</span>
+        <div class="axis-group" style="display: flex; border: 1px solid #2E2C27; border-radius: 2px; overflow: hidden;">
+          <sc-for list="{{ axisOptions }}" as="o" hint-placeholder-count="2">
+            <button sc-camel-on-click="{{ o.pick }}" style="background: {{ o.bg }}; color: {{ o.fg }}; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; padding: 9px 12px; cursor: pointer; white-space: nowrap;">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
       <div style="flex: 1;"></div>
       <button sc-camel-on-click="{{ exportHeatPng }}" style="margin-left: auto; background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;">Export PNG</button>
     </div>
@@ -555,7 +565,7 @@ class Component extends DCLogic {
     lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
     date: new Date().toISOString().slice(0, 10),
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
-    showEcliptic: true, heat: 0.8, stars: 0.35, geoMsg: '', obsSel: 'starfront', tab: 'heat',
+    showEcliptic: true, centered: false, heat: 0.8, stars: 0.35, geoMsg: '', obsSel: 'starfront', tab: 'heat',
   };
   OBSERVATORIES = [
     { id: 'starfront', name: 'Starfront Observatories \u2014 Rockwood, TX', lat: 31.55, lon: -99.38 },
@@ -900,9 +910,17 @@ class Component extends DCLogic {
     const ctx = canvas.getContext('2d');
     ctx.scale(S, S);
     const X0 = 64, X1 = 900, Y0 = 16, Y1 = 546;
-    const xOf = ra => X0 + (((ra % 24) + 24) % 24) / 24 * (X1 - X0);
-    const yOf = dec => Y0 + (90 - dec) / 180 * (Y1 - Y0);
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
+    // Centered mode rotates the RA axis to start at the Sun, which puts the
+    // anti-solar point - where tonight's best targets transit - mid-chart.
+    const raOrg = this.state.centered ? dark.sun.ra : 0;
+    const xOf = ra => X0 + ((((ra - raOrg) % 24) + 24) % 24) / 24 * (X1 - X0);
+    const yOf = dec => Y0 + (90 - dec) / 180 * (Y1 - Y0);
+    // Ticks stay on whole hours of real RA so the labels remain readable when
+    // the axis no longer starts at zero.
+    const raTicks = [];
+    for (let t = 0; t < 24; t += 2) raTicks.push({ ra: t, x: xOf(t) });
+    if (!this.state.centered) raTicks.push({ ra: 24, x: X1 });
     ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, HH);
 
     // heat field
@@ -913,7 +931,8 @@ class Component extends DCLogic {
       const dec = 90 - r * 180 / (rows - 1);
       const H = this.hoursAbove(lat, thr, dec) / 2;
       for (let c = 0; c < cols; c++) {
-        const ra = c * 24 / cols;
+        // column position is a chart offset, so it carries the axis rotation
+        const ra = raOrg + c * 24 / cols;
         const u = L >= 24 ? Math.min(2 * H, 24) : (L <= 0 ? 0 : this.arcOverlap(ra - H, 2 * H, dark.dusk, L));
         const denom = L >= 24 ? 24 : L;
         const [rr, gg, bb] = this.heatColor(denom > 0 ? u / denom : 0);
@@ -976,7 +995,7 @@ class Component extends DCLogic {
     ctx.restore();
     // gridlines
     ctx.strokeStyle = 'rgba(246,245,242,0.12)'; ctx.lineWidth = 1;
-    for (let ra = 0; ra <= 24; ra += 2) { ctx.beginPath(); ctx.moveTo(xOf(ra === 24 ? 23.9999 : ra), Y0); ctx.lineTo(xOf(ra === 24 ? 23.9999 : ra), Y1); ctx.stroke(); }
+    for (const t of raTicks) { ctx.beginPath(); ctx.moveTo(t.x, Y0); ctx.lineTo(t.x, Y1); ctx.stroke(); }
     for (let d = -60; d <= 60; d += 30) { ctx.beginPath(); ctx.moveTo(X0, yOf(d)); ctx.lineTo(X1, yOf(d)); ctx.stroke(); }
     const drawWrapped = (pts, style) => { // pts: [ra, dec]
       ctx.strokeStyle = style.color; ctx.lineWidth = style.w;
@@ -1091,10 +1110,9 @@ class Component extends DCLogic {
     ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
     ctx.fillStyle = '#E8E4D8'; ctx.font = '600 16px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1;
-    for (let ra = 0; ra <= 24; ra += 2) {
-      const x = X0 + ra / 24 * (X1 - X0);
-      ctx.beginPath(); ctx.moveTo(x, Y1); ctx.lineTo(x, Y1 + 6); ctx.stroke();
-      ctx.fillText(String(ra), x, Y1 + 26);
+    for (const t of raTicks) {
+      ctx.beginPath(); ctx.moveTo(t.x, Y1); ctx.lineTo(t.x, Y1 + 6); ctx.stroke();
+      ctx.fillText(String(t.ra), t.x, Y1 + 26);
     }
     ctx.textAlign = 'right';
     for (let d = -90; d <= 90; d += 30) {
@@ -1102,7 +1120,9 @@ class Component extends DCLogic {
       ctx.fillText(String(d), X0 - 12, yOf(d) + 5);
     }
     ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
+    ctx.fillText(this.state.centered
+      ? 'RIGHT ASCENSION (H) \u00B7 CENTERED ON TONIGHT\u2019S DARK WINDOW'
+      : 'RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
     ctx.save(); ctx.translate(14, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
     ctx.fillText('DECLINATION (\u00B0)', 0, 0); ctx.restore();
     // colorbar
@@ -1200,6 +1220,12 @@ class Component extends DCLogic {
       starsPct: String(Math.round(s.stars * 100)),
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
+      axisOptions: [{ id: false, label: 'RA 0\u201324h' }, { id: true, label: 'Center on dark' }].map(o => ({
+        label: o.label,
+        bg: s.centered === o.id ? '#D9A960' : '#161616',
+        fg: s.centered === o.id ? '#0A0A0A' : '#C9C4B7',
+        pick: () => this.setState({ centered: o.id }),
+      })),
       opUsable: s.showUsable ? '1' : '0.32',
       opFullDark: s.showFullDark ? '1' : '0.32',
       opEcliptic: s.showEcliptic ? '1' : '0.32',
