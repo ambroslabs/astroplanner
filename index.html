@@ -589,7 +589,12 @@
 class Component extends DCLogic {
   state = {
     lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38',
-    date: new Date().toISOString().slice(0, 10),
+    // toISOString() is UTC, so west of Greenwich the default rolled to tomorrow
+    // as soon as local evening crossed UTC midnight - 7pm in US Central.
+    date: (() => {
+      const t = new Date(), p = n => String(n).padStart(2, '0');
+      return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+    })(),
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
     showEcliptic: true, centered: true, mask: true, maskStrength: 0.85, maskFalloff: 0.5,
     heat: 0.8, stars: 1, geoMsg: '', obsSel: 'starfront', tab: 'heat',
