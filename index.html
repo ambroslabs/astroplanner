@@ -550,7 +550,7 @@
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Frame</span>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button sc-camel-on-click="{{ fullSky }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Full sky</button>
-          <button sc-camel-on-click="{{ centerDark }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Center dark</button>
+          <button sc-camel-on-click="{{ centerUsable }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Center usable</button>
           <button sc-camel-on-click="{{ fitFrameNow }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;">Fit usable</button>
           <label class="moon-check" style="display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; font-weight: 600; color: #C9C4B7; white-space: nowrap;">
             <input type="checkbox" checked="{{ autoFrame }}" sc-camel-on-change="{{ onAutoFrame }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
@@ -609,8 +609,8 @@ class Component extends DCLogic {
   SITE_DEFAULTS = { lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38', obsSel: 'starfront' };
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showFullDark: true,
-    showEcliptic: true, mask: true, maskStrength: 0.85, maskFalloff: 0.5,
-    heat: 0.8, stars: 1, milkyway: 0.5, tab: 'heat',
+    showEcliptic: true, mask: true, maskStrength: 0.75, maskFalloff: 0.25,
+    heat: 0.8, stars: 1, milkyway: 0.25, tab: 'heat',
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     frame: null, autoFrame: true,
   };
@@ -1803,7 +1803,7 @@ class Component extends DCLogic {
       // back to the canonical turn: whole sky, starting at RA 0
       fullSky: () => this.setState({ frame: null, autoFrame: false }),
       // the whole sky, translated so tonight's dark window sits in the middle
-      centerDark: () => this.setFrame({ raStart: this.darkWindow().sun.ra, raLen: 24, decMin: -90, decMax: 90 }),
+      centerUsable: () => this.setFrame({ raStart: this.darkWindow().sun.ra, raLen: 24, decMin: -90, decMax: 90 }),
       autoFrame: s.autoFrame,
       onAutoFrame: e => {
         const on = e.target.checked;
