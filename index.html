@@ -823,14 +823,19 @@ class Component extends DCLogic {
       if (!at(k)) { if (run === 0) start = k; run++; if (run > gapLen && run <= N) { gapLen = run; gapStart = start; } }
       else run = 0;
     }
+    // Below a modest threshold every RA has some usable sky, because the
+    // circumpolar cap is usable all night at any RA. There is no arc to fit
+    // then, and adding a margin to a full turn would only rotate the axis to
+    // an arbitrary origin - so leave RA alone and crop declination only.
     let raStart = 0, raLen = 24;
     if (gapLen > 0 && gapLen < N) {
       raStart = (((gapStart + gapLen) % N) + N) % N * 24 / N;
       raLen = (N - gapLen) * 24 / N;
+      const mRa = Math.max(0.4, raLen * 0.06);
+      if (raLen + 2 * mRa >= 24) raLen = 24;          // margin closes the gap: treat as full
+      else { raLen += 2 * mRa; raStart = ((raStart - mRa) % 24 + 24) % 24; }
     }
-    const mRa = Math.max(0.4, raLen * 0.06), mDec = Math.max(3, (decMax - decMin) * 0.06);
-    raLen = Math.min(24, raLen + 2 * mRa);
-    raStart = ((raStart - mRa) % 24 + 24) % 24;
+    const mDec = Math.max(3, (decMax - decMin) * 0.06);
     return { raStart, raLen,
              decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) };
   }
@@ -1084,7 +1089,9 @@ class Component extends DCLogic {
     // A crop narrows what the axes span. axStart is the RA at the RIGHT edge,
     // since RA runs leftward, and the span shrinks with it.
     const crop = this.state.crop;
-    const axStart = crop ? crop.raStart : raOrg;
+    // A crop spanning the full turn carries no RA information, so the origin
+    // stays wherever the RA axis mode puts it and Center on dark keeps working.
+    const axStart = crop && crop.raLen < 23.999 ? crop.raStart : raOrg;
     const axSpan = crop ? crop.raLen : 24;
     const dTop = crop ? crop.decMax : 90;
     const dBot = crop ? crop.decMin : -90;
