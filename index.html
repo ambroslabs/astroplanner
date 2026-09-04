@@ -405,7 +405,8 @@
 </helmet>
 <div class="page" style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2; filter: {{ nightFilter }};">
     <svg width="0" height="0" style="position: absolute; width: 0; height: 0; pointer-events: none;" aria-hidden="true" focusable="false"><filter id="nightvision" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"></feColorMatrix></filter></svg>
-    <div class="topbar" style="width: 100%; max-width: 1160px; display: flex; align-items: center; justify-content: flex-end;">
+    <div class="topbar" style="width: 100%; max-width: 1160px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+      <button sc-camel-on-click="{{ toggleFullscreen }}" ref="{{ fsRef }}" aria-pressed="{{ fsPressed }}" style="background: #161616; color: {{ fsFg }}; border: 1px solid {{ fsBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ fsTip }}"><span style="font-size: 15px; line-height: 13px;">&#9974;</span>{{ fsLabel }}</button>
       <button sc-camel-on-click="{{ toggleNight }}" aria-pressed="{{ nightPressed }}" style="background: #161616; color: {{ nightFg }}; border: 1px solid {{ nightBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ nightTip }}"><span style="font-size: 15px; line-height: 13px;">&#9681;</span>{{ nightLabel }}</button>
     </div>
   <div class="panel bar" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 18px 36px; box-sizing: border-box; display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;">
@@ -1631,7 +1632,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0, exOpen: false, exWhich: '', exName: '', exSize: '', sugg: [], suggIx: -1 }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0, exOpen: false, exWhich: '', exName: '', exSize: '', sugg: [], suggIx: -1, fs: false }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
@@ -3274,6 +3275,36 @@ class Component extends DCLogic {
       // One filter over the whole page, so the canvas and the SVG chart go red
       // with everything else and no drawing code has to know about the theme.
       nightFilter: s.night ? 'url(#nightvision)' : 'none',
+      fsLabel: s.fs ? 'Exit full screen' : 'Full screen',
+      fsPressed: s.fs ? 'true' : 'false',
+      fsFg: s.fs ? '#D9A960' : '#C9C4B7',
+      fsBorder: s.fs ? '#8C6A3F' : '#2E2C27',
+      fsTip: s.fs ? 'Leave full screen' : 'Fill the screen with the chart',
+      toggleFullscreen: () => {
+        const el = document.documentElement, d = document;
+        const on = d.fullscreenElement || d.webkitFullscreenElement;
+        const fn = on ? (d.exitFullscreen || d.webkitExitFullscreen)
+                      : (el.requestFullscreen || el.webkitRequestFullscreen);
+        if (!fn) return;
+        // Refused when the gesture is not trusted, and absent entirely on
+        // iPhone Safari. Nothing to recover from: the page stays as it was.
+        try { const r = fn.call(on ? d : el); if (r && r.catch) r.catch(() => {}); }
+        catch (err) { /* ignore */ }
+      },
+      // The browser can leave full screen without the button being pressed -
+      // Escape, or the window manager - so the label follows the browser's own
+      // event rather than what was last clicked.
+      fsRef: el => {
+        if (!el || el.__fsBound) return;
+        el.__fsBound = true;
+        const sync = () => {
+          const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
+          if (on !== !!this.state.fs) this.setState({ fs: on });
+        };
+        document.addEventListener('fullscreenchange', sync);
+        document.addEventListener('webkitfullscreenchange', sync);
+        sync();
+      },
       query: s.query || '',
       searchMsg: s.searchMsg || '',
       onQuery: e => {
