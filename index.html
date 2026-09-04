@@ -451,7 +451,7 @@
       <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Hours above altitude threshold</div>
       <div style="display: flex; align-items: center; gap: 20px;">
         <div style="font-size: 17px; letter-spacing: 0.12em; text-transform: uppercase; color: #D9A960; font-weight: 700; white-space: nowrap;">Latitude {{ latLabel }}</div>
-        <button sc-camel-on-click="{{ exportChartPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Save this chart as a PNG">Export PNG</button>
+        <button sc-camel-on-click="{{ openChartExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this chart">Export…</button>
       </div>
     </div>
     <div class="chart-scroll"><svg sc-camel-view-box="0 0 992 560" style="width: 100%; height: auto; display: block;">
@@ -579,7 +579,7 @@
       <div style="flex: 1;"></div>
       <button sc-camel-on-click="{{ clearPoints }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-left: auto;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Remove every marked point">Clear points</button>
       <button sc-camel-on-click="{{ resetChart }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Put the chart settings back to their defaults">Reset chart</button>
-      <button sc-camel-on-click="{{ exportHeatPng }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Save this map as a PNG, with the legend and site">Export PNG</button>
+      <button sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
     <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> to mark a point, again to remove it</div>
@@ -626,6 +626,43 @@
       </sc-for>
     </div>
     </sc-if>
+  </div>
+  </sc-if>
+  <sc-if value="{{ exOpen }}" hint-placeholder-val="{{ true }}">
+  <div class="panel card" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 22px 36px; box-sizing: border-box;">
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 260px;">
+        <label for="ex-name" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">File name</label>
+        <input id="ex-name" type="text" sc-camel-value="{{ exName }}" sc-camel-on-input="{{ onExName }}" style="width: 100%; box-sizing: border-box; background: #0F0F0F; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 10px; outline: none;">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Format</span>
+        <div style="display: flex; gap: 6px;">
+          <button sc-camel-on-click="{{ setPng }}" title="Lossless, larger file. Best for text and flat colour." style="background: {{ pngBg }}; color: {{ pngFg }}; border: 1px solid {{ pngBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;">PNG</button>
+          <button sc-camel-on-click="{{ setJpg }}" title="Lossy, much smaller file. Fine for sharing." style="background: {{ jpgBg }}; color: {{ jpgFg }}; border: 1px solid {{ jpgBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;">JPG</button>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="ex-size" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Size</label>
+        <sc-raw-select id="ex-size" value="{{ exScale }}" sc-camel-on-change="{{ onExScale }}" style="background: #0F0F0F; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 10px; outline: none;">
+          <sc-for list="{{ sizeOptions }}" as="o" hint-placeholder-count="4">
+            <option value="{{ o.value }}">{{ o.label }}</option>
+          </sc-for>
+        </sc-raw-select>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; display: {{ qualityShow }};">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Quality {{ qualityLabel }}</span>
+        <input type="range" min="40" max="100" step="5" value="{{ qualityPct }}" sc-camel-on-input="{{ onExQuality }}" style="width: 150px; accent-color: #D9A960;">
+      </div>
+      <label title="Write the file in night-vision red instead of full colour" style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #C9C4B7; padding-bottom: 10px;">
+        <input type="checkbox" checked="{{ exNight }}" sc-camel-on-change="{{ onExNight }}" style="accent-color: #D9A960; width: 16px; height: 16px;">Red
+      </label>
+      <div style="display: flex; align-items: center; gap: 10px; margin-left: auto; padding-bottom: 1px;">
+        <span style="font-size: 13px; color: #8E897D; min-width: 96px; text-align: right;">{{ exSizeLabel }}</span>
+        <button sc-camel-on-click="{{ cancelExport }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Close without saving">Cancel</button>
+        <button sc-camel-on-click="{{ saveExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 18px; cursor: pointer;" style-hover="background: #E8C288;" title="Write the file">Save</button>
+      </div>
+    </div>
   </div>
   </sc-if>
   <div style="width: 100%; max-width: 1160px; font-size: 13px; color: #5A5751;">cos H = (sin alt − sin φ sin δ) / (cos φ cos δ) · usable = overlap of [RA − H, RA + H] with the astronomical dark window (Sun below −18°), in local sidereal time</div>
@@ -716,7 +753,18 @@ class Component extends DCLogic {
   // Night vision is persisted like the sites, and like them belongs to neither
   // reset group: it is how you are looking at the screen, not what the chart
   // is showing, so neither reset button should switch the lights back on.
-  KEPT_DEFAULTS = { sites: [], night: false };
+  KEPT_DEFAULTS = { sites: [], night: false,
+    // How to write the file, not what is on the chart, so Reset chart leaves
+    // these alone the way it leaves the saved sites alone.
+    exScale: 1.5, exFormat: 'png', exQuality: 0.92, exNight: false };
+  // Long edge of the written image. 1160 is the chart's own layout width, so
+  // these are 1x through 3x of the real thing rather than arbitrary numbers.
+  EXPORT_SIZES = [
+    { v: 1, label: 'Small', px: 1160 },
+    { v: 1.5, label: 'Standard', px: 1740 },
+    { v: 2, label: 'Large', px: 2320 },
+    { v: 3, label: 'Huge', px: 3480 },
+  ];
   // Class fields initialise in order, so every defaults group above exists by
   // the time this runs. Declaring one below meant initialState could not see it:
   // the key was written on save and never looked for on load.
@@ -1305,7 +1353,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0 }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0, exOpen: false, exWhich: '', exName: '', exSize: '' }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
@@ -1889,7 +1937,7 @@ class Component extends DCLogic {
       // sky it matters most on - and it read as more of the same grey wash.
       // Adding light is also what the band actually does.
       ctx.globalCompositeOperation = 'lighter';
-      if (this.state.night && !this._forceDay) {
+      if ((this.state.night || this._forceNight) && !this._forceDay) {
         // Night vision spends the hue this band was separating itself with:
         // its cool light and the warm contrast ground both land on the same
         // red, so the two stop being distinguishable. Sprinkled points put the
@@ -2774,13 +2822,38 @@ class Component extends DCLogic {
           { timeout: 10000 }
         );
       },
-      exportChartPng: () => this.exportChartPng(),
-      exportHeatPng: () => this.exportHeatPng(),
+      openChartExport: () => this.openExport('chart'),
+      openHeatExport: () => this.openExport('heat'),
+      exOpen: !!s.exOpen,
+      exName: s.exName || '',
+      onExName: e => this.setState({ exName: e.target.value }),
+      exNight: !!s.exNight,
+      onExNight: e => { this.setState({ exNight: e.target.checked }); this.refreshExportSize(); },
+      exScale: String(s.exScale),
+      sizeOptions: this.EXPORT_SIZES.map(o => ({
+        value: String(o.v), label: o.label + ' \u00B7 ' + o.px + ' px' })),
+      onExScale: e => { this.setState({ exScale: Number(e.target.value) }); this.refreshExportSize(); },
+      pngBg: s.exFormat === 'png' ? '#D9A960' : '#161616',
+      jpgBg: s.exFormat === 'jpg' ? '#D9A960' : '#161616',
+      pngFg: s.exFormat === 'png' ? '#0A0A0A' : '#C9C4B7',
+      jpgFg: s.exFormat === 'jpg' ? '#0A0A0A' : '#C9C4B7',
+      pngBorder: s.exFormat === 'png' ? '#D9A960' : '#2E2C27',
+      jpgBorder: s.exFormat === 'jpg' ? '#D9A960' : '#2E2C27',
+      setPng: () => { this.setState({ exFormat: 'png' }); this.refreshExportSize(); },
+      setJpg: () => { this.setState({ exFormat: 'jpg' }); this.refreshExportSize(); },
+      qualityShow: s.exFormat === 'jpg' ? 'flex' : 'none',
+      qualityPct: String(Math.round(s.exQuality * 100)),
+      qualityLabel: Math.round(s.exQuality * 100) + '%',
+      onExQuality: e => { this.setState({ exQuality: Number(e.target.value) / 100 }); this.refreshExportSize(); },
+      exSizeLabel: s.exSize ? '\u2248 ' + s.exSize : 'measuring\u2026',
+      cancelExport: () => this.setState({ exOpen: false }),
+      saveExport: () => this.saveExport(),
     };
   }
   // ---------- export ----------
-  exportSetup(bodyH) {
-    const W = 1160, PAD = 36, S = 2;
+  exportSetup(bodyH, S) {
+    const W = 1160, PAD = 36;
+    S = S || 2;
     const H = Math.round(bodyH);
     const cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
     const ctx = cv.getContext('2d'); ctx.scale(S, S);
@@ -2854,15 +2927,6 @@ class Component extends DCLogic {
     ctx.fillStyle = '#8E897D'; ctx.font = '600 14px Inter, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText(text, PAD, yFoot + 28);
   }
-  download(cv, name) {
-    cv.toBlob(blob => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    });
-  }
   // Name the site on the export when one of the presets is selected. Editing
   // lat or lon switches obsSel to 'custom', so the name only ever appears
   // alongside the coordinates it actually belongs to.
@@ -2876,12 +2940,103 @@ class Component extends DCLogic {
       '\u03C6 ' + Math.abs(s.lat).toFixed(1) + '\u00B0 ' + (s.lat < 0 ? 'S' : 'N') +
       ' \u00B7 \u03BB ' + Math.abs(s.lon).toFixed(1) + '\u00B0 ' + (s.lon < 0 ? 'W' : 'E');
   }
-  async exportChartPng() {
+  // ---------- export ----------
+  // Turns the finished image red the way the screen filter does, by the same
+  // luminance-into-the-red-channel matrix. It has to happen here in pixels: a
+  // CSS filter cannot reach a canvas, so the file would otherwise come out in
+  // full colour no matter what the screen was doing.
+  redFilter(cv) {
+    const ctx = cv.getContext('2d');
+    const img = ctx.getImageData(0, 0, cv.width, cv.height), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) | 0;
+      d[i + 1] = 0; d[i + 2] = 0;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // A file name someone can find again: what it is, where from, and when.
+  // The site only goes in when one is actually selected - editing a coordinate
+  // switches obsSel to 'custom', so the name can never outlive the place it
+  // belongs to - and it goes through the same slug the saved sites use.
+  exportBaseName(which) {
+    const s = this.state;
+    const site = s.obsSel && s.obsSel !== 'custom' ? this.slug(this.obsName().replace(/ \u00B7 $/, '')) : '';
+    const lat = 'lat' + (s.lat < 0 ? 'm' : '') + Math.abs(s.lat).toFixed(2).replace('.', '-');
+    return which === 'chart'
+      ? ['hours-above-altitude', site, lat].filter(Boolean).join('-')
+      : ['dark-hours-map', site, s.date, lat].filter(Boolean).join('-');
+  }
+
+  exportOpts() {
+    const s = this.state;
+    return { scale: s.exScale, format: s.exFormat, quality: s.exQuality, night: s.exNight };
+  }
+
+  async buildExport(which, opts) {
     await document.fonts.ready;
+    const cv = which === 'chart' ? this.buildChartExport(opts) : this.buildHeatExport(opts);
+    if (opts.night) this.redFilter(cv);
+    return cv;
+  }
+
+  encodeExport(cv, opts) {
+    return new Promise(res => cv.toBlob(
+      b => res(b), opts.format === 'jpg' ? 'image/jpeg' : 'image/png',
+      opts.format === 'jpg' ? opts.quality : undefined));
+  }
+
+  // Rebuilding and re-encoding the whole image is the only honest way to say
+  // how big it will be - the answer depends on the pixels, not on arithmetic
+  // over the dimensions - so it runs debounced and only while the panel is up.
+  refreshExportSize() {
+    clearTimeout(this._exT);
+    this._exT = setTimeout(async () => {
+      const which = this.state.exWhich;
+      if (!this.state.exOpen || !which) return;
+      const token = (this._exToken = (this._exToken || 0) + 1);
+      this.setState({ exSize: '' });
+      try {
+        const opts = this.exportOpts();
+        const blob = await this.encodeExport(await this.buildExport(which, opts), opts);
+        if (token !== this._exToken) return;
+        this.setState({ exSize: this.fmtBytes(blob.size) });
+      } catch (e) {
+        if (token === this._exToken) this.setState({ exSize: '' });
+      }
+    }, 260);
+  }
+
+  fmtBytes(n) {
+    return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB'
+         : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
+  }
+
+  openExport(which) {
+    this.setState({ exOpen: true, exWhich: which, exSize: '',
+                    exName: this.state.exName || this.exportBaseName(which) });
+    this.refreshExportSize();
+  }
+
+  async saveExport() {
+    const which = this.state.exWhich;
+    if (!which) return;
+    const opts = this.exportOpts();
+    const blob = await this.encodeExport(await this.buildExport(which, opts), opts);
+    const base = (this.state.exName || '').trim() || this.exportBaseName(which);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = this.slug(base) + (opts.format === 'jpg' ? '.jpg' : '.png');
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    this.setState({ exOpen: false });
+  }
+
+  buildChartExport(opts) {
     const s = this.state, lat = s.lat, data = this.compute(lat);
     const chartW = 1160 - 72, sc = chartW / 992, chartH = 560 * sc;
     const yFoot = 92 + chartH + 12;
-    const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44);
+    const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44, opts.scale);
     ctx.fillStyle = '#F6F5F2'; ctx.font = '800 28px Archivo, sans-serif';
     ctx.fillText('HOURS ABOVE ALTITUDE THRESHOLD', PAD, 58);
     ctx.fillStyle = '#D9A960'; ctx.font = '700 15px Inter, sans-serif'; ctx.textAlign = 'right';
@@ -2891,10 +3046,9 @@ class Component extends DCLogic {
     this.drawChart(ctx, data, null, lat);
     ctx.restore();
     this.exportFooter(ctx, W, PAD, yFoot, this.obsName() + '\u03C6 ' + Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N') + ' \u00B7 hours per sidereal day above each altitude threshold');
-    this.download(cv, 'hours-above-altitude-lat' + lat + '.png');
+    return cv;
   }
-  async exportHeatPng() {
-    await document.fonts.ready;
+  buildHeatExport(opts) {
     const s = this.state, dark = this.darkWindow();
     const chartW = 1160 - 72, sc = chartW / 992, hmH = 620 * sc;
     // Measure the legend first: it sits between the chart and the footer, and
@@ -2903,7 +3057,7 @@ class Component extends DCLogic {
     const yLegend = 92 + hmH + 30;
     const legendH = this.exportLegend(probe, 1160, 36, 0);
     const yFoot = yLegend + legendH + 4;
-    const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44);
+    const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44, opts.scale);
     const darkInfo = dark.L <= 0 ? 'NO ASTRONOMICAL DARKNESS' :
       dark.L >= 24 ? 'DARK 24.0H' :
       'DARK: LST ' + this.fmtLST(dark.dusk) + ' \u2192 ' + this.fmtLST(dark.dawn) + ' \u00B7 ' + dark.L.toFixed(1) + 'H';
@@ -2917,13 +3071,20 @@ class Component extends DCLogic {
     // as a blue speckled band and nothing else to explain itself. Redraw the
     // day version, copy that, and put the screen back. Both redraws are
     // synchronous and in the same task, so nothing is painted in between.
-    const wasNight = this.state.night && this.canvas;
-    if (wasNight) { this._forceDay = true; this.drawHeatmap(this.canvas); }
+    // The chart on screen is drawn for the screen's setting, not the file's.
+    // Whichever way they disagree, redraw for the file, copy that, and put the
+    // screen back; both redraws are synchronous and in the same task, so
+    // nothing is painted in between. The stipple belongs with the red - it is
+    // there because red-only has no hue left to separate the band from the
+    // ground - so an export in colour gets the smooth band and a red one gets
+    // the grain, whatever the screen happens to be showing.
+    const wantNight = !!opts.night, disagree = this.canvas && this.state.night !== wantNight;
+    if (disagree) { this._forceDay = !wantNight; this._forceNight = wantNight; this.drawHeatmap(this.canvas); }
     if (this.canvas) ctx.drawImage(this.canvas, PAD, 92, chartW, hmH);
-    if (wasNight) { this._forceDay = false; this.drawHeatmap(this.canvas); }
+    if (disagree) { this._forceDay = false; this._forceNight = false; this.drawHeatmap(this.canvas); }
     this.exportLegend(ctx, W, PAD, yLegend);
     this.exportFooter(ctx, W, PAD, yFoot, this.locFooter() + ' \u00B7 threshold Alt > ' + s.thr + '\u00B0 \u00B7 Sun below \u221218\u00B0');
-    this.download(cv, 'dark-hours-map-' + s.date + '-lat' + s.lat + '.png');
+    return cv;
   }
   drawChart(ctx, data, dark, lat) { // draws 992x560 reference chart at ctx origin
     const { xOf, yOf } = this.geom();
