@@ -552,6 +552,16 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starsLabel }}</span>
         </div>
       </div>
+      <!-- Find, on its own row: a hit reframes the chart, so it belongs beside Frame -->
+      <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
+      <div class="find-group" style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="find-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Find object</label>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <input id="find-in" type="text" placeholder="M31, NGC 7000, Horsehead" sc-camel-value="{{ query }}" sc-camel-on-input="{{ onQuery }}" ref="{{ findRef }}" style="width: 232px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 10px; outline: none;">
+          <button sc-camel-on-click="{{ doSearch }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Find the object, switch its catalogue on and frame the chart around it">Go</button>
+          <span style="font-size: 12px; color: #8E897D; max-width: 340px;">{{ searchMsg }}</span>
+        </div>
+      </div>
       <!-- forces Field, RA axis and Frame onto a row of their own -->
       <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -582,6 +592,15 @@
       <button sc-camel-on-click="{{ toggleMoon }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opMoon }};" style-hover="color: #F6F5F2;" title="The Moon tonight, ringed at the 30 degrees it washes out"><span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px dotted rgba(246,245,242,0.75); border-radius: 50%;"><span style="width: 7px; height: 7px; background: #F6F5F2; border-radius: 50%;"></span></span>Moon &#177; 30&#176; dimming radius</button>
       <button sc-camel-on-click="{{ toggleSun }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opSun }};" style-hover="color: #F6F5F2;" title="Where the Sun sits, so you can see what it takes with it"><span style="display: inline-block; width: 15px; height: 15px; background: #F5C36A; border-radius: 50%;"></span>Sun</button>
       <button sc-camel-on-click="{{ togglePlanets }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opPlanets }};" style-hover="color: #F6F5F2;" title="The planets at local midnight"><span style="display: inline-block; width: 10px; height: 10px; background: #93C4EE; border-radius: 50%; margin: 0 2px;"></span>Planets</button>
+    </div>
+    <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 4px; padding-top: 10px; border-top: 1px solid #2E2C27;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Catalogs <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
+      <sc-for list="{{ catToggles }}" as="c" hint-placeholder-count="10">
+        <button sc-camel-on-click="{{ c.toggle }}" title="{{ c.tip }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ c.fg }};">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: {{ c.dot }}; border: 1px solid {{ c.ring }};"></span>{{ c.label }}
+        </button>
+      </sc-for>
+      <button sc-camel-on-click="{{ toggleCatLabels }}" title="{{ catLabelTip }}" style="background: none; border: none; padding: 7px 4px; margin: 0 0 0 auto; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ catLabelFg }};">{{ catLabelText }}</button>
     </div>
     <sc-if value="{{ showPlanets }}" hint-placeholder-val="{{ true }}">
     <div class="planet-table" style="margin-top: 16px; border-top: 1px solid #2E2C27; padding-top: 12px;">
@@ -641,6 +660,28 @@ class Component extends DCLogic {
     { v: 5, l: '5d/s' }, { v: 7, l: '1w/s' },
   ];
   MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // Deep-sky catalogues. Each is a self-contained file under assets/catalogs/
+  // with a hash of its contents in the name, fetched only when its layer is
+  // switched on: turning NGC on costs 74 KB gzipped once, and never turning it
+  // on costs nothing. The hash is what lets the worker mark them immutable, so
+  // a reader downloads each at most once ever rather than revalidating a
+  // 74 KB file on every visit. Regenerate with scripts/build-catalogs.py, which
+  // prints this list.
+  CATALOGS = [
+    { id: 'messier', label: 'Messier', pfx: 'M', color: '#E5C07B', n: 110, file: 'messier.550ab2bdaef4.txt' },
+    { id: 'caldwell', label: 'Caldwell', pfx: 'C', color: '#7FB2E5', n: 109, file: 'caldwell.ab187eae8d5e.txt' },
+    { id: 'herschel', label: 'Herschel 400', pfx: 'H', color: '#9AD1A6', n: 400, file: 'herschel.5fad616d857d.txt' },
+    { id: 'ngc', label: 'NGC', pfx: 'NGC', color: '#8FA8C8', n: 7148, file: 'ngc.fa2d51f8f798.txt' },
+    { id: 'ic', label: 'IC', pfx: 'IC', color: '#B79AD1', n: 4153, file: 'ic.50f40d7ce1c9.txt' },
+    { id: 'sharpless', label: 'Sharpless', pfx: 'Sh2', color: '#E58F8F', n: 313, file: 'sharpless.c21baeb92e5b.txt' },
+    { id: 'barnard', label: 'Barnard', pfx: 'B', color: '#A89684', n: 343, file: 'barnard.5606e4536123.txt' },
+    { id: 'vdb', label: 'van den Bergh', pfx: 'vdB', color: '#8FD1D1', n: 158, file: 'vdb.6f1ac0d41fea.txt' },
+    { id: 'lynds', label: 'Lynds dark', pfx: 'LDN', color: '#9C8FA8', n: 1787, file: 'lynds.1e067fbd8a85.txt' },
+    { id: 'arp', label: 'Arp', pfx: 'Arp', color: '#D19AC0', n: 338, file: 'arp.6e77886da78c.txt' },
+  ];
+  // Angular sizes are arcminutes, so an object has to be a good fraction of a
+  // degree before it is worth drawing as its own shape rather than a marker.
+  ELLIPSE_MIN_PX = 7;
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
@@ -650,6 +691,11 @@ class Component extends DCLogic {
     // start of the span the time slider covers; '' means centre it on the date
     winStart: '',
     speedIx: 3,   // index into SPEEDS; playback itself is never restored
+    // Which catalogue layers are on. Messier alone by default: it is the one
+    // list nearly everyone wants and the only one small enough that showing it
+    // costs nothing to read on a whole-sky chart.
+    cats: { messier: true },
+    catLabels: true,
     // marked points ride along with the rest of the chart: they survive a
     // reload, and Reset chart clears them like everything else here
     probes: [],
@@ -1248,7 +1294,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0 }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
@@ -1278,6 +1324,255 @@ class Component extends DCLogic {
     let h = Math.imul(i + 1, 374761393) ^ Math.imul(j + 1, 668265263) ^ Math.imul(salt, 2246822519);
     h = Math.imul(h ^ (h >>> 13), 1274126177);
     return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+
+  // ---------- catalogues ----------
+  // Files load on demand and stay for the life of the page. A load in flight is
+  // recorded so the redraws that happen while it is arriving do not each start
+  // another, and every caller gets the same promise back.
+  catalogRows(id) { return (this._cats || {})[id] || null; }
+  catalogDef(id) { return this.CATALOGS.find(c => c.id === id) || null; }
+
+  loadCatalog(id) {
+    this._cats = this._cats || {};
+    this._catLoad = this._catLoad || {};
+    if (this._cats[id]) return Promise.resolve(this._cats[id]);
+    if (this._catLoad[id]) return this._catLoad[id];
+    const def = this.catalogDef(id);
+    if (!def) return Promise.resolve(null);
+    const done = fetch('assets/catalogs/' + def.file)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(txt => {
+        this._cats[id] = this.parseCatalog(txt, def);
+        delete this._catLoad[id];
+        // Nothing in state changed, but the chart is now able to draw something
+        // it could not a moment ago, so it has to be told to.
+        this.setState({ catTick: (this.state.catTick || 0) + 1 });
+        return this._cats[id];
+      })
+      .catch(err => {
+        delete this._catLoad[id];
+        (this._catErr = this._catErr || {})[id] = String((err && err.message) || err);
+        this.setState({ catTick: (this.state.catTick || 0) + 1 });
+        return null;
+      });
+    this._catLoad[id] = done;
+    return done;
+  }
+
+  // Each row is a delta from the row before it, so decoding is a running total.
+  // scripts/build-catalogs.py writes them and documents the field order.
+  parseCatalog(txt, def) {
+    const out = [];
+    let id = 0, ra = 0, dec = 0;
+    for (const line of txt.split('\n')) {
+      if (!line) continue;
+      const f = line.split(',');
+      id += (f[0] ? parseInt(f[0], 10) : 0) + 1;
+      ra += parseFloat(f[1]);
+      dec += parseFloat(f[2]);
+      if (!isFinite(ra) || !isFinite(dec)) continue;
+      out.push({
+        id, cat: def.id, ra: ((ra % 24) + 24) % 24, dec,
+        type: f[3] || '', mag: f[4] ? parseFloat(f[4]) : null,
+        maj: f[5] ? parseFloat(f[5]) : null, min: f[6] ? parseFloat(f[6]) : null,
+        pa: f[7] ? parseFloat(f[7]) : null, name: f[8] || '', desig: f[9] || '',
+        label: def.pfx + (def.pfx === 'Sh2' ? '-' : ' ') + id,
+      });
+    }
+    return out;
+  }
+
+  ensureCatalogs() {
+    const on = this.state.cats || {};
+    for (const c of this.CATALOGS) if (on[c.id]) this.loadCatalog(c.id);
+  }
+
+  // Messier, Caldwell and Herschel are selections out of NGC and IC, so with
+  // both layers up the same object is drawn and labelled twice - "Ring Nebula"
+  // beside "Ring Nebula", which reads as a bug rather than as two catalogues
+  // agreeing. Their rows carry the NGC/IC designation they were selected from,
+  // so the duplicate can be dropped exactly instead of by guessing at distance.
+  suppressed() {
+    const on = this.state.cats || {};
+    const out = new Set();
+    for (const def of this.CATALOGS) {
+      if (!on[def.id]) continue;
+      const rows = this.catalogRows(def.id);
+      if (!rows) continue;
+      for (const o of rows) {
+        const m = /^(NGC|IC)\s*0*(\d+)/i.exec(o.desig || '');
+        if (m) out.add(m[1].toLowerCase() + ':' + parseInt(m[2], 10));
+      }
+    }
+    return out;
+  }
+
+  drawCatalogs(ctx, g) {
+    const on = this.state.cats || {};
+    const live = this.CATALOGS.filter(c => on[c.id] && this.catalogRows(c.id));
+    if (!live.length) return;
+    const dup = this.suppressed();
+    const { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot } = g;
+    const pxPerDeg = (Y1 - Y0) / (dTop - dBot);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+    const cand = [];
+    for (const def of live) {
+      const marks = new Path2D(), shapes = new Path2D();
+      const selectable = def.id === 'ngc' || def.id === 'ic';
+      for (const o of this.catalogRows(def.id)) {
+        if (selectable && dup.has(def.id + ':' + o.id)) continue;
+        const x = xOf(o.ra), y = yOf(o.dec);
+        if (x < X0 - 6 || x > X1 + 6 || y < Y0 - 6 || y > Y1 + 6) continue;
+        const majPx = o.maj ? o.maj / 60 * pxPerDeg : 0;
+        let r = o.mag == null ? 1.9 : Math.max(1.4, 3.6 - o.mag * 0.17);
+        if (majPx >= this.ELLIPSE_MIN_PX) {
+          // Position angle is measured from north through east. North is up and
+          // east is to the left here, because RA increases leftward, so the
+          // major axis lies along (-sin PA, -cos PA) in screen terms.
+          const pa = (o.pa == null ? 0 : o.pa) * this.D2R;
+          const b = (o.min ? o.min / 60 * pxPerDeg : majPx * 0.55) / 2;
+          shapes.ellipse(x, y, majPx / 2, Math.max(b, 1),
+                         Math.atan2(-Math.cos(pa), -Math.sin(pa)), 0, 6.2832);
+          r = majPx / 2;
+        } else {
+          marks.moveTo(x + r, y); marks.arc(x, y, r, 0, 6.2832);
+        }
+        cand.push({ x, y, o, def, r });
+      }
+      ctx.globalAlpha = 0.9; ctx.fillStyle = def.color; ctx.fill(marks);
+      ctx.globalAlpha = 0.8; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
+    }
+    ctx.globalAlpha = 1;
+    if (this.state.catLabels) this.labelCatalogs(ctx, cand, g);
+    ctx.restore();
+  }
+
+  // Labelling everything is not on the table - NGC alone puts thousands in
+  // view - so rank them and stop. Named first, then bright, then large: the
+  // order you would point them out in. The grid is what keeps the survivors
+  // from landing on top of each other.
+  labelCatalogs(ctx, cand, g) {
+    if (!cand.length) return;
+    const { X0, X1, Y0, Y1 } = g;
+    const score = c => (c.o.name ? 0 : 40) + (c.o.mag == null ? 14 : c.o.mag)
+                     - Math.min(8, (c.o.maj || 0) / 12);
+    const ranked = cand.slice().sort((a, b) => score(a) - score(b)).slice(0, 110);
+    ctx.font = '600 10px Inter, sans-serif';
+    ctx.textBaseline = 'middle';
+    const cell = 15, cols = Math.ceil((X1 - X0) / cell) + 2, taken = new Set();
+    const span = (x, w) => [Math.floor((x - X0) / cell), Math.floor((x + w - X0) / cell)];
+    for (const c of ranked) {
+      const text = c.o.name || c.o.label;
+      const w = ctx.measureText(text).width;
+      let spot = null;
+      for (const [dx, dy] of [[c.r + 5, 0], [-c.r - 5 - w, 0], [c.r + 5, -11],
+                              [-c.r - 5 - w, -11], [-w / 2, -c.r - 9], [-w / 2, c.r + 9]]) {
+        const x = c.x + dx, y = c.y + dy;
+        if (x < X0 + 2 || x + w > X1 - 2 || y < Y0 + 7 || y > Y1 - 7) continue;
+        const row = Math.floor((y - Y0) / cell), [a, b] = span(x, w);
+        let clash = false;
+        for (let cx = a; cx <= b && !clash; cx++) clash = taken.has(row * cols + cx);
+        if (clash) continue;
+        for (let cx = a; cx <= b; cx++) taken.add(row * cols + cx);
+        spot = [x, y]; break;
+      }
+      if (!spot) continue;
+      ctx.fillStyle = 'rgba(10,10,10,0.7)';
+      ctx.fillRect(spot[0] - 2, spot[1] - 6, w + 4, 12);
+      ctx.fillStyle = c.def.color;
+      ctx.fillText(text, spot[0], spot[1]);
+    }
+  }
+
+  // ---------- search ----------
+  // "M31", "ngc 7000", "sh2-155", "horsehead". A designation names the
+  // catalogue it belongs to, so looking one up switches that catalogue on and
+  // fetches it rather than reporting nothing found among the layers that
+  // happen to be showing.
+  CAT_ALIAS = {
+    m: 'messier', messier: 'messier', c: 'caldwell', caldwell: 'caldwell',
+    h: 'herschel', herschel: 'herschel', ngc: 'ngc', n: 'ngc', ic: 'ic',
+    sh: 'sharpless', sh2: 'sharpless', sharpless: 'sharpless',
+    b: 'barnard', barn: 'barnard', barnard: 'barnard', vdb: 'vdb',
+    ldn: 'lynds', lynds: 'lynds', arp: 'arp',
+  };
+  // Never frame tighter than this. The chart answers when a patch of sky is
+  // usable; a two-arcminute window of it says nothing a wider one does not,
+  // and throws away every landmark that tells you where you are looking.
+  FRAME_MIN_DEG = 14;
+
+  // Longest prefix first, because the prefixes overlap and some carry a digit:
+  // a plain letters-then-number pattern reads "Sh2-155" as prefix "sh" and
+  // cannot see "sh2" at all, and reading it greedily instead turns "M31" into
+  // catalogue "m3", object 1.
+  parseDesignation(q) {
+    const t = String(q).trim().toLowerCase().replace(/\s+/g, '');
+    if (!this._catKeys) {
+      this._catKeys = Object.keys(this.CAT_ALIAS).sort((a, b) => b.length - a.length);
+    }
+    for (const key of this._catKeys) {
+      if (t.slice(0, key.length) !== key) continue;
+      const rest = t.slice(key.length).replace(/^[-\s]+/, '');
+      if (/^\d{1,4}$/.test(rest)) return { cat: this.CAT_ALIAS[key], id: parseInt(rest, 10) };
+    }
+    return null;
+  }
+
+  findByName(needle) {
+    for (const def of this.CATALOGS) {
+      const rows = this.catalogRows(def.id);
+      if (!rows) continue;
+      for (const o of rows) {
+        if (o.name && o.name.toLowerCase().indexOf(needle) >= 0) return o;
+      }
+    }
+    return null;
+  }
+
+  frameFor(o) {
+    const decSpan = Math.min(180, Math.max(this.FRAME_MIN_DEG, (o.maj || 0) / 60 * 6));
+    // An hour of RA covers 15*cos(dec) degrees, so holding the sky roughly
+    // square on screen takes more hours the further from the equator it sits.
+    const cos = Math.max(0.15, Math.cos(o.dec * this.D2R));
+    const raLen = Math.min(24, Math.max(0.5, decSpan / (15 * cos) * 1.6));
+    return { raStart: ((o.ra - raLen / 2) % 24 + 24) % 24, raLen,
+             decMin: o.dec - decSpan / 2, decMax: o.dec + decSpan / 2 };
+  }
+
+  goToObject(o) {
+    this.setState({ cats: Object.assign({}, this.state.cats, { [o.cat]: true }),
+                    searchMsg: (o.label + (o.name ? ' · ' + o.name : '')) });
+    this.setFrame(this.frameFor(o));
+  }
+
+  async searchGo() {
+    const q = (this.state.query || '').trim();
+    if (!q) return;
+    const d = this.parseDesignation(q);
+    if (d) {
+      const def = this.catalogDef(d.cat);
+      this.setState({ searchMsg: 'Loading ' + def.label + '…' });
+      await this.loadCatalog(d.cat);
+      const rows = this.catalogRows(d.cat);
+      if (!rows) return this.setState({ searchMsg: def.label + ' failed to load' });
+      const o = rows.find(r => r.id === d.id);
+      return o ? this.goToObject(o)
+               : this.setState({ searchMsg: 'No ' + def.pfx + ' ' + d.id + ' in ' + def.label });
+    }
+    const needle = q.toLowerCase();
+    let hit = this.findByName(needle);
+    if (!hit) {
+      // A name does not say which catalogue it is in, so the only way to answer
+      // honestly is to have them all. They are immutable and cached, so this is
+      // once per reader rather than once per search.
+      this.setState({ searchMsg: 'Searching all catalogues…' });
+      await Promise.all(this.CATALOGS.map(c => this.loadCatalog(c.id)));
+      hit = this.findByName(needle);
+    }
+    return hit ? this.goToObject(hit)
+               : this.setState({ searchMsg: 'Nothing matching “' + q + '”' });
   }
 
   // ---------- milky way ----------
@@ -1914,6 +2209,12 @@ class Component extends DCLogic {
         drawWrapped(full2, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
       }
     }
+    // Catalogue objects sit above the veil, unlike the constellation figures
+    // below it. A figure is scenery and should fade where the sky is out of
+    // reach; a target is the thing being looked for, and a target you cannot
+    // see is not an answer to "can I shoot this one tonight". The heat behind
+    // it still says whether it is reachable.
+    this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot });
     if (frame) ctx.restore();
     // Click readout, drawn last so it sits above the field either way.
     // Several points can be down at once, so each box has to dodge the ones
@@ -2192,6 +2493,7 @@ class Component extends DCLogic {
       const c = this.fitFrame();
       if (c) this.setState({ frame: c });
     }
+    this.ensureCatalogs();
     this.drawHeatmap(this.canvas);
     // Canvas text takes no part in font-fallback swaps, so a mount that beats
     // Inter's load leaves the chart lettered in the fallback face until the
@@ -2207,6 +2509,7 @@ class Component extends DCLogic {
       const sig = this.frameSignature();
       if (sig !== this._frameSig) { this._frameSig = sig; const c = this.fitFrame(); if (c) { this.setState({ frame: c }); return; } }
     }
+    this.ensureCatalogs();
     this.drawHeatmap(this.canvas);
     this.persist();
   }
@@ -2258,6 +2561,43 @@ class Component extends DCLogic {
       // One filter over the whole page, so the canvas and the SVG chart go red
       // with everything else and no drawing code has to know about the theme.
       nightFilter: s.night ? 'url(#nightvision)' : 'none',
+      query: s.query || '',
+      searchMsg: s.searchMsg || '',
+      onQuery: e => this.setState({ query: e.target.value, searchMsg: '' }),
+      doSearch: () => this.searchGo(),
+      // Enter should search. The runtime's on-key handling does not reach here,
+      // and the canvas already takes its own listeners this way.
+      findRef: el => {
+        if (!el || el.__findBound) return;
+        el.__findBound = true;
+        el.addEventListener('keydown', ev => {
+          if (ev.key === 'Enter') { ev.preventDefault(); this.searchGo(); }
+        });
+      },
+      catToggles: this.CATALOGS.map(c => {
+        const on = !!(s.cats || {})[c.id];
+        const rows = this.catalogRows(c.id);
+        const loading = !!((this._catLoad || {})[c.id]);
+        const failed = !!((this._catErr || {})[c.id]);
+        return {
+          label: c.label + (on && loading ? ' …' : on && failed ? ' (failed)' : ''),
+          fg: on ? '#F6F5F2' : '#6E6A62',
+          dot: on ? c.color : 'transparent',
+          ring: on ? c.color : '#4A4740',
+          tip: (on ? 'Hide ' : 'Show ') + c.label + ' · ' + c.n + ' objects'
+               + (rows || on ? '' : ', downloaded once when first shown'),
+          toggle: () => {
+            const next = Object.assign({}, s.cats);
+            if (next[c.id]) delete next[c.id]; else next[c.id] = true;
+            this.setState({ cats: next });
+          },
+        };
+      }),
+      catLabelText: s.catLabels ? 'Labels on' : 'Labels off',
+      catLabelFg: s.catLabels ? '#D9A960' : '#6E6A62',
+      catLabelTip: s.catLabels ? 'Stop naming catalogue objects on the chart'
+                               : 'Name catalogue objects on the chart',
+      toggleCatLabels: () => this.setState({ catLabels: !s.catLabels }),
       nightLabel: s.night ? 'Night vision on' : 'Night vision',
       nightPressed: s.night ? 'true' : 'false',
       // Active reads as gold text on a gold border, the way the play button

@@ -49,8 +49,10 @@ scripts and fonts over HTTP.
 
 ```
 index.html                     markup + component logic (x-dc format)
-_worker.js                     Pages worker: pages.dev -> custom domain
+_worker.js                     Pages worker: pages.dev -> domain, catalogue caching
 scripts/build.sh               assembles dist/, injects the analytics beacon
+scripts/build-catalogs.py      regenerates assets/catalogs/ from the source lists
+assets/catalogs/*.txt          deep-sky catalogues, content-hashed, fetched on demand
 assets/js/dc-runtime.js        renderer for the x-dc document
 assets/js/react*.min.js        React 18.3.1 UMD builds, vendored
 assets/fonts/*.woff2           Inter and Archivo subsets, vendored
@@ -59,3 +61,33 @@ assets/fonts/*.woff2           Inter and Archivo subsets, vendored
 `index.html` was unpacked from a self-contained HTML export: the embedded
 base64 assets were written out as real files and the CDN references rewired to
 the vendored copies via `window.__resources`.
+
+
+## Catalogues
+
+Ten deep-sky catalogues, 14,861 objects: Messier, Caldwell, Herschel 400, NGC,
+IC, Sharpless, Barnard, van den Bergh, Lynds dark nebulae and Arp. Messier is
+the only one on by default.
+
+Each is a separate file under `assets/catalogs/`, fetched the first time its
+layer is switched on and not before - turning NGC on costs 74 KB gzipped once,
+and never turning it on costs nothing. Every filename carries a hash of its own
+contents, so the bytes behind a URL can never change, which is what lets
+`_worker.js` serve them `immutable` with a one-year max-age: a reader downloads
+each catalogue at most once ever rather than revalidating it on every visit.
+That has to happen in the worker, because Pages ignores `_headers` for anything
+served through an advanced-mode `_worker.js`.
+
+Rows are stored as deltas from the row before, which is worth about a third
+against plain values and keeps every field - position, type, magnitude, major
+and minor axis, position angle and common name. Each delta is measured from the
+value the decoder will have reconstructed rather than the true one, so rounding
+cannot accumulate down the file.
+
+Regenerate with `python3 scripts/build-catalogs.py`. It fetches from OpenNGC
+(CC-BY-SA-4.0) for NGC, IC and the Messier numbers, VizieR for Sharpless,
+Barnard, van den Bergh, Lynds and Arp, Wikipedia for the Caldwell and
+Herschel 400 lists, and SIMBAD for the popular names the source lists omit -
+without which the Horsehead cannot be found by the only word anyone calls it.
+It prints the `CATALOGS` block to paste into `index.html`, since the filenames
+change whenever the data does.

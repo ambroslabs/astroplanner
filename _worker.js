@@ -14,13 +14,38 @@
 const PAGES_HOST = "astroplanner.pages.dev";
 const SITE_HOST = "astroplanner.ambroslabs.io";
 
+// The catalogue files carry a hash of their own contents in the name, so a
+// given URL's bytes can never change: rebuilding a catalogue produces a new
+// filename, and the old one simply stops being asked for. That is what makes
+// `immutable` safe here - the browser is told never to revalidate, and there is
+// no stale version to be stuck with. It matters because these are the large
+// files (NGC is 74 KB gzipped) and they should be fetched once per reader, not
+// once per visit.
+//
+// This has to happen in the worker. Pages ignores the _headers file for
+// anything served through an advanced-mode _worker.js, so a _headers rule would
+// look correct in the repository and do nothing at all.
+const HASHED = /^\/assets\/catalogs\/[a-z0-9]+\.[0-9a-f]{12}\.txt$/;
+const IMMUTABLE = "public, max-age=31536000, immutable";
+
 export default {
-  fetch(request, env) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     if (url.hostname === PAGES_HOST) {
       url.hostname = SITE_HOST;
       return Response.redirect(url.toString(), 301);
     }
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+    if (HASHED.test(url.pathname) && response.ok) {
+      // The body has to be re-wrapped: an ASSETS response's headers are frozen.
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", IMMUTABLE);
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+    return response;
   },
 };
