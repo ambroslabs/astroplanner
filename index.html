@@ -738,6 +738,24 @@ class Component extends DCLogic {
   // being readable anyway, so the slider scales against it rather than against
   // however many objects happen to be in view.
   LABEL_CAP = 110;
+  // Label ranking, all in magnitudes so the terms trade against each other.
+  LABEL_NAME_BONUS = 5;   // having a common name is worth five magnitudes
+  LABEL_SIZE_MAX = 8;     // a large object is worth up to eight
+  LABEL_CAT_STEP = 1.2;   // and each step down the catalogue list costs this
+  LABEL_CAT_MAX = 6;      // up to a limit, so the obscure lists are not buried
+
+  // Position in CATALOGS is the order of prominence - Messier first, then
+  // Caldwell, then the rest - so an unnamed Messier object is not pushed off
+  // the chart by a named NGC one the reader never asked for by name.
+  catRank() {
+    if (!this._catRank) {
+      this._catRank = {};
+      this.CATALOGS.forEach((c, i) => {
+        this._catRank[c.id] = Math.min(this.LABEL_CAT_MAX, i * this.LABEL_CAT_STEP);
+      });
+    }
+    return this._catRank;
+  }
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
@@ -1544,10 +1562,20 @@ class Component extends DCLogic {
   // from landing on top of each other.
   labelCatalogs(ctx, cand, g) {
     if (!cand.length) return;
+    const op = this.state.catOpacity;
     const { X0, X1, Y0, Y1 } = g;
     const names = this.state.catNames || {};
-    const score = c => (c.o.name ? 0 : 40) + (c.o.mag == null ? 14 : c.o.mag)
-                     - Math.min(8, (c.o.maj || 0) / 12);
+    // Everything below is denominated in magnitudes, so the terms are
+    // comparable and none of them is categorical. The old name term was worth
+    // 40, which is more than the whole magnitude range: every named object
+    // outranked every unnamed one no matter how faint, so a mag 11 galaxy
+    // nobody has heard of beat a naked-eye globular. A name is now worth five
+    // magnitudes - a real thumb on the scale, not a verdict.
+    const rank = this.catRank();
+    const score = c => (rank[c.def.id] || 0)
+                     + (c.o.name ? 0 : this.LABEL_NAME_BONUS)
+                     + (c.o.mag == null ? 14 : c.o.mag)
+                     - Math.min(this.LABEL_SIZE_MAX, (c.o.maj || 0) / 12);
     const cap = Math.round(this.LABEL_CAP * Math.max(0, Math.min(1, this.state.catDensity)));
     if (!cap) return;
     const ranked = cand.slice().sort((a, b) => score(a) - score(b)).slice(0, cap);
@@ -1559,20 +1587,47 @@ class Component extends DCLogic {
       const text = (names[c.def.id] && c.o.name) ? c.o.label + ' \u00B7 ' + c.o.name : c.o.label;
       const w = ctx.measureText(text).width;
       let spot = null;
-      for (const [dx, dy] of [[c.r + 5, 0], [-c.r - 5 - w, 0], [c.r + 5, -11],
-                              [-c.r - 5 - w, -11], [-w / 2, -c.r - 9], [-w / 2, c.r + 9]]) {
-        const x = c.x + dx, y = c.y + dy;
-        if (x < X0 + 2 || x + w > X1 - 2 || y < Y0 + 7 || y > Y1 - 7) continue;
-        const row = Math.floor((y - Y0) / cell), [a, b] = span(x, w);
-        let clash = false;
-        for (let cx = a; cx <= b && !clash; cx++) clash = taken.has(row * cols + cx);
-        if (clash) continue;
-        for (let cx = a; cx <= b; cx++) taken.add(row * cols + cx);
-        spot = [x, y]; break;
+      // Rings at a growing gap, nearest first, so a label travels only as far
+      // as it has to. Before this the six places were all flush against the
+      // marker, and a label that fitted nowhere was simply dropped - which is
+      // why the density slider stopped doing anything above about 60 per cent
+      // in a crowded view. Now it moves out instead, and the leader says where
+      // it came from.
+      for (const gap of [5, 14, 26, 44, 70]) {
+        const spots = [[c.r + gap, 0], [-c.r - gap - w, 0],
+                       [c.r + gap, -gap - 7], [-c.r - gap - w, -gap - 7],
+                       [c.r + gap, gap + 7], [-c.r - gap - w, gap + 7],
+                       [-w / 2, -c.r - gap - 7], [-w / 2, c.r + gap + 7]];
+        for (const [dx, dy] of spots) {
+          const x = c.x + dx, y = c.y + dy;
+          if (x < X0 + 2 || x + w > X1 - 2 || y < Y0 + 7 || y > Y1 - 7) continue;
+          const row = Math.floor((y - Y0) / cell), [a, b] = span(x, w);
+          let clash = false;
+          for (let cx = a; cx <= b && !clash; cx++) clash = taken.has(row * cols + cx);
+          if (clash) continue;
+          for (let cx = a; cx <= b; cx++) taken.add(row * cols + cx);
+          spot = [x, y]; break;
+        }
+        if (spot) break;
       }
       if (!spot) continue;
+      const bx = spot[0] - 2, by = spot[1] - 6, bw = w + 4, bh = 12;
+      // Leader from the nearest edge of the label to the marker, stopping short
+      // of it so the line points at the object without touching it. Drawn
+      // before the label's own background, so the background caps it cleanly.
+      // Only when the label actually moved: at the nearest ring the line would
+      // be a few pixels of noise between two things already side by side.
+      const ax = Math.max(bx, Math.min(c.x, bx + bw)), ay = Math.max(by, Math.min(c.y, by + bh));
+      const vx = c.x - ax, vy = c.y - ay, len = Math.hypot(vx, vy);
+      if (len > 9) {
+        ctx.strokeStyle = c.def.color; ctx.globalAlpha = 0.45; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(ax, ay);
+        const stop = Math.min(len - 1, c.r + 3);
+        ctx.lineTo(c.x - vx / len * stop, c.y - vy / len * stop); ctx.stroke();
+        ctx.globalAlpha = op;
+      }
       ctx.fillStyle = 'rgba(10,10,10,0.7)';
-      ctx.fillRect(spot[0] - 2, spot[1] - 6, w + 4, 12);
+      ctx.fillRect(bx, by, bw, bh);
       ctx.fillStyle = c.def.color;
       ctx.fillText(text, spot[0], spot[1]);
     }
