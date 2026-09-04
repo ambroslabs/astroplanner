@@ -28,6 +28,30 @@ const SITE_HOST = "astroplanner.ambroslabs.io";
 const HASHED = /^\/(?:beta\/)?assets\/catalogs\/[a-z0-9]+\.[0-9a-f]{12}\.txt$/;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
+// Pages answers a path it does not have with the page itself and a 200, not a
+// 404. That is right for an app with client-side routes and wrong for a data
+// file: asked for a catalogue that is not there, the reply looked like a
+// catalogue that was, and being on a hashed path it was about to be marked
+// immutable - so a reader holding a stale index.html would have cached an HTML
+// page under a catalogue URL for a year and parsed it as data every time. A
+// real catalogue is text/plain, so anything else on one of these paths is the
+// fallback, and is turned back into the 404 it should have been.
+function catalogueResponse(response) {
+  const type = response.headers.get("Content-Type") || "";
+  if (!response.ok || type.indexOf("text/plain") !== 0) {
+    return new Response("Not found", {
+      status: 404,
+      headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
+    });
+  }
+  // The body has to be re-wrapped: an ASSETS response's headers are frozen.
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", IMMUTABLE);
+  return new Response(response.body, {
+    status: response.status, statusText: response.statusText, headers,
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -39,22 +63,13 @@ export default {
     // /beta is a copy of the site for trying things on, and there is no reason
     // for a search engine to carry a second, deliberately unstable version of
     // every page.
+    if (HASHED.test(url.pathname)) return catalogueResponse(response);
     if (url.pathname === "/beta" || url.pathname.startsWith("/beta/")) {
-      const headers = new Headers(response.headers);
-      headers.set("X-Robots-Tag", "noindex, nofollow");
-      if (HASHED.test(url.pathname) && response.ok) headers.set("Cache-Control", IMMUTABLE);
-      return new Response(response.body, {
-        status: response.status, statusText: response.statusText, headers,
-      });
-    }
-    if (HASHED.test(url.pathname) && response.ok) {
       // The body has to be re-wrapped: an ASSETS response's headers are frozen.
       const headers = new Headers(response.headers);
-      headers.set("Cache-Control", IMMUTABLE);
+      headers.set("X-Robots-Tag", "noindex, nofollow");
       return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
+        status: response.status, statusText: response.statusText, headers,
       });
     }
     return response;
