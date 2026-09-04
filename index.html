@@ -1305,7 +1305,10 @@ class Component extends DCLogic {
       if (!inPlot(p)) return;
       const onPoint = e.pointerType === 'touch' ? null : pointAt(p);
       if (onPoint && !boxAt(p)) {
-        this._drag = { mode: 'point', idx: onPoint.i,
+        // Where the readout sits right now, so it can be held there while the
+        // point travels underneath it.
+        this._drag = { mode: 'point', idx: onPoint.i, moved: false,
+                       lockX: onPoint.x, lockY: onPoint.y,
                        x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         e.preventDefault();
@@ -1347,15 +1350,23 @@ class Component extends DCLogic {
       if (d.mode === 'point') {
         const x = Math.max(64, Math.min(900, p.x)), y = Math.max(16, Math.min(546, p.y));
         d.x1 = x; d.y1 = y;
+        // Any real movement makes this a drag rather than a click, and a drag
+        // must never delete. The old test compared start and end and called
+        // anything under six pixels a click, so nudging a point a little way
+        // and letting go deleted it - which is the one thing a drag should not
+        // be able to do.
+        if (Math.abs(x - d.x0) > 3 || Math.abs(y - d.y0) > 3) d.moved = true;
         const a = this._axis;
         const ra = a.axStart + (1 - (x - a.X0) / (a.X1 - a.X0)) * a.axSpan;
         const dec = a.dTop - (y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
         const ps = this.state.probes.slice(), pr = ps[d.idx];
         if (!pr) return;
-        // The label's offset is held in pixels from its point, so a moved
-        // point carries its label along at the same relative position.
+        // Hold the readout where it was when the drag started. Left to follow
+        // the point it swings around the cursor, which is exactly when it is
+        // hardest to see where the point is going.
         ps[d.idx] = Object.assign({}, pr, { ra: ((ra % 24) + 24) % 24,
-                                            dec: Math.max(-90, Math.min(90, dec)) });
+                                            dec: Math.max(-90, Math.min(90, dec)),
+                                            lx: d.lockX - x, ly: d.lockY - y });
         this.setState({ probes: ps });
         return;
       }
@@ -1393,9 +1404,9 @@ class Component extends DCLogic {
       if (!d) return;
       const a = this._axis;
       if (d.mode === 'point') {
-        // Barely moved reads as a click on the point, which is how a point has
-        // always been taken back off; only a real drag repositions it.
-        if (Math.abs(d.x1 - d.x0) < 6 && Math.abs(d.y1 - d.y0) < 6) {
+        // Only a press that never became a drag reads as a click, which is how
+        // a point has always been taken back off.
+        if (!d.moved) {
           this.setState({ probes: this.state.probes.filter((_, i) => i !== d.idx) });
           return;
         }
@@ -1643,9 +1654,14 @@ class Component extends DCLogic {
         // against that line, and the name shows if either of them asked for it.
         const list = alias.get(key) || [];
         const found = list.find(e => e.label === o.label);
-        if (found) { if (found.cats.indexOf(def.id) < 0) found.cats.push(def.id);
-                     if (!found.name) found.name = o.name; }
-        else list.push({ label: o.label, cats: [def.id], name: o.name });
+        if (found) {
+          if (found.cats.indexOf(def.id) < 0) found.cats.push(def.id);
+          if (!found.name) found.name = o.name;
+          if (!def.desigLabel) found.borrowed = false;
+        } else {
+          list.push({ label: o.label, cats: [def.id], name: o.name,
+                      borrowed: !!def.desigLabel });
+        }
         alias.set(key, list);
       }
     }
@@ -1779,7 +1795,15 @@ class Component extends DCLogic {
       // separate name switches, so C 20 can be spelled out while the NGC line
       // beside it is not. Comma-joining them made a single run of text with no
       // way to see which name belonged to which number.
-      const entries = (alias && c.key && alias.get(c.key)) || null;
+      let entries = (alias && c.key && alias.get(c.key)) || null;
+      // Herschel 400 has no designation of its own - it is a selection of NGC
+      // objects identified by their NGC numbers - so its line is that NGC
+      // number. With NGC switched off that reads as NGC appearing uninvited,
+      // and with any other catalogue up it doubles every label. A catalogue
+      // that borrows its designation only gets a line when nothing else can
+      // supply one, which leaves it as the label of last resort: on its own it
+      // still says NGC 891, because that is what the object is called.
+      if (entries && entries.some(e => !e.borrowed)) entries = entries.filter(e => !e.borrowed);
       // Each line is coloured by the catalogue it came from, so a stack of
       // designations reads as a list of which layers hold this object rather
       // than as one block in whichever colour happened to own it.
