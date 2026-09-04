@@ -552,6 +552,13 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starsLabel }}</span>
         </div>
       </div>
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Objects</span>
+        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+          <input aria-label="Catalogue object opacity" type="range" min="0" max="100" step="5" value="{{ catOpacityPct }}" sc-camel-on-input="{{ onCatOpacity }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ catOpacityLabel }}</span>
+        </div>
+      </div>
       <!-- Find, on its own row: a hit reframes the chart, so it belongs beside Frame -->
       <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="find-group" style="display: flex; flex-direction: column; gap: 6px;">
@@ -749,6 +756,7 @@ class Component extends DCLogic {
     // interesting ones first and the famous objects survive longest. 0 is off,
     // which is why there is no separate on/off beside it.
     catDensity: 1,
+    catOpacity: 1,
     // Per catalogue: also print the common name beside the designation. Off by
     // default - the designation is what you look an object up by, and "Salt and
     // Pepper Cluster" spends four times the width saying less about which one
@@ -1478,10 +1486,16 @@ class Component extends DCLogic {
     return out;
   }
 
+  // Drawn under the veil, with the constellation figures rather than over the
+  // top of them. Mask and falloff then reach the objects and their names, so an
+  // object in sky that is out of reach tonight fades with the sky it is in,
+  // instead of sitting at full strength over a region the chart is busy saying
+  // you cannot use.
   drawCatalogs(ctx, g) {
     const on = this.state.cats || {};
     const live = this.CATALOGS.filter(c => on[c.id] && this.catalogRows(c.id));
-    if (!live.length) return;
+    if (!live.length || this.state.catOpacity <= 0.001) return;
+    const op = this.state.catOpacity;
     const dup = this.suppressed();
     const { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot } = g;
     const pxPerDeg = (Y1 - Y0) / (dTop - dBot);
@@ -1516,10 +1530,10 @@ class Component extends DCLogic {
         }
         cand.push({ x, y, o, def, r });
       }
-      ctx.globalAlpha = 0.9; ctx.fillStyle = def.color; ctx.fill(marks);
-      ctx.globalAlpha = 0.8; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
+      ctx.globalAlpha = 0.9 * op; ctx.fillStyle = def.color; ctx.fill(marks);
+      ctx.globalAlpha = 0.8 * op; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
     }
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = op;
     if (this.state.catDensity > 0) this.labelCatalogs(ctx, cand, g);
     ctx.restore();
   }
@@ -2224,7 +2238,9 @@ class Component extends DCLogic {
       // past the veil and stay bright. The Sun does exactly that when centred.
       ctx.save();
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
-      drawMilkyWay(); drawConstellations(); drawEcliptic(); drawMoon(); drawBodies();
+      drawMilkyWay(); drawConstellations();
+      this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot });
+      drawEcliptic(); drawMoon(); drawBodies();
       ctx.restore();
     }
 
@@ -2287,12 +2303,6 @@ class Component extends DCLogic {
         drawWrapped(full2, { color: '#0A0A0A', w: 2.5, dash: [8, 6] });
       }
     }
-    // Catalogue objects sit above the veil, unlike the constellation figures
-    // below it. A figure is scenery and should fade where the sky is out of
-    // reach; a target is the thing being looked for, and a target you cannot
-    // see is not an answer to "can I shoot this one tonight". The heat behind
-    // it still says whether it is reachable.
-    this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot });
     if (frame) ctx.restore();
     // Click readout, drawn last so it sits above the field either way.
     // Several points can be down at once, so each box has to dodge the ones
@@ -2710,6 +2720,9 @@ class Component extends DCLogic {
       milkyLabel: Math.round(s.milkyway * 100) + '%',
       contrastPct: String(Math.round(s.contrast * 100)),
       contrastLabel: Math.round(s.contrast * 100) + '%',
+      catOpacityPct: String(Math.round(s.catOpacity * 100)),
+      catOpacityLabel: Math.round(s.catOpacity * 100) + '%',
+      onCatOpacity: e => this.setState({ catOpacity: Number(e.target.value) / 100 }),
       starsPct: String(Math.round(s.stars * 100)),
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
