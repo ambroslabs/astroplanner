@@ -612,7 +612,10 @@
           </label>
         </span>
       </sc-for>
-      <label title="How many object names to print. Names are ranked before they are cut, so the best-known survive longest; 0% prints none." style="display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; cursor: pointer;">Names
+      <label title="Print every designation an object is known by, such as C 20, NGC 7000, rather than only the one its catalogue gives it" style="display: flex; align-items: center; gap: 7px; margin-left: auto; cursor: pointer; font-size: 12px; font-weight: 600; color: #8E897D;">
+        <input type="checkbox" checked="{{ catAliases }}" sc-camel-on-change="{{ onCatAliases }}" style="accent-color: #D9A960; width: 13px; height: 13px; margin: 0;">All IDs
+      </label>
+      <label title="How many object names to print. Names are ranked before they are cut, so the best-known survive longest; 0% prints none." style="display: flex; align-items: center; gap: 8px; margin-left: 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; cursor: pointer;">Names
         <input type="range" min="0" max="100" step="5" value="{{ densityPct }}" sc-camel-on-input="{{ onDensity }}" style="width: 110px; accent-color: #D9A960;">
         <span style="letter-spacing: 0; text-transform: none; color: #C9C4B7; min-width: 34px;">{{ densityLabel }}</span>
       </label>
@@ -722,7 +725,7 @@ class Component extends DCLogic {
   CATALOGS = [
     { id: 'messier', label: 'Messier', pfx: 'M', color: '#E5C07B', n: 110, file: 'messier.550ab2bdaef4.txt' },
     { id: 'caldwell', label: 'Caldwell', pfx: 'C', color: '#7FB2E5', n: 109, file: 'caldwell.ab187eae8d5e.txt' },
-    { id: 'herschel', label: 'Herschel 400', pfx: 'H', color: '#9AD1A6', n: 400, file: 'herschel.5fad616d857d.txt' },
+    { id: 'herschel', label: 'Herschel 400', pfx: 'H', desigLabel: true, color: '#9AD1A6', n: 400, file: 'herschel.5fad616d857d.txt' },
     { id: 'ngc', label: 'NGC', pfx: 'NGC', color: '#8FA8C8', n: 7148, file: 'ngc.fa2d51f8f798.txt' },
     { id: 'ic', label: 'IC', pfx: 'IC', color: '#B79AD1', n: 4153, file: 'ic.50f40d7ce1c9.txt' },
     { id: 'sharpless', label: 'Sharpless', pfx: 'Sh2', color: '#E58F8F', n: 313, file: 'sharpless.c21baeb92e5b.txt' },
@@ -775,6 +778,9 @@ class Component extends DCLogic {
     // which is why there is no separate on/off beside it.
     catDensity: 1,
     catOpacity: 1,
+    // Print every designation an object is known by, not only the one the most
+    // prominent catalogue gives it.
+    catAliases: false,
     // Per catalogue: also print the common name beside the designation. Off by
     // default - the designation is what you look an object up by, and "Salt and
     // Pepper Cluster" spends four times the width saying less about which one
@@ -1473,7 +1479,11 @@ class Component extends DCLogic {
         type: f[3] || '', mag: f[4] ? parseFloat(f[4]) : null,
         maj: f[5] ? parseFloat(f[5]) : null, min: f[6] ? parseFloat(f[6]) : null,
         pa: f[7] ? parseFloat(f[7]) : null, name: f[8] || '', desig: f[9] || '',
-        label: def.pfx + (def.pfx === 'Sh2' ? '-' : ' ') + id,
+        // Herschel 400 numbers its entries by the NGC number they already
+        // carry, so printing "H 7000" invents a designation nobody uses. Show
+        // the real one it cross-references instead.
+        label: (def.desigLabel && f[9]) ? this.tidyDesig(f[9])
+                                        : def.pfx + (def.pfx === 'Sh2' ? '-' : ' ') + id,
       });
     }
     return out;
@@ -1495,25 +1505,41 @@ class Component extends DCLogic {
   // CATALOGS is the order of prominence, so the first catalogue to claim a
   // designation keeps it and the rest skip that row - one object, one label,
   // and the label is the one from the best-known list that has it.
+  // "NGC0224" and "NGC 224" are the same designation written two ways; they
+  // arrive that way because they come from different sources.
+  tidyDesig(v) {
+    const m = /^(NGC|IC)\s*0*(\d+)$/i.exec((v || '').trim());
+    return m ? m[1].toUpperCase() + ' ' + parseInt(m[2], 10) : (v || '').trim();
+  }
+  // What identifies a row across catalogues. Only lists carrying an NGC or IC
+  // cross-reference can be matched up; Sharpless, Barnard and the rest have
+  // none, so they are never merged with anything.
+  objKey(def, o) {
+    if (def.id === 'ngc' || def.id === 'ic') return def.id + ':' + o.id;
+    const m = /^(NGC|IC)\s*0*(\d+)/i.exec(o.desig || '');
+    return m ? m[1].toLowerCase() + ':' + parseInt(m[2], 10) : null;
+  }
+
   claims() {
     const on = this.state.cats || {};
-    const out = new Map();
+    const owner = new Map(), alias = new Map();
     for (const def of this.CATALOGS) {
       if (!on[def.id]) continue;
       const rows = this.catalogRows(def.id);
       if (!rows) continue;
-      const own = def.id === 'ngc' || def.id === 'ic';
       for (const o of rows) {
-        let key = null;
-        if (own) key = def.id + ':' + o.id;
-        else {
-          const m = /^(NGC|IC)\s*0*(\d+)/i.exec(o.desig || '');
-          if (m) key = m[1].toLowerCase() + ':' + parseInt(m[2], 10);
-        }
-        if (key && !out.has(key)) out.set(key, def.id);
+        const key = this.objKey(def, o);
+        if (!key) continue;
+        if (!owner.has(key)) owner.set(key, def.id);
+        // Collected in prominence order, so the list reads "M 31, NGC 224".
+        const list = alias.get(key) || [];
+        if (list.indexOf(o.label) < 0) list.push(o.label);
+        const dd = this.tidyDesig(o.desig);
+        if (dd && list.indexOf(dd) < 0) list.push(dd);
+        alias.set(key, list);
       }
     }
-    return out;
+    return { owner, alias };
   }
 
   // Drawn under the veil, with the constellation figures rather than over the
@@ -1529,7 +1555,7 @@ class Component extends DCLogic {
     const live = this.CATALOGS.filter(c => on[c.id] && this.catalogRows(c.id)).reverse();
     if (!live.length || this.state.catOpacity <= 0.001) return;
     const op = this.state.catOpacity;
-    const claimed = this.claims();
+    const { owner, alias } = this.claims();
     const { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot, axSpan } = g;
     const pxPerDeg = (Y1 - Y0) / (dTop - dBot);
     // A whole turn of RA in pixels. xOf wraps its argument into the visible
@@ -1543,15 +1569,9 @@ class Component extends DCLogic {
     const cand = [];
     for (const def of live) {
       const marks = new Path2D(), shapes = new Path2D();
-      const own = def.id === 'ngc' || def.id === 'ic';
       for (const o of this.catalogRows(def.id)) {
-        let key = null;
-        if (own) key = def.id + ':' + o.id;
-        else {
-          const m = /^(NGC|IC)\s*0*(\d+)/i.exec(o.desig || '');
-          if (m) key = m[1].toLowerCase() + ':' + parseInt(m[2], 10);
-        }
-        if (key && claimed.get(key) !== def.id) continue;
+        const key = this.objKey(def, o);
+        if (key && owner.get(key) !== def.id) continue;
         let x = xOf(o.ra);
         const y = yOf(o.dec);
         x -= period * Math.round((x - midX) / period);
@@ -1588,13 +1608,13 @@ class Component extends DCLogic {
         // labelled across itself the way an atlas does it.
         const ax = Math.max(X0 + 10, Math.min(X1 - 10, x));
         const ay = Math.max(Y0 + 10, Math.min(Y1 - 10, y));
-        cand.push({ x, y, ax, ay, o, def, r, lr: Math.min(r, 18) });
+        cand.push({ x, y, ax, ay, o, def, r, key, lr: Math.min(r, 18) });
       }
       ctx.globalAlpha = 0.9 * op; ctx.fillStyle = def.color; ctx.fill(marks);
       ctx.globalAlpha = 0.8 * op; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
     }
     ctx.globalAlpha = op;
-    if (this.state.catDensity > 0) this.labelCatalogs(ctx, cand, g);
+    if (this.state.catDensity > 0) this.labelCatalogs(ctx, cand, g, this.state.catAliases ? alias : null);
     ctx.restore();
   }
 
@@ -1602,11 +1622,12 @@ class Component extends DCLogic {
   // view - so rank them and stop. Named first, then bright, then large: the
   // order you would point them out in. The grid is what keeps the survivors
   // from landing on top of each other.
-  labelCatalogs(ctx, cand, g) {
+  labelCatalogs(ctx, cand, g, alias) {
     if (!cand.length) return;
     const op = this.state.catOpacity;
     const { X0, X1, Y0, Y1 } = g;
     const names = this.state.catNames || {};
+
     // Everything below is denominated in magnitudes, so the terms are
     // comparable and none of them is categorical. The old name term was worth
     // 40, which is more than the whole magnitude range: every named object
@@ -1626,7 +1647,20 @@ class Component extends DCLogic {
     const cell = 15, cols = Math.ceil((X1 - X0) / cell) + 2, taken = new Set();
     const span = (x, w) => [Math.floor((x - X0) / cell), Math.floor((x + w - X0) / cell)];
     for (const c of ranked) {
-      const text = (names[c.def.id] && c.o.name) ? c.o.label + ' \u00B7 ' + c.o.name : c.o.label;
+      // Every designation the object answers to, when asked for: "C 20,
+      // NGC 7000" says more than either half, and which half you know it by
+      // depends on which list you came in from.
+      // Objects whose cross-reference is not an NGC or IC number - the
+      // Pleiades are Mel 22, the Hyades Mel 25 - get no shared key, so they
+      // are never merged with anything and their second designation has to
+      // come off the row itself.
+      let ids = (alias && c.key && alias.get(c.key)) || null;
+      if (!ids && alias) {
+        const dd = this.tidyDesig(c.o.desig);
+        ids = dd && dd !== c.o.label ? [c.o.label, dd] : [c.o.label];
+      }
+      if (!ids) ids = [c.o.label];
+      const text = ids.join(', ') + ((names[c.def.id] && c.o.name) ? ' \u00B7 ' + c.o.name : '');
       const w = ctx.measureText(text).width;
       let spot = null;
       // Rings at a growing gap, nearest first, so a label travels only as far
@@ -2795,6 +2829,8 @@ class Component extends DCLogic {
           },
         };
       }),
+      catAliases: !!s.catAliases,
+      onCatAliases: e => this.setState({ catAliases: e.target.checked }),
       densityPct: String(Math.round(s.catDensity * 100)),
       densityLabel: s.catDensity > 0 ? Math.round(s.catDensity * 100) + '%' : 'off',
       onDensity: e => this.setState({ catDensity: Number(e.target.value) / 100 }),
