@@ -111,3 +111,14 @@ copy of everything.
 
 Until the `beta` branch exists, `/beta` is built from `main` and is simply the
 same site.
+
+The two keep separate saved settings - `imaging-planner/v1` and
+`imaging-planner/v1/beta` - because they share an origin, and one key would mean
+testing on beta quietly rewrote the settings of the page being used for real.
+
+They share one catalogue directory. The file names are hashes of their contents,
+so a catalogue both copies agree on is one file at one URL and is downloaded
+once for both, while a catalogue beta has changed lands under a different name
+and the two sit side by side. The beta build rewrites its fetch path to the
+absolute one to make that possible; the default stays relative so a clone still
+runs from any directory.

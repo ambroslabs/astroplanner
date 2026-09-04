@@ -62,6 +62,19 @@ html = open(path, encoding='utf-8').read()
 assert html.count('</body>') == 1, 'expected exactly one </body>'
 open(path, 'w', encoding='utf-8').write(html.replace('</body>', badge + '</body>'))
 BADGE
+  # Point the beta copy at the root's catalogue directory. The file names
+  # carry a hash of their contents, so the two copies share one URL and one
+  # cached download wherever the data is the same, and get separate files
+  # automatically wherever it differs.
+  python3 - "$OUT/index.html" <<'BASE'
+import sys
+path = sys.argv[1]
+old = "CATALOG_BASE = 'assets/catalogs/';"
+new = "CATALOG_BASE = '/assets/catalogs/';"
+html = open(path, encoding='utf-8').read()
+assert html.count(old) == 1, 'expected exactly one CATALOG_BASE'
+open(path, 'w', encoding='utf-8').write(html.replace(old, new))
+BASE
   echo "build: stamped as beta"
 fi
 echo "build: $OUT ready ($(find "$OUT" -type f | wc -l) files)"

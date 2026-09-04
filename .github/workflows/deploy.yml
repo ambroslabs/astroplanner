@@ -62,6 +62,19 @@ jobs:
             ./scripts/build.sh
           fi
 
+      # One catalogue directory for both copies. The names are content hashes,
+      # so merging is safe: identical data collides on the same name and stays
+      # one file with one URL, which is what stops a reader downloading the
+      # same 96 KB twice for two copies of the same page. Data that differs
+      # lands under a different name and both survive.
+      - name: Share one catalogue directory between / and /beta
+        run: |
+          if [ -d dist/beta/assets/catalogs ]; then
+            cp -n dist/beta/assets/catalogs/*.txt dist/assets/catalogs/ 2>/dev/null || true
+            rm -rf dist/beta/assets/catalogs
+          fi
+          echo "catalogue files served: $(ls dist/assets/catalogs | wc -l)"
+
       - name: Deploy
         uses: cloudflare/wrangler-action@v4.0.0
         with:

@@ -705,7 +705,11 @@ class Component extends DCLogic {
   // initialiser below reads this key. Declaring it later left the load path
   // reading localStorage under the key `undefined` while saves went to the
   // real one, so settings stored fine and never came back.
-  STORE_KEY = 'imaging-planner/v1';
+  // Saved settings are per copy of the site. /beta and / share an origin, so
+  // one key would mean testing on beta quietly rewrote the settings of the page
+  // being used for real - and clearing beta's would take those with it.
+  STORE_KEY = 'imaging-planner/v1' + ((typeof location !== 'undefined'
+    && /^\/beta(\/|$)/.test(location.pathname)) ? '/beta' : '');
   // Everything here is persisted and restored. Split into the two groups the
   // reset buttons act on, so each button can restore exactly its own half.
   SITE_DEFAULTS = { lat: 31.55, latText: '31.55', lon: -99.38, lonText: '-99.38', obsSel: 'starfront' };
@@ -752,6 +756,14 @@ class Component extends DCLogic {
     { id: 'lynds', label: 'Lynds dark', pfx: 'LDN', color: '#9C8FA8', n: 1787, file: 'lynds.e076bd266086.txt' },
     { id: 'arp', label: 'Arp', pfx: 'Arp', color: '#D19AC0', n: 338, file: 'arp.d9469aa3720d.txt' },
   ];
+  // Where the catalogue files are fetched from. Relative by default, so a clone
+  // works from any directory and straight off the disk. The beta build rewrites
+  // this to the absolute path, which is what lets both copies of the site share
+  // one set of files: the names carry a hash of their contents, so identical
+  // data is the same name, the same URL and one cached copy, while data that
+  // differs gets a different name and the two live side by side.
+  CATALOG_BASE = 'assets/catalogs/';
+
   // Angular sizes are arcminutes, so an object has to be a good fraction of a
   // degree before it is worth drawing as its own shape rather than a marker.
   ELLIPSE_MIN_PX = 7;
@@ -1678,7 +1690,7 @@ class Component extends DCLogic {
     if (this._catLoad[id]) return this._catLoad[id];
     const def = this.catalogDef(id);
     if (!def) return Promise.resolve(null);
-    const done = fetch('assets/catalogs/' + def.file)
+    const done = fetch(this.CATALOG_BASE + def.file)
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
       .then(txt => {
         this._cats[id] = this.parseCatalog(txt, def);
