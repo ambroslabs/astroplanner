@@ -403,7 +403,11 @@
 }
 </style>
 </helmet>
-<div class="page" style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2;">
+<div class="page" style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2; filter: {{ nightFilter }};">
+    <svg width="0" height="0" style="position: absolute; width: 0; height: 0; pointer-events: none;" aria-hidden="true" focusable="false"><filter id="nightvision" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"></feColorMatrix></filter></svg>
+    <div class="topbar" style="width: 100%; max-width: 1160px; display: flex; align-items: center; justify-content: flex-end;">
+      <button sc-camel-on-click="{{ toggleNight }}" aria-pressed="{{ nightPressed }}" style="background: #161616; color: {{ nightFg }}; border: 1px solid {{ nightBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ nightTip }}"><span style="font-size: 15px; line-height: 13px;">&#9681;</span>{{ nightLabel }}</button>
+    </div>
   <div class="panel bar" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 18px 36px; box-sizing: border-box; display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;">
     <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #D9A960; padding-bottom: 10px;">Observer</span>
     <div class="obs-group" style="display: flex; flex-direction: column; gap: 6px;">
@@ -652,7 +656,10 @@ class Component extends DCLogic {
   };
   // Persisted, but deliberately in neither reset group: Reset site restores
   // Starfront's coordinates and must not delete the saved list.
-  KEPT_DEFAULTS = { sites: [] };
+  // Night vision is persisted like the sites, and like them belongs to neither
+  // reset group: it is how you are looking at the screen, not what the chart
+  // is showing, so neither reset button should switch the lights back on.
+  KEPT_DEFAULTS = { sites: [], night: false };
   // Class fields initialise in order, so every defaults group above exists by
   // the time this runs. Declaring one below meant initialState could not see it:
   // the key was written on save and never looked for on load.
@@ -1264,6 +1271,15 @@ class Component extends DCLogic {
   }
   resetSite() { this.setState(Object.assign({}, this.SITE_DEFAULTS, { geoMsg: '' })); }
 
+  // A hash, not a random number: the night-vision stipple has to land on the
+  // same points every redraw or the sky boils. Three salts give each cell its
+  // two jitters and its keep-or-drop roll from one integer mix.
+  hash01(i, j, salt) {
+    let h = Math.imul(i + 1, 374761393) ^ Math.imul(j + 1, 668265263) ^ Math.imul(salt, 2246822519);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+
   // ---------- milky way ----------
   // J2000 north galactic pole, and the galactic longitude of the north
   // celestial pole. Checked against known points: the galactic centre lands on
@@ -1537,21 +1553,22 @@ class Component extends DCLogic {
     const drawMilkyWay = () => {
       if (this.state.milkyway <= 0.001) return;
       const mc = 256, mr = 128;
-      const off2 = document.createElement('canvas'); off2.width = mc; off2.height = mr;
-      const o2 = off2.getContext('2d'), im = o2.createImageData(mc, mr);
+      // The field itself, kept as numbers: both ways of drawing it want the
+      // same values, one as pixels and one as a probability per point.
+      const field = new Float32Array(mc * mr);
       for (let r = 0; r < mr; r++) {
         const dec = dTop - (r + 0.5) * (dTop - dBot) / mr;
         for (let c = 0; c < mc; c++) {
           const ra = axStart + (1 - (c + 0.5) / mc) * axSpan;
-          const v = this.milkyWayAt(ra, dec);
-          const k = (r * mc + c) * 4;
-          im.data[k] = this.MW[0]; im.data[k + 1] = this.MW[1]; im.data[k + 2] = this.MW[2];
-          im.data[k + 3] = Math.round(255 * Math.max(0, Math.min(1, v)));
+          field[r * mc + c] = Math.max(0, Math.min(1, this.milkyWayAt(ra, dec)));
         }
       }
-      o2.putImageData(im, 0, 0);
+      const sampleAt = (x, y) => {
+        const c = Math.max(0, Math.min(mc - 1, Math.floor((x - X0) / (X1 - X0) * mc)));
+        const r = Math.max(0, Math.min(mr - 1, Math.floor((y - Y0) / (Y1 - Y0) * mr)));
+        return field[r * mc + c];
+      };
       ctx.save();
-      ctx.imageSmoothingEnabled = true;
       ctx.globalAlpha = this.state.milkyway;
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
       // Added, not blended. Painted over the contrast ground the old way, the
@@ -1560,7 +1577,77 @@ class Component extends DCLogic {
       // sky it matters most on - and it read as more of the same grey wash.
       // Adding light is also what the band actually does.
       ctx.globalCompositeOperation = 'lighter';
-      ctx.drawImage(off2, X0, Y0, X1 - X0, Y1 - Y0);
+      if (this.state.night && !this._forceDay) {
+        // Night vision spends the hue this band was separating itself with:
+        // its cool light and the warm contrast ground both land on the same
+        // red, so the two stop being distinguishable. Sprinkled points put the
+        // difference back as texture, which survives being one colour - the
+        // band becomes the grainy part of an otherwise smooth field.
+        //
+        // The lattice is in sky coordinates and the scatter is hashed from the
+        // cell index, never from Math.random, so the grain belongs to the sky:
+        // it pans and zooms with it and holds still through a redraw. Seeded
+        // per frame it would boil, which during playback is the one thing the
+        // eye would be guaranteed to notice.
+        // Points are fixed to the sky, so magnifying spreads them and the grain
+        // thins out just as you lean in to look at it. Each doubling of the
+        // zoom therefore subdivides the lattice once more, and every level is
+        // drawn: the points already on screen keep their positions and finer
+        // ones fill in between them, so density holds while nothing moves.
+        // A level has four times the cells of the one above and the zoom shows
+        // a quarter as much sky, so the levels each cost about the same and the
+        // whole stack stays within a third of drawing one.
+        // floor, not round: a level costs four times the one above it, so it
+        // may only be added once the zoom has actually taken four times the
+        // sky off the screen. Rounding up added a lattice the view had not
+        // paid for yet and cost more than the whole rest of the redraw.
+        const zoom = Math.sqrt((24 / axSpan) * (180 / (dTop - dBot)));
+        const levels = Math.max(0, Math.min(3, Math.floor(Math.log2(Math.max(1, zoom)))));
+        // One fill per brightness bucket instead of one per point: the points
+        // are thousands of one-pixel rectangles and the per-call overhead, not
+        // the pixels, was the cost.
+        const NB = 8, paths = [];
+        for (let k = 0; k < NB; k++) paths.push(new Path2D());
+        for (let L = 0; L <= levels; L++) {
+          const NRA = 640 << L, NDEC = 320 << L;
+          const raStep = 24 / NRA, decStep = 180 / NDEC;
+          const j0 = Math.max(0, Math.floor((dBot + 90) / decStep));
+          const j1 = Math.min(NDEC - 1, Math.ceil((dTop + 90) / decStep));
+          for (let j = j0; j <= j1; j++) {
+            const yC = yOf(-90 + (j + 0.5) * decStep);
+            if (yC < Y0 - 2 || yC > Y1 + 2) continue;
+            for (let i = 0; i < NRA; i++) {
+              // Cheap rejects first - position and density need no hashing, and
+              // most of the sky is not the Milky Way.
+              const xC = xOf((i + 0.5) * raStep);
+              if (xC < X0 - 2 || xC > X1 + 2) continue;
+              const v = sampleAt(xC, yC);
+              if (v <= 0.03) continue;
+              if (this.hash01(i, j, L * 4 + 3) > v * 0.42) continue;
+              const x = xOf((i + this.hash01(i, j, L * 4 + 1)) * raStep);
+              const y = yOf(-90 + (j + this.hash01(i, j, L * 4 + 2)) * decStep);
+              if (x < X0 || x > X1 || y < Y0 || y > Y1) continue;
+              const sz = v > 0.62 ? 2 : 1;
+              paths[Math.min(NB - 1, (v * NB) | 0)].rect(Math.round(x), Math.round(y), sz, sz);
+            }
+          }
+        }
+        for (let k = 0; k < NB; k++) {
+          ctx.fillStyle = 'rgba(214, 226, 255, ' + (0.30 + 0.70 * ((k + 0.5) / NB)).toFixed(3) + ')';
+          ctx.fill(paths[k]);
+        }
+      } else {
+        const off2 = document.createElement('canvas'); off2.width = mc; off2.height = mr;
+        const o2 = off2.getContext('2d'), im = o2.createImageData(mc, mr);
+        for (let k4 = 0, n = mc * mr; k4 < n; k4++) {
+          const k = k4 * 4;
+          im.data[k] = this.MW[0]; im.data[k + 1] = this.MW[1]; im.data[k + 2] = this.MW[2];
+          im.data[k + 3] = Math.round(255 * field[k4]);
+        }
+        o2.putImageData(im, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(off2, X0, Y0, X1 - X0, Y1 - Y0);
+      }
       ctx.restore();
     };
     const drawConstellations = () => {
@@ -2168,6 +2255,21 @@ class Component extends DCLogic {
     return {
       latText: s.latText, lonText: s.lonText, date: s.date, thrText: s.thrText, showMoon: s.showMoon,
       showPlanets: s.showPlanets,
+      // One filter over the whole page, so the canvas and the SVG chart go red
+      // with everything else and no drawing code has to know about the theme.
+      nightFilter: s.night ? 'url(#nightvision)' : 'none',
+      nightLabel: s.night ? 'Night vision on' : 'Night vision',
+      nightPressed: s.night ? 'true' : 'false',
+      // Active reads as gold text on a gold border, the way the play button
+      // already shows itself running. A filled button would have made the
+      // control the brightest thing on a screen whose whole point is to stop
+      // being bright.
+      nightFg: s.night ? '#D9A960' : '#C9C4B7',
+      nightBorder: s.night ? '#8C6A3F' : '#2E2C27',
+      nightTip: s.night
+        ? 'Turn off night vision and go back to full colour'
+        : 'Red only, to keep your dark adaptation while you plan at the scope',
+      toggleNight: () => this.setState({ night: !this.state.night }),
       timeVal: String(this.dayNum(s.date) - this.dayNum(this.winStart())),
       speedIx: String(s.speedIx),
       speedLabel: this.SPEEDS[s.speedIx].l,
@@ -2439,7 +2541,16 @@ class Component extends DCLogic {
     ctx.fillText('USABLE DARK HOURS BY RA / DEC', PAD, 58);
     ctx.fillStyle = '#D9A960'; ctx.font = '700 15px Inter, sans-serif'; ctx.textAlign = 'right';
     ctx.fillText(darkInfo, W - PAD, 58); ctx.textAlign = 'left';
+    // The export is a picture to keep and hand to someone else. A CSS filter
+    // cannot reach canvas pixels, so it comes out in full colour whatever the
+    // screen is doing - which means night vision's stipple would arrive in it
+    // as a blue speckled band and nothing else to explain itself. Redraw the
+    // day version, copy that, and put the screen back. Both redraws are
+    // synchronous and in the same task, so nothing is painted in between.
+    const wasNight = this.state.night && this.canvas;
+    if (wasNight) { this._forceDay = true; this.drawHeatmap(this.canvas); }
     if (this.canvas) ctx.drawImage(this.canvas, PAD, 92, chartW, hmH);
+    if (wasNight) { this._forceDay = false; this.drawHeatmap(this.canvas); }
     this.exportLegend(ctx, W, PAD, yLegend);
     this.exportFooter(ctx, W, PAD, yFoot, this.locFooter() + ' \u00B7 threshold Alt > ' + s.thr + '\u00B0 \u00B7 Sun below \u221218\u00B0');
     this.download(cv, 'dark-hours-map-' + s.date + '-lat' + s.lat + '.png');
