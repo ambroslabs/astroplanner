@@ -564,7 +564,18 @@
       <div class="find-group" style="display: flex; flex-direction: column; gap: 6px;">
         <label for="find-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Find object</label>
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <input id="find-in" type="text" placeholder="M31, NGC 7000, Horsehead" sc-camel-value="{{ query }}" sc-camel-on-input="{{ onQuery }}" ref="{{ findRef }}" style="width: 232px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 10px; outline: none;">
+          <span style="position: relative; display: inline-block;">
+            <input id="find-in" type="text" autocomplete="off" placeholder="M31, NGC 7000, Horsehead" sc-camel-value="{{ query }}" sc-camel-on-input="{{ onQuery }}" ref="{{ findRef }}" style="width: 232px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 10px; outline: none;">
+            <div class="find-sugg" style="display: {{ suggShow }}; position: absolute; z-index: 30; top: 100%; left: 0; width: 300px; margin-top: 3px; background: #101010; border: 1px solid #3A362F; border-radius: 3px; box-shadow: 0 10px 28px rgba(0,0,0,0.55); overflow: hidden;">
+              <sc-for list="{{ suggestions }}" as="g" hint-placeholder-count="8">
+                <button sc-camel-on-click="{{ g.pick }}" style="display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left; background: {{ g.bg }}; border: none; border-bottom: 1px solid #232323; padding: 8px 10px; cursor: pointer; font-family: 'Inter', sans-serif;" style-hover="background: #232323;">
+                  <span style="font-size: 13px; font-weight: 700; color: {{ g.color }}; white-space: nowrap;">{{ g.label }}</span>
+                  <span style="font-size: 12px; color: #C9C4B7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ g.name }}</span>
+                  <span style="font-size: 11px; color: #6E6A62; margin-left: auto; white-space: nowrap;">{{ g.cat }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </span>
           <button sc-camel-on-click="{{ doSearch }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Find the object, switch its catalogue on and frame the chart around it">Go</button>
           <span style="font-size: 12px; color: #8E897D; max-width: 340px;">{{ searchMsg }}</span>
         </div>
@@ -1528,7 +1539,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0, exOpen: false, exWhich: '', exName: '', exSize: '' }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0, exOpen: false, exWhich: '', exName: '', exSize: '', sugg: [], suggIx: -1 }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
@@ -1960,6 +1971,71 @@ class Component extends DCLogic {
     this.setState({ cats: Object.assign({}, this.state.cats, { [o.cat]: true }),
                     searchMsg: (o.label + (o.name ? ' · ' + o.name : '')) });
     this.setFrame(this.frameFor(o));
+  }
+
+  // Suggestions come out of whatever is loaded, and typing pulls the rest in
+  // behind the scenes: a catalogue file is fetched once per reader and cached
+  // for a year, so the cost of having them all searchable is paid once, on the
+  // first keystroke someone types into this box rather than on every visit.
+  loadAllCatalogs() {
+    if (this._allLoading) return this._allLoading;
+    this._allLoading = Promise.all(this.CATALOGS.map(c => this.loadCatalog(c.id)));
+    return this._allLoading;
+  }
+
+  // Designations match from the start - "ngc 70" should offer NGC 7000, not
+  // every object with a 70 buried in it - while names match anywhere, since
+  // nobody types "the" first when they are after the Ring Nebula.
+  suggest(q, limit) {
+    const needle = String(q).trim().toLowerCase();
+    if (needle.length < 1) return [];
+    const flat = needle.replace(/[\s-]+/g, '');
+    const rank = this.catRank();
+    const out = [];
+    for (const def of this.CATALOGS) {
+      const rows = this.catalogRows(def.id);
+      if (!rows) continue;
+      for (const o of rows) {
+        const desig = o.label.toLowerCase().replace(/[\s-]+/g, '');
+        let score = null;
+        if (desig.indexOf(flat) === 0) score = desig === flat ? 0 : 1;
+        else if (o.name && o.name.toLowerCase().indexOf(needle) >= 0) {
+          score = o.name.toLowerCase().indexOf(needle) === 0 ? 2 : 3;
+        }
+        if (score === null) continue;
+        out.push({ o, def, s: score * 100 + (rank[def.id] || 0)
+                              + (o.mag == null ? 14 : o.mag) });
+      }
+    }
+    out.sort((a, b) => a.s - b.s);
+    // One row per object. Herschel 400 and NGC hold the same objects under the
+    // same designation, so without this "ngc 70" offered NGC 7000 twice and
+    // spent two of eight slots saying the same thing.
+    const seen = new Set(), uniq = [];
+    for (const e of out) {
+      const k = this.objKey(e.def, e.o) || (e.def.id + ':' + e.o.id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      uniq.push(e);
+      if (uniq.length >= (limit || 8)) break;
+    }
+    return uniq;
+  }
+
+  refreshSuggest() {
+    clearTimeout(this._sugT);
+    this._sugT = setTimeout(() => {
+      this.setState({ sugg: this.suggest(this.state.query, 8), suggIx: -1 });
+    }, 90);
+  }
+
+  takeSuggestion(i) {
+    const list = this.state.sugg || [];
+    const pick = list[i < 0 ? 0 : i];
+    if (!pick) return false;
+    this.setState({ query: pick.o.label, sugg: [], suggIx: -1 });
+    this.goToObject(pick.o);
+    return true;
   }
 
   async searchGo() {
@@ -2994,16 +3070,48 @@ class Component extends DCLogic {
       nightFilter: s.night ? 'url(#nightvision)' : 'none',
       query: s.query || '',
       searchMsg: s.searchMsg || '',
-      onQuery: e => this.setState({ query: e.target.value, searchMsg: '' }),
-      doSearch: () => this.searchGo(),
+      onQuery: e => {
+        this.setState({ query: e.target.value, searchMsg: '' });
+        // First keystroke pulls in every catalogue, so the list can offer
+        // objects from layers that are not switched on - which is the whole
+        // point of being able to search for one.
+        this.loadAllCatalogs().then(() => this.refreshSuggest());
+        this.refreshSuggest();
+      },
+      suggShow: (s.sugg || []).length ? 'block' : 'none',
+      suggestions: (s.sugg || []).map((e, i) => ({
+        label: e.o.label,
+        name: e.o.name || '',
+        cat: e.def.label,
+        color: e.def.color,
+        bg: i === s.suggIx ? '#232323' : 'transparent',
+        pick: () => this.takeSuggestion(i),
+      })),
+      doSearch: () => { this.setState({ sugg: [] }); this.searchGo(); },
       // Enter should search. The runtime's on-key handling does not reach here,
       // and the canvas already takes its own listeners this way.
       findRef: el => {
         if (!el || el.__findBound) return;
         el.__findBound = true;
         el.addEventListener('keydown', ev => {
-          if (ev.key === 'Enter') { ev.preventDefault(); this.searchGo(); }
+          const list = this.state.sugg || [];
+          if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+            if (!list.length) return;
+            ev.preventDefault();
+            const n = list.length, d = ev.key === 'ArrowDown' ? 1 : -1;
+            this.setState({ suggIx: ((this.state.suggIx + d) % n + n) % n });
+            return;
+          }
+          if (ev.key === 'Escape') { this.setState({ sugg: [], suggIx: -1 }); return; }
+          if (ev.key !== 'Enter') return;
+          ev.preventDefault();
+          // Enter takes the highlighted suggestion, or the first one if the
+          // list is showing and nothing is highlighted, and only falls back to
+          // a plain search when there is nothing to take.
+          if (this.takeSuggestion(this.state.suggIx)) return;
+          this.searchGo();
         });
+        el.addEventListener('blur', () => setTimeout(() => this.setState({ sugg: [] }), 140));
       },
       catToggles: this.CATALOGS.map(c => {
         const on = !!(s.cats || {})[c.id];
