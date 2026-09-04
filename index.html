@@ -1433,9 +1433,14 @@ class Component extends DCLogic {
           // major axis lies along (-sin PA, -cos PA) in screen terms.
           const pa = (o.pa == null ? 0 : o.pa) * this.D2R;
           const b = (o.min ? o.min / 60 * pxPerDeg : majPx * 0.55) / 2;
-          shapes.ellipse(x, y, majPx / 2, Math.max(b, 1),
-                         Math.atan2(-Math.cos(pa), -Math.sin(pa)), 0, 6.2832);
-          r = majPx / 2;
+          const rx = majPx / 2, rot = Math.atan2(-Math.cos(pa), -Math.sin(pa));
+          // ellipse() does not begin a subpath - it runs a line from wherever
+          // the path currently is to the start of the arc - so without this
+          // moveTo every large object is wired to the one drawn before it, and
+          // the chart grows gold lines linking M31 to M42 to M44.
+          shapes.moveTo(x + rx * Math.cos(rot), y + rx * Math.sin(rot));
+          shapes.ellipse(x, y, rx, Math.max(b, 1), rot, 0, 6.2832);
+          r = rx;
         } else {
           marks.moveTo(x + r, y); marks.arc(x, y, r, 0, 6.2832);
         }
