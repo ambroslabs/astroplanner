@@ -80,7 +80,8 @@ served through an advanced-mode `_worker.js`.
 
 Rows are stored as deltas from the row before, which is worth about a third
 against plain values and keeps every field - position, type, magnitude, major
-and minor axis, position angle and common name. Each delta is measured from the
+and minor axis, position angle, common name, constellation, Hubble type and
+surface brightness. Each delta is measured from the
 value the decoder will have reconstructed rather than the true one, so rounding
 cannot accumulate down the file.
 

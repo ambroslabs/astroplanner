@@ -600,7 +600,7 @@
       <button sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
-    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -740,20 +740,29 @@ class Component extends DCLogic {
   // 74 KB file on every visit. Regenerate with scripts/build-catalogs.py, which
   // prints this list.
   CATALOGS = [
-    { id: 'messier', label: 'Messier', pfx: 'M', color: '#E5C07B', n: 110, file: 'messier.550ab2bdaef4.txt' },
-    { id: 'caldwell', label: 'Caldwell', pfx: 'C', color: '#7FB2E5', n: 109, file: 'caldwell.ab187eae8d5e.txt' },
-    { id: 'herschel', label: 'Herschel 400', pfx: 'H', desigLabel: true, color: '#9AD1A6', n: 400, file: 'herschel.5fad616d857d.txt' },
-    { id: 'ngc', label: 'NGC', pfx: 'NGC', color: '#8FA8C8', n: 7148, file: 'ngc.fa2d51f8f798.txt' },
-    { id: 'ic', label: 'IC', pfx: 'IC', color: '#B79AD1', n: 4153, file: 'ic.50f40d7ce1c9.txt' },
-    { id: 'sharpless', label: 'Sharpless', pfx: 'Sh2', color: '#E58F8F', n: 313, file: 'sharpless.c21baeb92e5b.txt' },
-    { id: 'barnard', label: 'Barnard', pfx: 'B', color: '#A89684', n: 343, file: 'barnard.5606e4536123.txt' },
-    { id: 'vdb', label: 'van den Bergh', pfx: 'vdB', color: '#8FD1D1', n: 158, file: 'vdb.6f1ac0d41fea.txt' },
-    { id: 'lynds', label: 'Lynds dark', pfx: 'LDN', color: '#9C8FA8', n: 1787, file: 'lynds.1e067fbd8a85.txt' },
-    { id: 'arp', label: 'Arp', pfx: 'Arp', color: '#D19AC0', n: 338, file: 'arp.6e77886da78c.txt' },
+    { id: 'messier', label: 'Messier', pfx: 'M', color: '#E5C07B', n: 110, file: 'messier.720600e79068.txt' },
+    { id: 'caldwell', label: 'Caldwell', pfx: 'C', color: '#7FB2E5', n: 109, file: 'caldwell.102551fde883.txt' },
+    { id: 'herschel', label: 'Herschel 400', pfx: 'H', desigLabel: true, color: '#9AD1A6', n: 400, file: 'herschel.7c18f48194d3.txt' },
+    { id: 'ngc', label: 'NGC', pfx: 'NGC', color: '#8FA8C8', n: 7148, file: 'ngc.588c8521c689.txt' },
+    { id: 'ic', label: 'IC', pfx: 'IC', color: '#B79AD1', n: 4153, file: 'ic.6dbc4641aeb1.txt' },
+    { id: 'sharpless', label: 'Sharpless', pfx: 'Sh2', color: '#E58F8F', n: 313, file: 'sharpless.aaa634426a60.txt' },
+    { id: 'barnard', label: 'Barnard', pfx: 'B', color: '#A89684', n: 343, file: 'barnard.ddd4d773b4f2.txt' },
+    { id: 'vdb', label: 'van den Bergh', pfx: 'vdB', color: '#8FD1D1', n: 158, file: 'vdb.fe173aa9fdeb.txt' },
+    { id: 'lynds', label: 'Lynds dark', pfx: 'LDN', color: '#9C8FA8', n: 1787, file: 'lynds.e076bd266086.txt' },
+    { id: 'arp', label: 'Arp', pfx: 'Arp', color: '#D19AC0', n: 338, file: 'arp.d9469aa3720d.txt' },
   ];
   // Angular sizes are arcminutes, so an object has to be a good fraction of a
   // degree before it is worth drawing as its own shape rather than a marker.
   ELLIPSE_MIN_PX = 7;
+  // OpenNGC's type codes, spelled out. The chart says "galaxy", not "G".
+  OBJ_TYPES = {
+    G: 'galaxy', GPair: 'galaxy pair', GTrpl: 'galaxy triplet', GGroup: 'galaxy group',
+    OCl: 'open cluster', GCl: 'globular cluster', 'Cl+N': 'cluster with nebulosity',
+    PN: 'planetary nebula', HII: 'HII region', Neb: 'nebula', EmN: 'emission nebula',
+    RfN: 'reflection nebula', DrkN: 'dark nebula', SNR: 'supernova remnant',
+    Nova: 'nova', '*': 'star', '**': 'double star', '*Ass': 'star association',
+    Dup: 'duplicate entry', Other: 'object',
+  };
   // Most names the chart will print at full density. Past this the labels stop
   // being readable anyway, so the slider scales against it rather than against
   // however many objects happen to be in view.
@@ -798,6 +807,10 @@ class Component extends DCLogic {
     // Print every designation an object is known by, not only the one the most
     // prominent catalogue gives it.
     catAliases: false,
+    // Open information panels, as { cat, id } plus an optional pixel offset
+    // once one has been dragged. They ride along with the rest of the chart:
+    // they survive a reload and Reset chart clears them.
+    info: [],
     // Per catalogue: also print the common name beside the designation. Off by
     // default - the designation is what you look an object up by, and "Salt and
     // Pepper Cluster" spends four times the width saying less about which one
@@ -1320,6 +1333,30 @@ class Component extends DCLogic {
     el.addEventListener('pointerdown', e => {
       const p = pos(e);
       if (!inPlot(p)) return;
+      // Panels sit above everything, so they get first refusal on a press.
+      const panel = e.pointerType === 'touch' ? null : (() => {
+        const list = this._infoBoxes || [];
+        for (let i = list.length - 1; i >= 0; i--) {
+          const b2 = list[i];
+          if (p.x >= b2.x && p.x <= b2.x + b2.w && p.y >= b2.y && p.y <= b2.y + b2.h) return b2;
+        }
+        return null;
+      })();
+      if (panel) {
+        const onClose = p.x >= panel.cx && p.x <= panel.cx + panel.cw
+                     && p.y >= panel.cy && p.y <= panel.cy + panel.ch;
+        if (onClose) {
+          this.setState({ info: (this.state.info || []).filter((_, k) => k !== panel.i) });
+          e.preventDefault();
+          return;
+        }
+        this._drag = { mode: 'panel', idx: panel.i, moved: false,
+                       ox: p.x - panel.x, oy: p.y - panel.y,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
       const onPoint = e.pointerType === 'touch' ? null : pointAt(p);
       if (onPoint && !boxAt(p)) {
         // Where the readout sits right now, so it can be held there while the
@@ -1357,7 +1394,10 @@ class Component extends DCLogic {
         // Say the box can be picked up before anyone tries it.
         if (e.pointerType !== 'touch') {
           const q = pos(e);
-          const over = inPlot(q) && (boxAt(q) || pointAt(q));
+          const panels = this._infoBoxes || [];
+          const overPanel = panels.some(b2 => q.x >= b2.x && q.x <= b2.x + b2.w
+                                           && q.y >= b2.y && q.y <= b2.y + b2.h);
+          const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q));
           const want = over ? 'move' : '';
           if (el.style.cursor !== want) el.style.cursor = want;
         }
@@ -1369,6 +1409,16 @@ class Component extends DCLogic {
       // one thing that can delete a point and a drag must never do that. The
       // threshold is a single pixel, which is jitter rather than intent.
       if (Math.abs(p.x - d.x0) > 1 || Math.abs(p.y - d.y0) > 1) d.moved = true;
+      if (d.mode === 'panel') {
+        d.x1 = p.x; d.y1 = p.y;
+        const b2 = (this._infoBoxes || []).find(q => q.i === d.idx);
+        if (!b2) return;
+        const list = this.state.info.slice(), it = list[d.idx];
+        if (!it) return;
+        list[d.idx] = Object.assign({}, it, { lx: p.x - d.ox - b2.px, ly: p.y - d.oy - b2.py });
+        this.setState({ info: list });
+        return;
+      }
       if (d.mode === 'point') {
         const x = Math.max(64, Math.min(900, p.x)), y = Math.max(16, Math.min(546, p.y));
         d.x1 = x; d.y1 = y;
@@ -1424,6 +1474,7 @@ class Component extends DCLogic {
       this._drag = null;
       if (!d) return;
       const a = this._axis;
+      if (d.mode === 'panel') { this.drawHeatmap(el); return; }
       if (d.mode === 'point') {
         // Only a press that never became a drag reads as a click, which is how
         // a point has always been taken back off.
@@ -1453,6 +1504,18 @@ class Component extends DCLogic {
       if (Math.abs(d.x1 - d.x0) < 6 && Math.abs(d.y1 - d.y0) < 6) {
         const ra = a.axStart + (1 - (d.x0 - a.X0) / (a.X1 - a.X0)) * a.axSpan;
         const dec = a.dTop - (d.y0 - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
+        // A click on a catalogue object opens what the catalogues know about
+        // it. Tested before marking a point, since landing on an object is the
+        // more specific thing to have meant.
+        if (!d.moved) {
+          const hits = this._objHits || [];
+          let best = null, bestD = Infinity;
+          for (const h of hits) {
+            const dd = Math.hypot(h.x - d.x0, h.y - d.y0);
+            if (dd <= Math.max(9, h.r + 4) && dd < bestD) { bestD = dd; best = h; }
+          }
+          if (best) { this.toggleInfo(best.cat, best.id); return; }
+        }
         const ps = this.state.probes;
         const hit = ps.findIndex(q =>
           Math.abs(this.xOfProbe(q) - d.x0) < 10 && Math.abs(this.yOfProbe(q) - d.y0) < 10);
@@ -1529,6 +1592,10 @@ class Component extends DCLogic {
       if (typeof saved[k] === typeof defs[k]) out[k] = saved[k];
     }
     // and the points are drawn as coordinates, so a bad entry would paint NaN
+    if (out.info) out.info = out.info.filter(q => q && typeof q.cat === 'string'
+      && typeof q.id === 'number' && isFinite(q.id))
+      .map(q => (isFinite(q.lx) && isFinite(q.ly)) ? q
+                : (() => { const r = Object.assign({}, q); delete r.lx; delete r.ly; return r; })());
     if (out.probes) out.probes = out.probes.filter(q => q && typeof q.ra === 'number' &&
       typeof q.dec === 'number' && isFinite(q.ra) && isFinite(q.dec) && Math.abs(q.dec) <= 90)
       // A moved readout carries a pixel offset; a bad one would place the box
@@ -1622,6 +1689,7 @@ class Component extends DCLogic {
         type: f[3] || '', mag: f[4] ? parseFloat(f[4]) : null,
         maj: f[5] ? parseFloat(f[5]) : null, min: f[6] ? parseFloat(f[6]) : null,
         pa: f[7] ? parseFloat(f[7]) : null, name: f[8] || '', desig: f[9] || '',
+        con: f[10] || '', hub: f[11] || '', sbr: f[12] ? parseFloat(f[12]) : null,
         // Herschel 400 numbers its entries by the NGC number they already
         // carry, so printing "H 7000" invents a designation nobody uses. Show
         // the real one it cross-references instead.
@@ -1708,6 +1776,7 @@ class Component extends DCLogic {
     // can be told to stay off them. Reset before the early returns, or a chart
     // with the layer switched off would keep dodging last frame's labels.
     this._catBoxes = [];
+    this._objHits = [];
     const on = this.state.cats || {};
     // Reversed: the least prominent catalogue is painted first and Messier
     // last, so where two objects overlap the better-known one is the one you
@@ -1769,6 +1838,8 @@ class Component extends DCLogic {
         const ax = Math.max(X0 + 10, Math.min(X1 - 10, x));
         const ay = Math.max(Y0 + 10, Math.min(Y1 - 10, y));
         cand.push({ x, y, ax, ay, o, def, r, key, lr: Math.min(r, 18) });
+        // Where every drawn object ended up, so a click can find one.
+        this._objHits.push({ x, y, r, cat: def.id, id: o.id });
       }
       ctx.globalAlpha = 0.9 * op; ctx.fillStyle = def.color; ctx.fill(marks);
       ctx.globalAlpha = 0.8 * op; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
@@ -1910,6 +1981,110 @@ class Component extends DCLogic {
         ctx.fillText(lines[i].text, spot[0], by + i * LH + LH / 2);
       }
     }
+  }
+
+  // ---------- object panels ----------
+  // Everything the catalogues actually carry about an object, in the order you
+  // would want to read it: what it is and where, how big and which way round,
+  // how bright, and - the reason this chart exists - how long it is usable
+  // tonight. Fields the source does not have are simply not shown, which is
+  // why the specialist lists produce a shorter panel than NGC does.
+  infoLines(o, def, dark) {
+    const out = [];
+    out.push({ t: o.label, size: 15, weight: 700, color: def.color });
+    if (o.name) out.push({ t: o.name, size: 13, color: '#F6F5F2' });
+    const kind = this.OBJ_TYPES[o.type] || o.type || '';
+    const where = kind + (o.con ? ' in ' + o.con : '');
+    if (where.trim()) out.push({ t: where, size: 12, color: '#C9C4B7' });
+    if (o.maj) {
+      const fmt = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
+      let t = fmt(o.maj) + '\u2032';
+      if (o.min) t += ' \u00D7 ' + fmt(o.min) + '\u2032';
+      if (o.pa != null) t += ' at PA ' + o.pa.toFixed(0) + '\u00B0';
+      out.push({ t, size: 12, color: '#C9C4B7' });
+    }
+    const bits = [];
+    if (o.mag != null) bits.push('mag ' + o.mag.toFixed(1));
+    if (o.sbr != null) bits.push('SB ' + o.sbr.toFixed(1));
+    if (o.hub) bits.push(o.hub);
+    if (bits.length) out.push({ t: bits.join('  \u00B7  '), size: 12, color: '#C9C4B7' });
+    const hrs = Math.max(0, this.usable(o.ra, o.dec, dark));
+    out.push({ t: hrs > 0.05 ? hrs.toFixed(1) + 'h usable tonight' : 'not usable tonight',
+               size: 13, weight: 700, color: hrs > 0.05 ? '#D9A960' : '#8E897D' });
+    return out;
+  }
+
+  infoObject(e) {
+    const rows = this.catalogRows(e.cat);
+    if (!rows) return null;
+    const o = rows.find(r => r.id === e.id);
+    return o ? { o, def: this.catalogDef(e.cat) } : null;
+  }
+
+  toggleInfo(cat, id) {
+    const list = this.state.info || [];
+    const at = list.findIndex(e => e.cat === cat && e.id === id);
+    this.setState({ info: at >= 0 ? list.filter((_, i) => i !== at)
+                                  : list.concat([{ cat, id }]) });
+  }
+
+  drawInfoPanels(ctx, g, dark) {
+    this._infoBoxes = [];
+    const list = this.state.info || [];
+    if (!list.length) return;
+    const { xOf, yOf, X0, X1, Y0, Y1 } = g;
+    const PAD = 11, LH = 17, CLOSE = 15;
+    ctx.save();
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i], found = this.infoObject(e);
+      if (!found) continue;
+      const { o, def } = found;
+      const px = xOf(o.ra), py = yOf(o.dec);
+      const lines = this.infoLines(o, def, dark);
+      let w = 0;
+      for (const ln of lines) {
+        ctx.font = (ln.weight || 600) + ' ' + ln.size + "px Inter, sans-serif";
+        w = Math.max(w, ctx.measureText(ln.t).width);
+      }
+      const bw = Math.max(150, w + PAD * 2 + CLOSE), bh = lines.length * LH + PAD * 2 - 4;
+      let bx, by;
+      if (isFinite(e.lx) && isFinite(e.ly)) { bx = px + e.lx; by = py + e.ly; }
+      else { bx = px + 18; by = py - bh - 14; }
+      bx = Math.min(Math.max(bx, X0 + 4), X1 - 4 - bw);
+      by = Math.min(Math.max(by, Y0 + 4), Y1 - 4 - bh);
+      // Leader back to the object, the same way the click readouts do it.
+      const ax = Math.max(bx, Math.min(px, bx + bw)), ay = Math.max(by, Math.min(py, by + bh));
+      const vx = px - ax, vy = py - ay, len = Math.hypot(vx, vy);
+      if (len > 4) {
+        ctx.strokeStyle = def.color; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(ax, ay);
+        const stop = Math.min(len - 1, 7);
+        ctx.lineTo(px - vx / len * stop, py - vy / len * stop); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = 'rgba(10,10,10,0.94)'; ctx.strokeStyle = '#4A463E'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = def.color; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(bx + 1, by + 1); ctx.lineTo(bx + 1, by + bh - 1); ctx.stroke();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      let y = by + PAD + 10;
+      for (const ln of lines) {
+        ctx.font = (ln.weight || 600) + ' ' + ln.size + "px Inter, sans-serif";
+        ctx.fillStyle = ln.color;
+        ctx.fillText(ln.t, bx + PAD, y);
+        y += LH;
+      }
+      // Close control, top right.
+      const cx = bx + bw - CLOSE - 3, cy = by + 4;
+      ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx + 4, cy + 4); ctx.lineTo(cx + CLOSE - 4, cy + CLOSE - 4);
+      ctx.moveTo(cx + CLOSE - 4, cy + 4); ctx.lineTo(cx + 4, cy + CLOSE - 4);
+      ctx.stroke();
+      this._infoBoxes.push({ i, x: bx, y: by, w: bw, h: bh, px, py,
+                             cx, cy, cw: CLOSE, ch: CLOSE });
+    }
+    ctx.restore();
   }
 
   // ---------- search ----------
@@ -2830,6 +3005,10 @@ class Component extends DCLogic {
         ctx.fillText(split, bx + 11, by + 56);
       }
     }
+    // Object panels last of all, so they sit above the readouts as well as the
+    // field - they are the thing most recently asked for.
+    this.drawInfoPanels(ctx, { xOf, yOf, X0, X1, Y0, Y1 }, dark);
+
     // Only a box-select draws a marquee. A pan keeps _drag set too, and
     // repaints on every move, so without this check dragging to pan drew a
     // selection rectangle from the grab point.

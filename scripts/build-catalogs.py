@@ -12,7 +12,7 @@ other field only saves a fifth, while sorting by catalogue number, storing the
 id as a gap from the previous row and delta-coding the coordinates saves a
 third and keeps everything. Fields per row:
 
-    gap,dRA,dDec,type,mag,maj,min,pa,name,desig
+    gap,dRA,dDec,type,mag,maj,min,pa,name,desig,const,hubble,sbr
 
 gap    number of skipped ids before this one, blank when consecutive
 dRA    RA in hours, as a delta from the previous row, 3dp
@@ -22,6 +22,10 @@ mag    visual (else blue) magnitude, 1dp
 maj    major axis in arcmin, min minor axis, pa position angle in degrees
 name   common name, where the object has one
 desig  cross-designation, for the catalogues that are selections
+const  IAU constellation abbreviation
+hubble Hubble type, for the galaxies that have one classified
+sbr    surface brightness, mag per square arcmin - for an extended object
+       this says more about how hard it is to shoot than its total magnitude
 
 Sources: OpenNGC (CC-BY-SA-4.0) for NGC/IC and the Messier numbers; VizieR for
 Sharpless VII/20, Barnard VII/220A, van den Bergh VII/21, Lynds dark nebulae
@@ -78,7 +82,7 @@ def f1(v, fmt='%.1f'):
     except (TypeError, ValueError): return ''
 
 def encode(objs):
-    """objs: (id, ra_hours, dec_deg, type, mag, maj, min, pa, name, desig).
+    """objs: (id, ra, dec, type, mag, maj, min, pa, name, desig, const, hubble, sbr).
 
     Each delta is measured from the position the decoder will actually have
     reconstructed, not from the true previous one. Measured from the true value,
@@ -90,7 +94,9 @@ def encode(objs):
     """
     objs = sorted(objs, key=lambda o: o[0])
     out, pn, ra_acc, dec_acc = [], 0, 0.0, 0.0
-    for n, ra, dec, ty, mag, maj, mnr, pa, name, desig in objs:
+    for row in objs:
+        row = tuple(row) + ('',) * (13 - len(row))
+        n, ra, dec, ty, mag, maj, mnr, pa, name, desig, const, hub, sbr = row[:13]
         gap = n - pn - 1
         dra = round(ra - ra_acc, 3)
         ddec = round(dec - dec_acc, 3)
@@ -99,7 +105,8 @@ def encode(objs):
         out.append(','.join([
             str(gap) if gap else '', '%.3f' % dra, '%.3f' % ddec,
             ty or '', mag or '', maj or '', mnr or '', pa or '',
-            (name or '').replace(',', ' '), (desig or '').replace(',', ' ')]))
+            (name or '').replace(',', ' '), (desig or '').replace(',', ' '),
+            const or '', (hub or '').replace(',', ' '), sbr or '']))
         pn = n
     return '\n'.join(out)
 
@@ -142,7 +149,9 @@ def mag_of(r):
 def row_of(r, n, desig=''):
     return (n, hms(r['RA']), dms(r['Dec']), r['Type'], mag_of(r),
             f1(r['MajAx']), f1(r['MinAx']), f1(r['PosAng'], '%.0f'),
-            (r['Common names'] or '').split(',')[0].strip(), desig)
+            (r['Common names'] or '').split(',')[0].strip(), desig,
+            (r.get('Const') or '').strip(), (r.get('Hubble') or '').strip(),
+            f1(r.get('SurfBr')))
 
 def ngc_ic(rows, prefix):
     out = []
@@ -312,7 +321,7 @@ def vz_rows(rows, idcol, kind, diam=None, radius=None, area=None, magcol=None):
             try: maj = '%.1f' % (2 * (float(r[area]) / 3.14159265) ** 0.5 * 60)
             except (TypeError, ValueError, KeyError): maj = ''
         seen[n] = (n, ra, dec, kind, f1(r.get(magcol)) if magcol else '',
-                   maj, '', '', '', '')
+                   maj, '', '', '', '', '', '', '')
     return list(seen.values())
 
 # SIMBAD carries the popular names the source lists do not: the Barnard
