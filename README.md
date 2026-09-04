@@ -92,3 +92,22 @@ Herschel 400 lists, and SIMBAD for the popular names the source lists omit -
 without which the Horsehead cannot be found by the only word anyone calls it.
 It prints the `CATALOGS` block to paste into `index.html`, since the filenames
 change whenever the data does.
+
+## /beta
+
+`https://astroplanner.ambroslabs.io/beta/` is a second, complete copy of the
+site, built from the `beta` branch. Push there to try something and look at it
+without touching the page people are using; `/` only ever changes when `main`
+does.
+
+Both halves are rebuilt on every deployment, whichever branch triggered it,
+because Pages replaces the entire tree each time - building only the branch
+that changed would delete the other one. `/beta` carries its own assets rather
+than sharing the root's: a catalogue change changes its file name, so a shared
+tree would mean beta could only ever test the data `main` already had. Its
+pages are stamped with a BETA badge and served `X-Robots-Tag: noindex`, since
+there is no reason for a search engine to carry a second, deliberately unstable
+copy of everything.
+
+Until the `beta` branch exists, `/beta` is built from `main` and is simply the
+same site.

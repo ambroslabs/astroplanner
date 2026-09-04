@@ -25,7 +25,7 @@ const SITE_HOST = "astroplanner.ambroslabs.io";
 // This has to happen in the worker. Pages ignores the _headers file for
 // anything served through an advanced-mode _worker.js, so a _headers rule would
 // look correct in the repository and do nothing at all.
-const HASHED = /^\/assets\/catalogs\/[a-z0-9]+\.[0-9a-f]{12}\.txt$/;
+const HASHED = /^\/(?:beta\/)?assets\/catalogs\/[a-z0-9]+\.[0-9a-f]{12}\.txt$/;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
 export default {
@@ -36,6 +36,17 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
     const response = await env.ASSETS.fetch(request);
+    // /beta is a copy of the site for trying things on, and there is no reason
+    // for a search engine to carry a second, deliberately unstable version of
+    // every page.
+    if (url.pathname === "/beta" || url.pathname.startsWith("/beta/")) {
+      const headers = new Headers(response.headers);
+      headers.set("X-Robots-Tag", "noindex, nofollow");
+      if (HASHED.test(url.pathname) && response.ok) headers.set("Cache-Control", IMMUTABLE);
+      return new Response(response.body, {
+        status: response.status, statusText: response.statusText, headers,
+      });
+    }
     if (HASHED.test(url.pathname) && response.ok) {
       // The body has to be re-wrapped: an ASSETS response's headers are frozen.
       const headers = new Headers(response.headers);

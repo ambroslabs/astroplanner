@@ -2,7 +2,7 @@ name: Deploy to Cloudflare Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
   workflow_dispatch:
 
 permissions:
@@ -29,6 +29,38 @@ jobs:
       # still set the variable to get a manually installed beacon.
       - name: Build
         run: ./scripts/build.sh
+
+      # /beta is a second, complete copy of the site built from the beta
+      # branch, so an experiment can be deployed and looked at without touching
+      # the page people are using. Both branches trigger this workflow and both
+      # halves are rebuilt every time, because Pages replaces the whole tree on
+      # each deployment - building only the branch that changed would delete
+      # the other one.
+      #
+      # It is built by the beta branch's own build script against its own
+      # assets rather than sharing the root's. A change to a catalogue changes
+      # its file name, so a shared asset tree would mean beta could only ever
+      # test the data main already had.
+      - name: Check out the beta branch
+        id: betasrc
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: beta
+          path: .beta-src
+
+      - name: Build /beta
+        env:
+          BUILD_OUT: ${{ github.workspace }}/dist/beta
+          BUILD_WORKER: '0'
+          BUILD_BETA: '1'
+        run: |
+          if [ -f .beta-src/scripts/build.sh ]; then
+            BUILD_SRC="$GITHUB_WORKSPACE/.beta-src" bash .beta-src/scripts/build.sh
+          else
+            echo "no beta branch yet - /beta gets a copy of main"
+            ./scripts/build.sh
+          fi
 
       - name: Deploy
         uses: cloudflare/wrangler-action@v4.0.0
