@@ -1548,6 +1548,10 @@ class Component extends DCLogic {
   // instead of sitting at full strength over a region the chart is busy saying
   // you cannot use.
   drawCatalogs(ctx, g) {
+    // Where the catalogue labels ended up, so the click readouts drawn later
+    // can be told to stay off them. Reset before the early returns, or a chart
+    // with the layer switched off would keep dodging last frame's labels.
+    this._catBoxes = [];
     const on = this.state.cats || {};
     // Reversed: the least prominent catalogue is painted first and Messier
     // last, so where two objects overlap the better-known one is the one you
@@ -1644,8 +1648,18 @@ class Component extends DCLogic {
     const ranked = cand.slice().sort((a, b) => score(a) - score(b)).slice(0, cap);
     ctx.font = '600 10px Inter, sans-serif';
     ctx.textBaseline = 'middle';
+    // The grid reserved one row per label while the label is 12px tall and the
+    // rows are 15, so two labels eight pixels apart could fall either side of a
+    // row boundary, register no clash and be drawn on top of each other. Every
+    // row the box actually covers has to be claimed, which is one or two.
     const cell = 15, cols = Math.ceil((X1 - X0) / cell) + 2, taken = new Set();
-    const span = (x, w) => [Math.floor((x - X0) / cell), Math.floor((x + w - X0) / cell)];
+    const cellsOf = (x, y, w) => {
+      const out = [];
+      const c0 = Math.floor((x - X0) / cell), c1 = Math.floor((x + w - X0) / cell);
+      const r0 = Math.floor((y - 7 - Y0) / cell), r1 = Math.floor((y + 7 - Y0) / cell);
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) out.push(r * cols + c);
+      return out;
+    };
     for (const c of ranked) {
       // Every designation the object answers to, when asked for: "C 20,
       // NGC 7000" says more than either half, and which half you know it by
@@ -1669,7 +1683,10 @@ class Component extends DCLogic {
       // why the density slider stopped doing anything above about 60 per cent
       // in a crowded view. Now it moves out instead, and the leader says where
       // it came from.
-      for (const gap of [5, 14, 26, 44, 70]) {
+      // More rings than the label used to have. Overlapping was doing the work
+      // of fitting them in; once it stops, a label either travels or is lost,
+      // and travelling is what the leader line is for.
+      for (const gap of [5, 14, 26, 44, 70, 104]) {
         const spots = [[c.lr + gap, 0], [-c.lr - gap - w, 0],
                        [c.lr + gap, -gap - 7], [-c.lr - gap - w, -gap - 7],
                        [c.lr + gap, gap + 7], [-c.lr - gap - w, gap + 7],
@@ -1677,11 +1694,11 @@ class Component extends DCLogic {
         for (const [dx, dy] of spots) {
           const x = c.ax + dx, y = c.ay + dy;
           if (x < X0 + 2 || x + w > X1 - 2 || y < Y0 + 7 || y > Y1 - 7) continue;
-          const row = Math.floor((y - Y0) / cell), [a, b] = span(x, w);
+          const cells = cellsOf(x, y, w);
           let clash = false;
-          for (let cx = a; cx <= b && !clash; cx++) clash = taken.has(row * cols + cx);
+          for (const k of cells) { if (taken.has(k)) { clash = true; break; } }
           if (clash) continue;
-          for (let cx = a; cx <= b; cx++) taken.add(row * cols + cx);
+          for (const k of cells) taken.add(k);
           spot = [x, y]; break;
         }
         if (spot) break;
@@ -1706,6 +1723,7 @@ class Component extends DCLogic {
         ctx.lineTo(c.ax - vx / len * stop, c.ay - vy / len * stop); ctx.stroke();
         ctx.globalAlpha = op;
       }
+      this._catBoxes.push({ x: bx, y: by, w: bw, h: bh });
       ctx.fillStyle = 'rgba(10,10,10,0.7)';
       ctx.fillRect(bx, by, bw, bh);
       ctx.fillStyle = c.def.color;
@@ -2496,6 +2514,15 @@ class Component extends DCLogic {
         // a box will always rather sit on another box than on a point
         for (const m of markers)
           if (m.x > x - 13 && m.x < x + bw + 13 && m.y > y - 13 && m.y < y + bh + 13) c += 1e6;
+        // Catalogue labels were placed before this ran, so a readout can be
+        // told to avoid them. Weighted a little under a readout-on-readout
+        // overlap: covering an object's name is worse than nothing and better
+        // than covering another readout's numbers.
+        for (const q of (this._catBoxes || [])) {
+          const ox = Math.min(x + bw, q.x + q.w) - Math.max(x, q.x);
+          const oy = Math.min(y + bh, q.y + q.h) - Math.max(y, q.y);
+          if (ox > 0 && oy > 0) c += ox * oy * 0.8;
+        }
         return c;
       };
       // Eight placements at a growing gap, nearest first, so a box travels only
