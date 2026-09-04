@@ -1489,16 +1489,28 @@ class Component extends DCLogic {
   // beside "Ring Nebula", which reads as a bug rather than as two catalogues
   // agreeing. Their rows carry the NGC/IC designation they were selected from,
   // so the duplicate can be dropped exactly instead of by guessing at distance.
-  suppressed() {
+  // The same object reaches the chart from several directions: NGC 7000 is
+  // also C 20, also H 7000, and with those layers up it was drawn three times
+  // with three labels and three colours stacked on each other. Position in
+  // CATALOGS is the order of prominence, so the first catalogue to claim a
+  // designation keeps it and the rest skip that row - one object, one label,
+  // and the label is the one from the best-known list that has it.
+  claims() {
     const on = this.state.cats || {};
-    const out = new Set();
+    const out = new Map();
     for (const def of this.CATALOGS) {
       if (!on[def.id]) continue;
       const rows = this.catalogRows(def.id);
       if (!rows) continue;
+      const own = def.id === 'ngc' || def.id === 'ic';
       for (const o of rows) {
-        const m = /^(NGC|IC)\s*0*(\d+)/i.exec(o.desig || '');
-        if (m) out.add(m[1].toLowerCase() + ':' + parseInt(m[2], 10));
+        let key = null;
+        if (own) key = def.id + ':' + o.id;
+        else {
+          const m = /^(NGC|IC)\s*0*(\d+)/i.exec(o.desig || '');
+          if (m) key = m[1].toLowerCase() + ':' + parseInt(m[2], 10);
+        }
+        if (key && !out.has(key)) out.set(key, def.id);
       }
     }
     return out;
@@ -1511,10 +1523,13 @@ class Component extends DCLogic {
   // you cannot use.
   drawCatalogs(ctx, g) {
     const on = this.state.cats || {};
-    const live = this.CATALOGS.filter(c => on[c.id] && this.catalogRows(c.id));
+    // Reversed: the least prominent catalogue is painted first and Messier
+    // last, so where two objects overlap the better-known one is the one you
+    // can see rather than whichever happened to come later in the list.
+    const live = this.CATALOGS.filter(c => on[c.id] && this.catalogRows(c.id)).reverse();
     if (!live.length || this.state.catOpacity <= 0.001) return;
     const op = this.state.catOpacity;
-    const dup = this.suppressed();
+    const claimed = this.claims();
     const { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot, axSpan } = g;
     const pxPerDeg = (Y1 - Y0) / (dTop - dBot);
     // A whole turn of RA in pixels. xOf wraps its argument into the visible
@@ -1528,9 +1543,15 @@ class Component extends DCLogic {
     const cand = [];
     for (const def of live) {
       const marks = new Path2D(), shapes = new Path2D();
-      const selectable = def.id === 'ngc' || def.id === 'ic';
+      const own = def.id === 'ngc' || def.id === 'ic';
       for (const o of this.catalogRows(def.id)) {
-        if (selectable && dup.has(def.id + ':' + o.id)) continue;
+        let key = null;
+        if (own) key = def.id + ':' + o.id;
+        else {
+          const m = /^(NGC|IC)\s*0*(\d+)/i.exec(o.desig || '');
+          if (m) key = m[1].toLowerCase() + ':' + parseInt(m[2], 10);
+        }
+        if (key && claimed.get(key) !== def.id) continue;
         let x = xOf(o.ra);
         const y = yOf(o.dec);
         x -= period * Math.round((x - midX) / period);
@@ -1559,7 +1580,15 @@ class Component extends DCLogic {
         } else {
           marks.moveTo(x + r, y); marks.arc(x, y, r, 0, 6.2832);
         }
-        cand.push({ x, y, o, def, r });
+        // Anchor for the label. A nebula wider than the screen has its centre
+        // off the crop, and hanging the label off that centre put it in open
+        // sky with nothing under it - which is exactly the case that made
+        // "H 7000" impossible to attribute. Pull the anchor inside the plot,
+        // and cap the offset the label is pushed out by, so a big object is
+        // labelled across itself the way an atlas does it.
+        const ax = Math.max(X0 + 10, Math.min(X1 - 10, x));
+        const ay = Math.max(Y0 + 10, Math.min(Y1 - 10, y));
+        cand.push({ x, y, ax, ay, o, def, r, lr: Math.min(r, 18) });
       }
       ctx.globalAlpha = 0.9 * op; ctx.fillStyle = def.color; ctx.fill(marks);
       ctx.globalAlpha = 0.8 * op; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
@@ -1607,12 +1636,12 @@ class Component extends DCLogic {
       // in a crowded view. Now it moves out instead, and the leader says where
       // it came from.
       for (const gap of [5, 14, 26, 44, 70]) {
-        const spots = [[c.r + gap, 0], [-c.r - gap - w, 0],
-                       [c.r + gap, -gap - 7], [-c.r - gap - w, -gap - 7],
-                       [c.r + gap, gap + 7], [-c.r - gap - w, gap + 7],
-                       [-w / 2, -c.r - gap - 7], [-w / 2, c.r + gap + 7]];
+        const spots = [[c.lr + gap, 0], [-c.lr - gap - w, 0],
+                       [c.lr + gap, -gap - 7], [-c.lr - gap - w, -gap - 7],
+                       [c.lr + gap, gap + 7], [-c.lr - gap - w, gap + 7],
+                       [-w / 2, -c.lr - gap - 7], [-w / 2, c.lr + gap + 7]];
         for (const [dx, dy] of spots) {
-          const x = c.x + dx, y = c.y + dy;
+          const x = c.ax + dx, y = c.ay + dy;
           if (x < X0 + 2 || x + w > X1 - 2 || y < Y0 + 7 || y > Y1 - 7) continue;
           const row = Math.floor((y - Y0) / cell), [a, b] = span(x, w);
           let clash = false;
@@ -1630,13 +1659,17 @@ class Component extends DCLogic {
       // before the label's own background, so the background caps it cleanly.
       // Only when the label actually moved: at the nearest ring the line would
       // be a few pixels of noise between two things already side by side.
-      const ax = Math.max(bx, Math.min(c.x, bx + bw)), ay = Math.max(by, Math.min(c.y, by + bh));
-      const vx = c.x - ax, vy = c.y - ay, len = Math.hypot(vx, vy);
-      if (len > 9) {
-        ctx.strokeStyle = c.def.color; ctx.globalAlpha = 0.45; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(ax, ay);
-        const stop = Math.min(len - 1, c.r + 3);
-        ctx.lineTo(c.x - vx / len * stop, c.y - vy / len * stop); ctx.stroke();
+      const ex = Math.max(bx, Math.min(c.ax, bx + bw)), ey = Math.max(by, Math.min(c.ay, by + bh));
+      const vx = c.ax - ex, vy = c.ay - ey, len = Math.hypot(vx, vy);
+      // Always drawn, however short. The old rule skipped the line whenever the
+      // label was close, which is most of them, and "close" is not the same as
+      // "obviously attached" once several objects are within a label's width of
+      // each other - which is when you need to be told which one it means.
+      if (len > 1.5) {
+        ctx.strokeStyle = c.def.color; ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(ex, ey);
+        const stop = Math.min(len - 1, 3);
+        ctx.lineTo(c.ax - vx / len * stop, c.ay - vy / len * stop); ctx.stroke();
         ctx.globalAlpha = op;
       }
       ctx.fillStyle = 'rgba(10,10,10,0.7)';
