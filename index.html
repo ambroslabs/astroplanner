@@ -1347,6 +1347,11 @@ class Component extends DCLogic {
         return;
       }
       const p = pos(e);
+      // Any movement at all makes this a drag, whatever mode it is in. Only a
+      // gesture that never moved may be read as a click, because a click is the
+      // one thing that can delete a point and a drag must never do that. The
+      // threshold is a single pixel, which is jitter rather than intent.
+      if (Math.abs(p.x - d.x0) > 1 || Math.abs(p.y - d.y0) > 1) d.moved = true;
       if (d.mode === 'point') {
         const x = Math.max(64, Math.min(900, p.x)), y = Math.max(16, Math.min(546, p.y));
         d.x1 = x; d.y1 = y;
@@ -1355,7 +1360,6 @@ class Component extends DCLogic {
         // anything under six pixels a click, so nudging a point a little way
         // and letting go deleted it - which is the one thing a drag should not
         // be able to do.
-        if (Math.abs(x - d.x0) > 3 || Math.abs(y - d.y0) > 3) d.moved = true;
         const a = this._axis;
         const ra = a.axStart + (1 - (x - a.X0) / (a.X1 - a.X0)) * a.axSpan;
         const dec = a.dTop - (y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
@@ -1435,8 +1439,19 @@ class Component extends DCLogic {
         const ps = this.state.probes;
         const hit = ps.findIndex(q =>
           Math.abs(this.xOfProbe(q) - d.x0) < 10 && Math.abs(this.yOfProbe(q) - d.y0) < 10);
-        this.setState({ probes: hit >= 0 ? ps.filter((_, i) => i !== hit)
-                                         : ps.concat([{ ra: ((ra % 24) + 24) % 24, dec }]) });
+        // This is the other way a point could disappear under a drag. A press
+        // that misses the crosshair test - which reads the boxes from the last
+        // frame drawn, and so can disagree with where the point is now - starts
+        // a pan instead, and a short pan used to arrive here and delete the
+        // point it began on. Removing still needs a gesture that never moved;
+        // adding keeps the old tolerance, so a click with a shaky hand still
+        // marks a point.
+        if (hit >= 0) {
+          if (!d.moved) this.setState({ probes: ps.filter((_, i) => i !== hit) });
+          else this.drawHeatmap(el);
+          return;
+        }
+        this.setState({ probes: ps.concat([{ ra: ((ra % 24) + 24) % 24, dec }]) });
         return;
       }
       // panning already applied itself as it went; touch never selects
