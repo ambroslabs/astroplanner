@@ -754,6 +754,31 @@ class Component extends DCLogic {
   // Angular sizes are arcminutes, so an object has to be a good fraction of a
   // degree before it is worth drawing as its own shape rather than a marker.
   ELLIPSE_MIN_PX = 7;
+  // The 88 IAU constellations by abbreviation, from the IAU list, plus the two
+  // codes OpenNGC uses for the halves of Serpens - the IAU counts it once and
+  // the sky does not. Se1 is Caput and Se2 is Cauda, checked against M 5 and
+  // the Eagle Nebula, which sit one in each.
+  CONST_NAMES = {
+   And: 'Andromeda', Ant: 'Antlia', Aps: 'Apus', Aql: 'Aquila', Aqr: 'Aquarius', Ara: 'Ara',
+   Ari: 'Aries', Aur: 'Auriga', Boo: 'Boötes', CMa: 'Canis Major', CMi: 'Canis Minor',
+   CVn: 'Canes Venatici', Cae: 'Caelum', Cam: 'Camelopardalis', Cap: 'Capricornus',
+   Car: 'Carina', Cas: 'Cassiopeia', Cen: 'Centaurus', Cep: 'Cepheus', Cet: 'Cetus',
+   Cha: 'Chamaeleon', Cir: 'Circinus', Cnc: 'Cancer', Col: 'Columba', Com: 'Coma Berenices',
+   CrA: 'Corona Australis', CrB: 'Corona Borealis', Crt: 'Crater', Cru: 'Crux',
+   Crv: 'Corvus', Cyg: 'Cygnus', Del: 'Delphinus', Dor: 'Dorado', Dra: 'Draco',
+   Equ: 'Equuleus', Eri: 'Eridanus', For: 'Fornax', Gem: 'Gemini', Gru: 'Grus',
+   Her: 'Hercules', Hor: 'Horologium', Hya: 'Hydra', Hyi: 'Hydrus', Ind: 'Indus',
+   LMi: 'Leo Minor', Lac: 'Lacerta', Leo: 'Leo', Lep: 'Lepus', Lib: 'Libra', Lup: 'Lupus',
+   Lyn: 'Lynx', Lyr: 'Lyra', Men: 'Mensa', Mic: 'Microscopium', Mon: 'Monoceros',
+   Mus: 'Musca', Nor: 'Norma', Oct: 'Octans', Oph: 'Ophiuchus', Ori: 'Orion', Pav: 'Pavo',
+   Peg: 'Pegasus', Per: 'Perseus', Phe: 'Phoenix', Pic: 'Pictor', PsA: 'Piscis Austrinus',
+   Psc: 'Pisces', Pup: 'Puppis', Pyx: 'Pyxis', Ret: 'Reticulum', Scl: 'Sculptor',
+   Sco: 'Scorpius', Sct: 'Scutum', Se1: 'Serpens Caput', Se2: 'Serpens Cauda',
+   Ser: 'Serpens', Sex: 'Sextans', Sge: 'Sagitta', Sgr: 'Sagittarius', Tau: 'Taurus',
+   Tel: 'Telescopium', TrA: 'Triangulum Australe', Tri: 'Triangulum', Tuc: 'Tucana',
+   UMa: 'Ursa Major', UMi: 'Ursa Minor', Vel: 'Vela', Vir: 'Virgo', Vol: 'Volans',
+   Vul: 'Vulpecula',
+  };
   // OpenNGC's type codes, spelled out. The chart says "galaxy", not "G".
   OBJ_TYPES = {
     G: 'galaxy', GPair: 'galaxy pair', GTrpl: 'galaxy triplet', GGroup: 'galaxy group',
@@ -1994,7 +2019,8 @@ class Component extends DCLogic {
     out.push({ t: o.label, size: 15, weight: 700, color: def.color });
     if (o.name) out.push({ t: o.name, size: 13, color: '#F6F5F2' });
     const kind = this.OBJ_TYPES[o.type] || o.type || '';
-    const where = kind + (o.con ? ' in ' + o.con : '');
+    const con = o.con ? (this.CONST_NAMES[o.con] || o.con) : '';
+    const where = kind + (con ? ' in ' + con : '');
     if (where.trim()) out.push({ t: where, size: 12, color: '#C9C4B7' });
     if (o.maj) {
       const fmt = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
