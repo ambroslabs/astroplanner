@@ -1780,12 +1780,28 @@ class Component extends DCLogic {
       // beside it is not. Comma-joining them made a single run of text with no
       // way to see which name belonged to which number.
       const entries = (alias && c.key && alias.get(c.key)) || null;
+      // Each line is coloured by the catalogue it came from, so a stack of
+      // designations reads as a list of which layers hold this object rather
+      // than as one block in whichever colour happened to own it.
+      //
+      // A line can come from more than one catalogue - Herschel 400 borrows
+      // the NGC number rather than having a designation of its own - so the
+      // colour goes to the first contributor that is not borrowing. Colouring
+      // "NGC 7000" in the Herschel green would say the wrong thing about which
+      // catalogue that spelling belongs to.
       const lines = entries
-        ? entries.map(e => e.label + (e.name && e.cats.some(id => names[id]) ? ' \u00B7 ' + e.name : ''))
-        : [c.o.label + ((names[c.def.id] && c.o.name) ? ' \u00B7 ' + c.o.name : '')];
+        ? entries.map(e => {
+            const from = e.cats.find(id => { const d = this.catalogDef(id); return d && !d.desigLabel; })
+                      || e.cats[0];
+            const d = this.catalogDef(from);
+            return { text: e.label + (e.name && e.cats.some(id => names[id]) ? ' \u00B7 ' + e.name : ''),
+                     color: (d || c.def).color };
+          })
+        : [{ text: c.o.label + ((names[c.def.id] && c.o.name) ? ' \u00B7 ' + c.o.name : ''),
+             color: c.def.color }];
       const LH = 12;
       let w = 0;
-      for (const t of lines) w = Math.max(w, ctx.measureText(t).width);
+      for (const t of lines) w = Math.max(w, ctx.measureText(t.text).width);
       const bh = lines.length * LH, half = bh / 2;
       let spot = null;
       // Rings at a growing gap, nearest first, so a label travels only as far
@@ -1839,8 +1855,10 @@ class Component extends DCLogic {
       this._catBoxes.push({ x: bx, y: by, w: bw, h: bh });
       ctx.fillStyle = 'rgba(10,10,10,0.7)';
       ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = c.def.color;
-      for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], spot[0], by + i * LH + LH / 2);
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillStyle = lines[i].color;
+        ctx.fillText(lines[i].text, spot[0], by + i * LH + LH / 2);
+      }
     }
   }
 
