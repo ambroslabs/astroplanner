@@ -589,7 +589,7 @@
       <button sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
-    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -1288,9 +1288,29 @@ class Component extends DCLogic {
       return null;
     };
 
+    // The crosshair itself, for moving the point rather than its label. Tested
+    // after the box, since the box is drawn on top and should win where they
+    // overlap.
+    const pointAt = p => {
+      const list = this._probeBoxes || [];
+      for (let i = list.length - 1; i >= 0; i--) {
+        const b = list[i];
+        if (Math.hypot(p.x - b.px, p.y - b.py) <= 11) return b;
+      }
+      return null;
+    };
+
     el.addEventListener('pointerdown', e => {
       const p = pos(e);
       if (!inPlot(p)) return;
+      const onPoint = e.pointerType === 'touch' ? null : pointAt(p);
+      if (onPoint && !boxAt(p)) {
+        this._drag = { mode: 'point', idx: onPoint.i,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
       const hit = e.pointerType === 'touch' ? null : boxAt(p);
       if (hit) {
         this._drag = { mode: 'label', idx: hit.i, ox: p.x - hit.x, oy: p.y - hit.y,
@@ -1316,13 +1336,29 @@ class Component extends DCLogic {
       if (!d) {
         // Say the box can be picked up before anyone tries it.
         if (e.pointerType !== 'touch') {
-          const over = inPlot(pos(e)) && boxAt(pos(e));
+          const q = pos(e);
+          const over = inPlot(q) && (boxAt(q) || pointAt(q));
           const want = over ? 'move' : '';
           if (el.style.cursor !== want) el.style.cursor = want;
         }
         return;
       }
       const p = pos(e);
+      if (d.mode === 'point') {
+        const x = Math.max(64, Math.min(900, p.x)), y = Math.max(16, Math.min(546, p.y));
+        d.x1 = x; d.y1 = y;
+        const a = this._axis;
+        const ra = a.axStart + (1 - (x - a.X0) / (a.X1 - a.X0)) * a.axSpan;
+        const dec = a.dTop - (y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
+        const ps = this.state.probes.slice(), pr = ps[d.idx];
+        if (!pr) return;
+        // The label's offset is held in pixels from its point, so a moved
+        // point carries its label along at the same relative position.
+        ps[d.idx] = Object.assign({}, pr, { ra: ((ra % 24) + 24) % 24,
+                                            dec: Math.max(-90, Math.min(90, dec)) });
+        this.setState({ probes: ps });
+        return;
+      }
       if (d.mode === 'label') {
         d.x1 = p.x; d.y1 = p.y;
         const b2 = (this._probeBoxes || []).find(q => q.i === d.idx);
@@ -1356,6 +1392,16 @@ class Component extends DCLogic {
       this._drag = null;
       if (!d) return;
       const a = this._axis;
+      if (d.mode === 'point') {
+        // Barely moved reads as a click on the point, which is how a point has
+        // always been taken back off; only a real drag repositions it.
+        if (Math.abs(d.x1 - d.x0) < 6 && Math.abs(d.y1 - d.y0) < 6) {
+          this.setState({ probes: this.state.probes.filter((_, i) => i !== d.idx) });
+          return;
+        }
+        this.drawHeatmap(el);
+        return;
+      }
       if (d.mode === 'label') {
         // Dropped back onto its own point, it goes back to being placed
         // automatically - otherwise there would be no way to undo a drag short
