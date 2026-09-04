@@ -589,7 +589,7 @@
       <button sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
-    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> to mark a point, again to remove it</div>
+    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click</b> to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -1277,9 +1277,28 @@ class Component extends DCLogic {
     // so the box-select modifier is usable.
     el.addEventListener('contextmenu', e => { if (e.ctrlKey || e.metaKey) e.preventDefault(); });
 
+    // Topmost first: the readouts are drawn in order, so the last one painted
+    // is the one on top and the one a press should pick up.
+    const boxAt = p => {
+      const list = this._probeBoxes || [];
+      for (let i = list.length - 1; i >= 0; i--) {
+        const b = list[i];
+        if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) return b;
+      }
+      return null;
+    };
+
     el.addEventListener('pointerdown', e => {
       const p = pos(e);
       if (!inPlot(p)) return;
+      const hit = e.pointerType === 'touch' ? null : boxAt(p);
+      if (hit) {
+        this._drag = { mode: 'label', idx: hit.i, ox: p.x - hit.x, oy: p.y - hit.y,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
       this._drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, px: p.x, py: p.y,
                      touch: e.pointerType === 'touch',
                      mode: (e.ctrlKey || e.metaKey) ? 'select' : 'pan' };
@@ -1294,8 +1313,26 @@ class Component extends DCLogic {
 
     el.addEventListener('pointermove', e => {
       const d = this._drag;
-      if (!d) return;
+      if (!d) {
+        // Say the box can be picked up before anyone tries it.
+        if (e.pointerType !== 'touch') {
+          const over = inPlot(pos(e)) && boxAt(pos(e));
+          const want = over ? 'move' : '';
+          if (el.style.cursor !== want) el.style.cursor = want;
+        }
+        return;
+      }
       const p = pos(e);
+      if (d.mode === 'label') {
+        d.x1 = p.x; d.y1 = p.y;
+        const b2 = (this._probeBoxes || []).find(q => q.i === d.idx);
+        if (!b2) return;
+        const ps = this.state.probes.slice(), pr = ps[d.idx];
+        if (!pr) return;
+        ps[d.idx] = Object.assign({}, pr, { lx: p.x - d.ox - b2.px, ly: p.y - d.oy - b2.py });
+        this.setState({ probes: ps });
+        return;
+      }
       // Tracked even for touch, which draws nothing: without it a swipe reads
       // as a zero-movement tap and strands a readout.
       d.x1 = Math.max(64, Math.min(900, p.x));
@@ -1319,6 +1356,19 @@ class Component extends DCLogic {
       this._drag = null;
       if (!d) return;
       const a = this._axis;
+      if (d.mode === 'label') {
+        // Dropped back onto its own point, it goes back to being placed
+        // automatically - otherwise there would be no way to undo a drag short
+        // of deleting the point and clicking it again.
+        const b2 = (this._probeBoxes || []).find(q => q.i === d.idx);
+        const ps = this.state.probes.slice(), pr = ps[d.idx];
+        if (b2 && pr && Math.hypot(b2.x + b2.w / 2 - b2.px, b2.y + b2.h / 2 - b2.py) < 26) {
+          const q = Object.assign({}, pr); delete q.lx; delete q.ly;
+          ps[d.idx] = q; this.setState({ probes: ps });
+        }
+        this.drawHeatmap(el);
+        return;
+      }
       // Barely moved, so read it as a click: mark the point and report the
       // usable hours there. Points accumulate, so several targets can be
       // compared at once; clicking one again takes that one back off.
@@ -1391,7 +1441,11 @@ class Component extends DCLogic {
     }
     // and the points are drawn as coordinates, so a bad entry would paint NaN
     if (out.probes) out.probes = out.probes.filter(q => q && typeof q.ra === 'number' &&
-      typeof q.dec === 'number' && isFinite(q.ra) && isFinite(q.dec) && Math.abs(q.dec) <= 90);
+      typeof q.dec === 'number' && isFinite(q.ra) && isFinite(q.dec) && Math.abs(q.dec) <= 90)
+      // A moved readout carries a pixel offset; a bad one would place the box
+      // at NaN, so drop it back to automatic rather than trust it.
+      .map(q => (isFinite(q.lx) && isFinite(q.ly)) ? q
+                : (() => { const r = Object.assign({}, q); delete r.lx; delete r.ly; return r; })());
     if (typeof saved.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(saved.date)) out.date = saved.date;
     return out;
   }
@@ -2473,6 +2527,8 @@ class Component extends DCLogic {
       return x >= X0 && x <= X1 && y >= Y0 && y <= Y1; };
     const shown = this.state.probes.filter(inView);
     const placed = [];
+    // Where each readout ended up, so a pointer can find it and drag it.
+    this._probeBoxes = [];
     const markers = shown.map(q => ({ x: xOf(q.ra), y: yOf(q.dec) }));
     for (const pr of shown) {
       const px = xOf(pr.ra), py = yOf(pr.dec);
@@ -2545,7 +2601,16 @@ class Component extends DCLogic {
         if (bestC === 0) break;
       }
       if (bx === null) { bx = Math.min(Math.max(px + 16, X0 + 4), X1 - 4 - bw); by = Math.min(Math.max(py - bh - 10, Y0 + 4), Y1 - 4 - bh); }
+      // A readout the reader has moved keeps where they put it. The offset is
+      // held in pixels from its own point rather than in RA and Dec, so the
+      // box stays where it was put relative to the thing it labels while the
+      // sky pans and zooms underneath - which is what "I moved it there" means.
+      if (isFinite(pr.lx) && isFinite(pr.ly)) {
+        bx = Math.min(Math.max(px + pr.lx, X0 + 4), X1 - 4 - bw);
+        by = Math.min(Math.max(py + pr.ly, Y0 + 4), Y1 - 4 - bh);
+      }
       placed.push({ x: bx, y: by, w: bw, h: bh });
+      this._probeBoxes.push({ i: this.state.probes.indexOf(pr), x: bx, y: by, w: bw, h: bh, px, py });
       // Leader from the box edge nearest the point, stopping short of the
       // crosshair. Drawn before the box so the box caps it cleanly.
       {
