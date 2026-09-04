@@ -571,7 +571,7 @@
                 <button sc-camel-on-click="{{ g.pick }}" style="display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left; background: {{ g.bg }}; border: none; border-bottom: 1px solid #232323; padding: 8px 10px; cursor: pointer; font-family: 'Inter', sans-serif;" style-hover="background: #232323;">
                   <span style="font-size: 13px; font-weight: 700; color: {{ g.color }}; white-space: nowrap;">{{ g.label }}</span>
                   <span style="font-size: 12px; color: #C9C4B7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ g.name }}</span>
-                  <span style="font-size: 11px; color: #6E6A62; margin-left: auto; white-space: nowrap;">{{ g.cat }}</span>
+                  <span style="font-size: 11px; font-weight: 600; color: {{ g.catFg }}; margin-left: auto; white-space: nowrap;">{{ g.cat }}</span>
                 </button>
               </sc-for>
             </div>
@@ -1993,6 +1993,14 @@ class Component extends DCLogic {
     const rank = this.catRank();
     const out = [];
     for (const def of this.CATALOGS) {
+      // Herschel 400 is left out of the list entirely. It identifies its
+      // objects by their NGC numbers, so every row it could offer is an NGC
+      // row wearing a different label, and a search for one would answer with
+      // the same designation twice. Nothing is lost: the eight of its 400 that
+      // our NGC file does not carry are all entries OpenNGC marks as
+      // duplicates, each reachable under its canonical number. Turning the
+      // layer on is a deliberate act, not something to be talked into here.
+      if (def.desigLabel) continue;
       const rows = this.catalogRows(def.id);
       if (!rows) continue;
       for (const o of rows) {
@@ -2008,24 +2016,17 @@ class Component extends DCLogic {
       }
     }
     out.sort((a, b) => a.s - b.s);
-    // One row per object. Herschel 400 and NGC hold the same objects under the
-    // same designation, so without this "ngc 70" offered NGC 7000 twice and
-    // spent two of eight slots saying the same thing.
-    const seen = new Set(), uniq = [];
-    for (const e of out) {
-      const k = this.objKey(e.def, e.o) || (e.def.id + ':' + e.o.id);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      uniq.push(e);
-      if (uniq.length >= (limit || 8)) break;
-    }
-    return uniq;
+    // One row per catalogue the object is in, not one row per object. An
+    // object reached through two catalogues is two different choices here,
+    // because picking a row switches that row's catalogue on: NGC 7000 offered
+    // under Herschel 400 and under NGC look alike but do different things.
+    return out.slice(0, limit || 10);
   }
 
   refreshSuggest() {
     clearTimeout(this._sugT);
     this._sugT = setTimeout(() => {
-      this.setState({ sugg: this.suggest(this.state.query, 8), suggIx: -1 });
+      this.setState({ sugg: this.suggest(this.state.query, 10), suggIx: -1 });
     }, 90);
   }
 
@@ -3085,6 +3086,11 @@ class Component extends DCLogic {
         cat: e.def.label,
         color: e.def.color,
         bg: i === s.suggIx ? '#232323' : 'transparent',
+        // Two rows can carry the same designation and differ only by which
+        // catalogue they come from, so that column is not an afterthought:
+        // dim while the layer is already on, lit while picking it would
+        // switch a new one on.
+        catFg: (s.cats || {})[e.def.id] ? '#6E6A62' : e.def.color,
         pick: () => this.takeSuggestion(i),
       })),
       doSearch: () => { this.setState({ sugg: [] }); this.searchGo(); },
