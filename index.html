@@ -1515,8 +1515,14 @@ class Component extends DCLogic {
     if (!live.length || this.state.catOpacity <= 0.001) return;
     const op = this.state.catOpacity;
     const dup = this.suppressed();
-    const { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot } = g;
+    const { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot, axSpan } = g;
     const pxPerDeg = (Y1 - Y0) / (dTop - dBot);
+    // A whole turn of RA in pixels. xOf wraps its argument into the visible
+    // span, so an object just off the right-hand edge comes back as a position
+    // far off to the left; shifting by whole turns puts every object at the
+    // image nearest the plot, which is the one that decides whether any part
+    // of it is on screen.
+    const period = (X1 - X0) * 24 / axSpan, midX = (X0 + X1) / 2;
     ctx.save();
     ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
     const cand = [];
@@ -1525,10 +1531,17 @@ class Component extends DCLogic {
       const selectable = def.id === 'ngc' || def.id === 'ic';
       for (const o of this.catalogRows(def.id)) {
         if (selectable && dup.has(def.id + ':' + o.id)) continue;
-        const x = xOf(o.ra), y = yOf(o.dec);
-        if (x < X0 - 6 || x > X1 + 6 || y < Y0 - 6 || y > Y1 + 6) continue;
+        let x = xOf(o.ra);
+        const y = yOf(o.dec);
+        x -= period * Math.round((x - midX) / period);
         const majPx = o.maj ? o.maj / 60 * pxPerDeg : 0;
         let r = o.mag == null ? 1.9 : Math.max(1.4, 3.6 - o.mag * 0.17);
+        // Cull by the object's own extent, not by its centre. A fixed margin
+        // drops an ellipse whose middle has just left the crop while most of it
+        // is still on screen, so panning made large objects appear from nowhere
+        // already halfway across the plot.
+        const margin = Math.max(6, majPx / 2 + 2);
+        if (x < X0 - margin || x > X1 + margin || y < Y0 - margin || y > Y1 + margin) continue;
         if (majPx >= this.ELLIPSE_MIN_PX) {
           // Position angle is measured from north through east. North is up and
           // east is to the left here, because RA increases leftward, so the
@@ -2294,7 +2307,7 @@ class Component extends DCLogic {
       ctx.save();
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
       drawMilkyWay(); drawConstellations();
-      this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot });
+      this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot, axSpan });
       drawEcliptic(); drawMoon(); drawBodies();
       ctx.restore();
     }
