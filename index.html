@@ -1657,10 +1657,8 @@ class Component extends DCLogic {
         if (found) {
           if (found.cats.indexOf(def.id) < 0) found.cats.push(def.id);
           if (!found.name) found.name = o.name;
-          if (!def.desigLabel) found.borrowed = false;
         } else {
-          list.push({ label: o.label, cats: [def.id], name: o.name,
-                      borrowed: !!def.desigLabel });
+          list.push({ label: o.label, cats: [def.id], name: o.name });
         }
         alias.set(key, list);
       }
@@ -1795,15 +1793,7 @@ class Component extends DCLogic {
       // separate name switches, so C 20 can be spelled out while the NGC line
       // beside it is not. Comma-joining them made a single run of text with no
       // way to see which name belonged to which number.
-      let entries = (alias && c.key && alias.get(c.key)) || null;
-      // Herschel 400 has no designation of its own - it is a selection of NGC
-      // objects identified by their NGC numbers - so its line is that NGC
-      // number. With NGC switched off that reads as NGC appearing uninvited,
-      // and with any other catalogue up it doubles every label. A catalogue
-      // that borrows its designation only gets a line when nothing else can
-      // supply one, which leaves it as the label of last resort: on its own it
-      // still says NGC 891, because that is what the object is called.
-      if (entries && entries.some(e => !e.borrowed)) entries = entries.filter(e => !e.borrowed);
+      const entries = (alias && c.key && alias.get(c.key)) || null;
       // Each line is coloured by the catalogue it came from, so a stack of
       // designations reads as a list of which layers hold this object rather
       // than as one block in whichever colour happened to own it.
@@ -1815,9 +1805,13 @@ class Component extends DCLogic {
       // catalogue that spelling belongs to.
       const lines = entries
         ? entries.map(e => {
-            const from = e.cats.find(id => { const d = this.catalogDef(id); return d && !d.desigLabel; })
-                      || e.cats[0];
-            const d = this.catalogDef(from);
+            // The colour goes to the first catalogue in prominence order that
+            // contributed the line. Herschel 400 identifies its objects by
+            // their NGC numbers, so with NGC also up the two land on one line -
+            // and that line is Herschel's colour, since Herschel is the reason
+            // it is being shown at all. The name follows either catalogue: if
+            // one of them asked for names, the name is wanted.
+            const d = this.catalogDef(e.cats[0]);
             return { text: e.label + (e.name && e.cats.some(id => names[id]) ? ' \u00B7 ' + e.name : ''),
                      color: (d || c.def).color };
           })
