@@ -596,9 +596,14 @@
     <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 4px; padding-top: 10px; border-top: 1px solid #2E2C27;">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Catalogs <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
       <sc-for list="{{ catToggles }}" as="c" hint-placeholder-count="10">
-        <button sc-camel-on-click="{{ c.toggle }}" title="{{ c.tip }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ c.fg }};">
-          <span style="width: 10px; height: 10px; border-radius: 50%; background: {{ c.dot }}; border: 1px solid {{ c.ring }};"></span>{{ c.label }}
-        </button>
+        <span style="display: inline-flex; align-items: center; gap: 1px;">
+          <button sc-camel-on-click="{{ c.toggle }}" title="{{ c.tip }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ c.fg }};">
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: {{ c.dot }}; border: 1px solid {{ c.ring }};"></span>{{ c.label }}
+          </button>
+          <label title="{{ c.nameTip }}" style="display: {{ c.nameShow }}; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: #8E897D; padding: 4px 6px 4px 2px;">
+            <input type="checkbox" checked="{{ c.nameOn }}" sc-camel-on-change="{{ c.toggleName }}" style="accent-color: #D9A960; width: 13px; height: 13px; margin: 0;">names
+          </label>
+        </span>
       </sc-for>
       <button sc-camel-on-click="{{ toggleCatLabels }}" title="{{ catLabelTip }}" style="background: none; border: none; padding: 7px 4px; margin: 0 0 0 auto; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ catLabelFg }};">{{ catLabelText }}</button>
     </div>
@@ -696,6 +701,12 @@ class Component extends DCLogic {
     // costs nothing to read on a whole-sky chart.
     cats: { messier: true },
     catLabels: true,
+    // Per catalogue: also print the common name beside the designation. Off by
+    // default - the designation is what you look an object up by, and "Salt and
+    // Pepper Cluster" spends four times the width saying less about which one
+    // it is. Kept per catalogue rather than global because the answer differs:
+    // Messier names are famous, NGC's are mostly obscure.
+    catNames: {},
     // marked points ride along with the rest of the chart: they survive a
     // reload, and Reset chart clears them like everything else here
     probes: [],
@@ -1461,6 +1472,7 @@ class Component extends DCLogic {
   labelCatalogs(ctx, cand, g) {
     if (!cand.length) return;
     const { X0, X1, Y0, Y1 } = g;
+    const names = this.state.catNames || {};
     const score = c => (c.o.name ? 0 : 40) + (c.o.mag == null ? 14 : c.o.mag)
                      - Math.min(8, (c.o.maj || 0) / 12);
     const ranked = cand.slice().sort((a, b) => score(a) - score(b)).slice(0, 110);
@@ -1469,7 +1481,7 @@ class Component extends DCLogic {
     const cell = 15, cols = Math.ceil((X1 - X0) / cell) + 2, taken = new Set();
     const span = (x, w) => [Math.floor((x - X0) / cell), Math.floor((x + w - X0) / cell)];
     for (const c of ranked) {
-      const text = c.o.name || c.o.label;
+      const text = (names[c.def.id] && c.o.name) ? c.o.label + ' \u00B7 ' + c.o.name : c.o.label;
       const w = ctx.measureText(text).width;
       let spot = null;
       for (const [dx, dy] of [[c.r + 5, 0], [-c.r - 5 - w, 0], [c.r + 5, -11],
@@ -2584,8 +2596,21 @@ class Component extends DCLogic {
         const rows = this.catalogRows(c.id);
         const loading = !!((this._catLoad || {})[c.id]);
         const failed = !!((this._catErr || {})[c.id]);
+        // The names box only appears for a catalogue that is showing and has
+        // names to show: Sharpless has none at all, and an empty checkbox that
+        // does nothing is worse than no checkbox.
+        const named = !!(rows && rows.some(r => r.name));
         return {
           label: c.label + (on && loading ? ' …' : on && failed ? ' (failed)' : ''),
+          nameShow: on && named ? 'inline-flex' : 'none',
+          nameOn: !!(s.catNames || {})[c.id],
+          nameTip: ((s.catNames || {})[c.id] ? 'Show only the designation for '
+                                             : 'Add the common name beside the designation for ') + c.label,
+          toggleName: () => {
+            const next = Object.assign({}, s.catNames);
+            if (next[c.id]) delete next[c.id]; else next[c.id] = true;
+            this.setState({ catNames: next });
+          },
           fg: on ? '#F6F5F2' : '#6E6A62',
           dot: on ? c.color : 'transparent',
           ring: on ? c.color : '#4A4740',
