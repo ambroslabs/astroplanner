@@ -605,7 +605,10 @@
           </label>
         </span>
       </sc-for>
-      <button sc-camel-on-click="{{ toggleCatLabels }}" title="{{ catLabelTip }}" style="background: none; border: none; padding: 7px 4px; margin: 0 0 0 auto; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ catLabelFg }};">{{ catLabelText }}</button>
+      <label title="How many object names to print. Names are ranked before they are cut, so the best-known survive longest; 0% prints none." style="display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; cursor: pointer;">Names
+        <input type="range" min="0" max="100" step="5" value="{{ densityPct }}" sc-camel-on-input="{{ onDensity }}" style="width: 110px; accent-color: #D9A960;">
+        <span style="letter-spacing: 0; text-transform: none; color: #C9C4B7; min-width: 34px;">{{ densityLabel }}</span>
+      </label>
     </div>
     <sc-if value="{{ showPlanets }}" hint-placeholder-val="{{ true }}">
     <div class="planet-table" style="margin-top: 16px; border-top: 1px solid #2E2C27; padding-top: 12px;">
@@ -724,6 +727,10 @@ class Component extends DCLogic {
   // Angular sizes are arcminutes, so an object has to be a good fraction of a
   // degree before it is worth drawing as its own shape rather than a marker.
   ELLIPSE_MIN_PX = 7;
+  // Most names the chart will print at full density. Past this the labels stop
+  // being readable anyway, so the slider scales against it rather than against
+  // however many objects happen to be in view.
+  LABEL_CAP = 110;
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
@@ -737,7 +744,11 @@ class Component extends DCLogic {
     // list nearly everyone wants and the only one small enough that showing it
     // costs nothing to read on a whole-sky chart.
     cats: { messier: true },
-    catLabels: true,
+    // How many object names to print, as a fraction of the cap. The labels are
+    // ranked before they are cut, so turning this down drops the least
+    // interesting ones first and the famous objects survive longest. 0 is off,
+    // which is why there is no separate on/off beside it.
+    catDensity: 1,
     // Per catalogue: also print the common name beside the designation. Off by
     // default - the designation is what you look an object up by, and "Salt and
     // Pepper Cluster" spends four times the width saying less about which one
@@ -1509,7 +1520,7 @@ class Component extends DCLogic {
       ctx.globalAlpha = 0.8; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
     }
     ctx.globalAlpha = 1;
-    if (this.state.catLabels) this.labelCatalogs(ctx, cand, g);
+    if (this.state.catDensity > 0) this.labelCatalogs(ctx, cand, g);
     ctx.restore();
   }
 
@@ -1523,7 +1534,9 @@ class Component extends DCLogic {
     const names = this.state.catNames || {};
     const score = c => (c.o.name ? 0 : 40) + (c.o.mag == null ? 14 : c.o.mag)
                      - Math.min(8, (c.o.maj || 0) / 12);
-    const ranked = cand.slice().sort((a, b) => score(a) - score(b)).slice(0, 110);
+    const cap = Math.round(this.LABEL_CAP * Math.max(0, Math.min(1, this.state.catDensity)));
+    if (!cap) return;
+    const ranked = cand.slice().sort((a, b) => score(a) - score(b)).slice(0, cap);
     ctx.font = '600 10px Inter, sans-serif';
     ctx.textBaseline = 'middle';
     const cell = 15, cols = Math.ceil((X1 - X0) / cell) + 2, taken = new Set();
@@ -2671,11 +2684,9 @@ class Component extends DCLogic {
           },
         };
       }),
-      catLabelText: s.catLabels ? 'Labels on' : 'Labels off',
-      catLabelFg: s.catLabels ? '#D9A960' : '#6E6A62',
-      catLabelTip: s.catLabels ? 'Stop naming catalogue objects on the chart'
-                               : 'Name catalogue objects on the chart',
-      toggleCatLabels: () => this.setState({ catLabels: !s.catLabels }),
+      densityPct: String(Math.round(s.catDensity * 100)),
+      densityLabel: s.catDensity > 0 ? Math.round(s.catDensity * 100) + '%' : 'off',
+      onDensity: e => this.setState({ catDensity: Number(e.target.value) / 100 }),
       nightLabel: s.night ? 'Night vision on' : 'Night vision',
       nightPressed: s.night ? 'true' : 'false',
       // Active reads as gold text on a gold border, the way the play button
