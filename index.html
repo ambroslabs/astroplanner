@@ -3465,7 +3465,22 @@ class Component extends DCLogic {
     // there is once the bar is against the edge of the screen.
     const cbW = overlay ? 13 : 18;
     const CB = overlay ? X1 - 12 - cbW : X1 + 28;
-    const BT = overlay ? Y0 + 46 : Y0, BB = overlay ? Y1 - 34 : Y1;
+    // The buttons float over the top-right corner, which is exactly where the
+    // bar hangs, so it starts below them rather than under them. Measured off
+    // the bar itself rather than written in: the buttons are a row of words on
+    // a desktop and a row of glyphs on a phone, and those are not the same
+    // height. Only the top is affected - the bar keeps the rest of the height.
+    let barTop = Y0 + 46;
+    if (overlay) {
+      const tb = document.querySelector('.topbar');
+      if (tb) {
+        const tbb = tb.getBoundingClientRect(), cr = canvas.getBoundingClientRect();
+        if (tbb.height > 4) barTop = Math.max(barTop, tbb.bottom - cr.top + 12);
+      }
+    }
+    const BT = overlay ? Math.min(barTop, Y0 + (Y1 - Y0) * 0.4) : Y0;
+    this._barTop = BT;   // remembered like _axis, so a test can check it clears the buttons
+    const BB = overlay ? Y1 - 34 : Y1;
     const denomL = L >= 24 ? 24 : L;
     // A ramp of dark-on-dark says little, so the bar carries a sample star
     // chain under the veil: it shows what the mask actually does to the sky
