@@ -817,7 +817,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -1477,20 +1477,20 @@ class Component extends DCLogic {
              decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) });
   }
 
-  // Declination sets the scale; RA is cropped or extended to whatever width the
-  // window has. Squashing RA to fit a full turn into a narrow plot does not
-  // draw a wide chart small, it draws an unreadable one - eight times as many
-  // degrees per pixel across as down on a phone held upright - and stretching
-  // it on a wide one is the same mistake in reverse. So the declination span is
-  // left exactly as fitted and the RA span moves with the shape of the plot.
+  // The chart is drawn at one fixed scale relationship between the two axes:
+  // RA degrees per pixel over declination degrees per pixel. Every view holds
+  // it - the fit, a wheel zoom, a pan, a window resize - so the sky
+  // never restretches under you. Before this the ratio was whatever a
+  // particular fit happened to produce and was only preserved from there, so
+  // an auto-fit sat at 1.64 and a hand-drawn box at 0.90: zooming in quietly
+  // changed the relationship between the axes.
   //
-  // Measured against the layout the chart already had, 836 by 530, so the
-  // ordinary desktop chart is a fixed point: the factor is 1 there and nothing
-  // moves. Nothing here touches declination, which is what keeps the poles on
-  // a wide monitor instead of trimming them away to tidy up a ratio.
-  REF_PLOT = { w: 836, h: 530 };
+  // The number is the one the ordinary desktop fit already produced, so that
+  // view is unchanged to the pixel and everything else is brought into line
+  // with it rather than the other way round.
+  RA_DEC_RATIO = 1.640961045865352;
   plotShape() {
-    const ref = this.REF_PLOT.w / this.REF_PLOT.h;
+    const ref = 836 / 530;
     if (!this.canvas) return ref;
     // Measured live rather than read off the last draw, so a fit computed
     // during a resize is against the size the canvas has now.
@@ -1498,15 +1498,35 @@ class Component extends DCLogic {
     const w = b.X1 - b.X0, h = b.Y1 - b.Y0;
     return (w > 20 && h > 20) ? w / h : ref;
   }
-  aspectFit(c) {
-    const factor = this.plotShape() / (this.REF_PLOT.w / this.REF_PLOT.h);
-    if (!isFinite(factor) || Math.abs(factor - 1) < 0.01) return c;
-    return this.scaleRa(c, factor);
+  // Declination is the zoom. RA follows from it and the shape of the window,
+  // which is what makes a resize show more or less sky rather than the same
+  // sky stretched. Past a full turn there is no more RA to be had, so the
+  // excess is left to the letterbox in the draw.
+  // The other way of reaching the ratio, for a region asked for by name - the
+  // search framing an object - rather than one derived from a zoom level:
+  // expand whichever axis is short so all of it stays on screen. Deriving RA
+  // from declination there would hand back a tall view for a wide flat object.
+  // A view already at the ratio comes through unchanged either way.
+  aspectContain(c) {
+    if (!c) return c;
+    const A = this.plotShape();
+    if (!isFinite(A) || A <= 0) return c;
+    const K = this.RA_DEC_RATIO;
+    const span = Math.min(180, Math.max(c.decMax - c.decMin, c.raLen * 15 / (K * A)));
+    const dMid = (c.decMin + c.decMax) / 2;
+    let decMin = dMid - span / 2, decMax = dMid + span / 2;
+    if (decMax > 90) { decMin -= decMax - 90; decMax = 90; }
+    if (decMin < -90) { decMax += -90 - decMin; decMin = -90; }
+    return this.aspectFit({ raStart: c.raStart, raLen: c.raLen,
+                            decMin: Math.max(-90, decMin), decMax: Math.min(90, decMax) });
   }
-  // Same crop about the middle, whatever the reason for it.
-  scaleRa(c, factor) {
+  aspectFit(c) {
+    if (!c) return c;
+    const A = this.plotShape();
+    if (!isFinite(A) || A <= 0) return c;
     const mid = c.raStart + c.raLen / 2;
-    const raLen = Math.max(0.25, Math.min(24, c.raLen * factor));
+    const raLen = Math.min(24, Math.max(0.05,
+      this.RA_DEC_RATIO * (c.decMax - c.decMin) * A / 15));
     return { raStart: ((mid - raLen / 2) % 24 + 24) % 24, raLen,
              decMin: c.decMin, decMax: c.decMax };
   }
@@ -1538,7 +1558,9 @@ class Component extends DCLogic {
   // Any hand-made frame turns Auto off: otherwise the next change to latitude,
   // date or threshold would silently throw the view away.
   setFrame(c) {
-    const n = this.normalizeFrame(c);
+    // Everything the user does to the view arrives here, so the ratio is
+    // applied here rather than at each of the callers.
+    const n = this.aspectContain(this.normalizeFrame(c));
     // Hold the view we just asked for. A burst of wheel events arrives faster
     // than the redraw that publishes the new axis, so without this each event
     // recomputes from the same stale base and only the last one counts.
@@ -1595,9 +1617,6 @@ class Component extends DCLogic {
       this.setFrame({ raStart: raC - u * raLen, raLen, decMax: top, decMin: top - dSpan });
     }, { passive: false });
 
-    // Ctrl-click is a context menu on some platforms; suppress it over the plot
-    // so the box-select modifier is usable.
-    el.addEventListener('contextmenu', e => { if (e.ctrlKey || e.metaKey) e.preventDefault(); });
 
     // Topmost first: the readouts are drawn in order, so the last one painted
     // is the one on top and the one a press should pick up.
@@ -1669,8 +1688,7 @@ class Component extends DCLogic {
         return;
       }
       this._drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, px: p.x, py: p.y,
-                     touch: e.pointerType === 'touch',
-                     mode: (e.ctrlKey || e.metaKey) ? 'select' : 'pan' };
+                     touch: e.pointerType === 'touch', mode: 'pan' };
       // Touch keeps its default gestures so the page still scrolls under a
       // swipe that starts on the chart; a tap has no movement to swallow and
       // still reads out. Wide mode is the exception: the whole page is fixed
@@ -1752,7 +1770,6 @@ class Component extends DCLogic {
         d.x1 = Math.max(a.X0, Math.min(a.X1, p.x));
         d.y1 = Math.max(a.Y0, Math.min(a.Y1, p.y)); }
       if (d.touch && !this.state.wide) return;
-      if (d.mode === 'select') { this.drawHeatmap(el); return; }
       // Pan. Full sky is a frame like any other, so this works there too and
       // simply translates the whole turn.
       const a = this._axis, v = view();
@@ -1830,16 +1847,8 @@ class Component extends DCLogic {
         this.setState({ probes: ps.concat([{ ra: ((ra % 24) + 24) % 24, dec }]) });
         return;
       }
-      // panning already applied itself as it went; touch never box-selects
-      if (d.touch || d.mode !== 'select') { this.drawHeatmap(el); return; }
-      // a box along only one axis is ambiguous, so ignore it rather than guess
-      if (Math.abs(d.x1 - d.x0) < 14 || Math.abs(d.y1 - d.y0) < 14) { this.drawHeatmap(el); return; }
-      const raAt = x => a.axStart + (1 - (x - a.X0) / (a.X1 - a.X0)) * a.axSpan;
-      const decAt = y => a.dTop - (y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot);
-      const raRight = raAt(Math.max(d.x0, d.x1)), raLeft = raAt(Math.min(d.x0, d.x1));
-      this.setFrame({ raStart: raRight, raLen: Math.max(0.5, Math.min(24, raLeft - raRight)),
-                     decMin: Math.min(decAt(d.y0), decAt(d.y1)),
-                     decMax: Math.max(decAt(d.y0), decAt(d.y1)) });
+      // panning already applied itself as it went
+      this.drawHeatmap(el);
     };
     el.addEventListener('pointerup', finish);
     // A cancel is the browser taking the gesture over to scroll: drop it
@@ -2827,7 +2836,9 @@ class Component extends DCLogic {
     // chart to hold any shape. In wide mode it is given the window's, which is
     // what fills the screen properly rather than fitting a 1.6 picture into it
     // and leaving the sides empty.
-    const { S, W, HH, X0, X1, Y0, Y1 } = this.plotBox(canvas);
+    const box = this.plotBox(canvas), S = box.S, W = box.W, HH = box.HH;
+    // let, because the letterbox below may inset them
+    let X0 = box.X0, X1 = box.X1, Y0 = box.Y0, Y1 = box.Y1;
     const overlay = this.state.wide && canvas === this.canvas;
     this._overlayAxes = overlay;
     canvas.width = W * S; canvas.height = HH * S;
@@ -2852,13 +2863,29 @@ class Component extends DCLogic {
     const axSpan = frame ? frame.raLen : 24;
     const dTop = frame ? frame.decMax : 90;
     const dBot = frame ? frame.decMin : -90;
+    // Letterbox. The whole sky is 24h by 180 degrees, an aspect of 2:1 in
+    // degrees, so at a fixed RA-to-Dec ratio it only fills a window of one
+    // particular shape. Rather than stretch it to fit any other, the plot
+    // shrinks inside the canvas and the leftover is simply empty - zoomed out
+    // far enough that everything asked for is on screen, at the same scale as
+    // every other view. This is also what catches a frame whose RA ran into
+    // the 24h limit: the ratio is restored by narrowing the plot, never by
+    // restretching the sky.
+    {
+      const fw = X1 - X0, fh = Y1 - Y0;
+      const sc = Math.max((dTop - dBot) / fh, (axSpan * 15) / (this.RA_DEC_RATIO * fw));
+      const ew = (axSpan * 15) / (this.RA_DEC_RATIO * sc), eh = (dTop - dBot) / sc;
+      // A pixel of slack: a view already at the ratio lands here with float
+      // noise, and letterboxing it by a hundredth of a pixel would move
+      // everything the ordinary chart draws.
+      if (fw - ew > 1) { X0 += (fw - ew) / 2; X1 -= (fw - ew) / 2; }
+      if (fh - eh > 1) { Y0 += (fh - eh) / 2; Y1 -= (fh - eh) / 2; }
+      this._boxed = (fw - ew > 1) || (fh - eh > 1);
+    }
     const xOf = ra => X0 + (1 - ((((ra - axStart) % 24) + 24) % 24) / axSpan) * (X1 - X0);
     const yOf = dec => Y0 + (dTop - dec) / (dTop - dBot) * (Y1 - Y0);
     // remembered for the drag-to-frame handler, which has to invert this mapping
     this._axis = { axStart, axSpan, dTop, dBot, X0, X1, Y0, Y1 };
-    // the shape this frame was drawn at, so a resize can tell how much wider
-    // or narrower the window just got and crop RA by exactly that much
-    if (canvas === this.canvas) this._shape = (X1 - X0) / (Y1 - Y0);
     this._view = frame ? { raStart: frame.raStart, raLen: frame.raLen, decMin: frame.decMin, decMax: frame.decMax }
                       : { raStart: raOrg, raLen: 24, decMin: -90, decMax: 90 };
     // A full 24h of RA in pixels. Equal to the plot width only when the axis
@@ -3396,23 +3423,10 @@ class Component extends DCLogic {
     // field - they are the thing most recently asked for.
     this.drawInfoPanels(ctx, { xOf, yOf, X0, X1, Y0, Y1 }, dark);
 
-    // Only a box-select draws a marquee. A pan keeps _drag set too, and
-    // repaints on every move, so without this check dragging to pan drew a
-    // selection rectangle from the grab point.
-    if (this._drag && this._drag.mode === 'select' && !this._drag.touch) {
-      const d = this._drag;
-      ctx.strokeStyle = '#D9A960'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
-      ctx.strokeRect(Math.min(d.x0, d.x1), Math.min(d.y0, d.y1),
-                     Math.abs(d.x1 - d.x0), Math.abs(d.y1 - d.y0));
-      ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(217,169,96,0.10)';
-      ctx.fillRect(Math.min(d.x0, d.x1), Math.min(d.y0, d.y1),
-                   Math.abs(d.x1 - d.x0), Math.abs(d.y1 - d.y0));
-    }
     // frame + ticks + labels
     // No frame when the plot is the window: the edge of the screen is the edge
     // of the map, and a rule drawn along it is just a line in the way.
-    if (!overlay) {
+    if (!overlay || this._boxed) {
       ctx.strokeStyle = '#C9C4B7'; ctx.lineWidth = 1.5;
       ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
     }
@@ -3605,6 +3619,12 @@ class Component extends DCLogic {
     if (this.state.autoFrame) {
       this._frameSig = this.frameSignature();
       const c = this.fitFrame();
+      if (c) this.setState({ frame: c });
+    } else if (this.state.frame) {
+      // A frame restored from a previous session was fitted to whatever window
+      // it was drawn in. Bring it to the ratio now, or it arrives letterboxed
+      // in a window it could have filled.
+      const c = this.aspectFit(this.state.frame);
       if (c) this.setState({ frame: c });
     }
     this.ensureCatalogs();
@@ -3878,13 +3898,11 @@ class Component extends DCLogic {
             // shown at a size it was not drawn for. Going through state instead
             // would put a render between the measuring and the drawing, and the
             // stretched bitmap is what fills that gap.
-            const was = this._shape;
             let f = this.state.frame;
+            // Declination is untouched either way; only the RA that fits
+            // beside it changes, which is the same rule as everywhere else.
             if (this.state.autoFrame) f = this.fitFrame() || f;
-            else if (f && was > 0) {
-              const now = this.plotShape();
-              if (isFinite(now) && Math.abs(now / was - 1) > 0.005) f = this.scaleRa(f, now / was);
-            }
+            else if (f) f = this.aspectFit(f);
             this._frameNow = f;
             this._fastDraw = true;
             this.drawHeatmap(this.canvas);
