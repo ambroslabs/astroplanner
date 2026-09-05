@@ -1958,6 +1958,10 @@ class Component extends DCLogic {
           })
         : [{ text: c.o.label + ((names[c.def.id] && c.o.name) ? ' \u00B7 ' + c.o.name : ''),
              color: c.def.color }];
+      // Coordinates on the label itself, so a target can be read off the chart
+      // without opening anything. Dimmer than the designations above it: it is
+      // reference, not identity.
+      lines.push({ text: this.fmtCoords(c.o.ra, c.o.dec), color: '#8E897D' });
       const LH = 12;
       let w = 0;
       for (const t of lines) w = Math.max(w, ctx.measureText(t.text).width);
@@ -2042,6 +2046,7 @@ class Component extends DCLogic {
       if (o.pa != null) t += ' at PA ' + o.pa.toFixed(0) + '\u00B0';
       out.push({ t, size: 12, color: '#C9C4B7' });
     }
+    out.push({ t: 'RA ' + this.fmtCoords(o.ra, o.dec), size: 12, color: '#8E897D' });
     const bits = [];
     if (o.mag != null) bits.push('mag ' + o.mag.toFixed(1));
     if (o.sbr != null) bits.push('SB ' + o.sbr.toFixed(1));
@@ -2050,6 +2055,10 @@ class Component extends DCLogic {
     const hrs = Math.max(0, this.usable(o.ra, o.dec, dark));
     out.push({ t: hrs > 0.05 ? hrs.toFixed(1) + 'h usable tonight' : 'not usable tonight',
                size: 13, weight: 700, color: hrs > 0.05 ? '#D9A960' : '#8E897D' });
+    const wins = hrs > 0.05 ? this.usableWindows(o.ra, o.dec, dark) : [];
+    if (wins.length) {
+      out.push({ t: 'LST ' + this.fmtWindows(wins), size: 12, color: '#C9C4B7' });
+    }
     return out;
   }
 
@@ -2447,12 +2456,51 @@ class Component extends DCLogic {
     if (tail > 0) segs.push({ start: 24 - e, len: tail });
     return segs.sort((p, q) => p.start - q.start);
   }
-  // Minutes, so the two pieces do not visibly disagree with the total above
-  // them: at one decimal 1.58h and 0.96h print as 1.6 and 1.0, which sum to
-  // more than the 2.5h on the line above.
-  fmtDur(h) {
-    const m = Math.round(h * 60);
-    return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') + 'm';
+  // The usable stretches as clock times rather than lengths. usableSegments
+  // measures from the moment the object clears the threshold, which is RA - H,
+  // so the absolute time is that offset added to it. The two degenerate cases
+  // have no such reference and are read straight off instead: an object that
+  // never drops below the threshold is usable for exactly the dark window, and
+  // a night with no daylight in it leaves the object's own window as the answer.
+  usableWindows(ra, dec, dark) {
+    const H = this.hoursAbove(this.state.lat, this.state.thr, dec) / 2;
+    if (H <= 0 || dark.L <= 0) return [];
+    const w = (from, len) => ({ from: ((from % 24) + 24) % 24,
+                                to: (((from + len) % 24) + 24) % 24, len });
+    const objLen = Math.min(2 * H, 24), darkLen = Math.min(dark.L, 24);
+    if (objLen >= 24 && darkLen >= 24) return [w(0, 24)];
+    if (objLen >= 24) return [w(dark.dusk, darkLen)];
+    if (darkLen >= 24) return [w(ra - H, objLen)];
+    // The overlap worked out here rather than taken from usableSegments, whose
+    // start field is a sort key and not an offset from anything - reading it as
+    // one put the windows in the right lengths at the wrong times, M 31 ending
+    // two hours after dawn. Both arcs are laid on the same line and the darkness
+    // is tried one turn either side, which is what catches the piece that wraps
+    // past midnight; an arc shorter than a day can meet another in at most two
+    // places, so this finds one window or two and never a spurious third.
+    const a1 = ((ra - H) % 24 + 24) % 24, out = [];
+    for (const shift of [-24, 0, 24]) {
+      const from = Math.max(a1, dark.dusk + shift);
+      const to = Math.min(a1 + objLen, dark.dusk + shift + darkLen);
+      if (to - from > 1 / 60) out.push(w(from, to - from));
+    }
+    // Ordered by how far into the night each one falls, not by the clock. A
+    // night that runs 18:40 to 03:12 crosses midnight, so sorting on the clock
+    // listed the piece before dawn ahead of the piece after dusk - the right
+    // times in the wrong order to read.
+    const since = x => ((x.from - dark.dusk) % 24 + 24) % 24;
+    return out.sort((p, q) => since(p) - since(q));
+  }
+  fmtWindows(list) {
+    if (!list.length) return '';
+    if (list.length === 1 && list[0].len >= 23.99) return 'all night';
+    return list.map(x => this.fmtLST(x.from) + '\u2013' + this.fmtLST(x.to))
+               .join('  \u00B7  ');
+  }
+  // RA and declination, short enough to sit on a chart label.
+  fmtCoords(ra, dec) {
+    return this.fmtLST(ra) + '  ' + (dec >= 0 ? '+' : '\u2212')
+         + Math.abs(dec).toFixed(1) + '\u00B0';
   }
   fmtLST(h) {
     h = ((h % 24) + 24) % 24;
@@ -2949,13 +2997,12 @@ class Component extends DCLogic {
       const big = hrs > 0.05 ? hrs.toFixed(1) + 'h usable' : 'not usable';
       const small = 'RA ' + this.fmtLST(pr.ra) + '  \u03B4 ' + (pr.dec >= 0 ? '+' : '\u2212') +
         Math.abs(pr.dec).toFixed(1) + '\u00B0';
-      // Two stretches means the object dips below the threshold mid-night. The
-      // total on its own reads as one continuous run, which is the wrong thing
-      // to plan a session around.
-      const segs = hrs > 0.05 ? this.usableSegments(pr.ra, pr.dec, dark) : [];
-      const split = segs.length > 1
-        ? this.fmtDur(segs[0].len) + ' after dusk  \u00B7  ' + this.fmtDur(segs[1].len) + ' before dawn'
-        : null;
+      // When, not only how much. Two stretches means the object dips below the
+      // threshold mid-night, and printing the clock times says that by itself
+      // as well as telling you when to be at the scope - which the total on its
+      // own, reading as one continuous run, never did.
+      const wins = hrs > 0.05 ? this.usableWindows(pr.ra, pr.dec, dark) : [];
+      const split = wins.length ? 'LST ' + this.fmtWindows(wins) : null;
       ctx.font = '700 15px Inter, sans-serif';
       const w1 = ctx.measureText(big).width;
       ctx.font = '600 13px Inter, sans-serif';
