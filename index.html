@@ -426,8 +426,11 @@
    moving around the sky it is a button you press by accident. */
 .page[data-wide="1"] .export-btn { display: none !important; }
 .page[data-wide="1"] .controls {
-  position: fixed; left: 12px; top: 62px; z-index: 45;
-  width: min(430px, calc(100vw - 24px)); max-height: calc(100vh - 80px);
+  position: fixed; left: 12px; top: 52px; z-index: 45;
+  width: min(430px, calc(100vw - 24px));
+  /* Stop above the bottom strip rather than running under it - the panel is
+     scrollable, so the room it loses costs nothing but a scroll. */
+  max-height: calc(100vh - 292px);
   overflow-y: auto; background: rgba(18,18,18,0.94); border: 1px solid #3A362F;
   border-radius: 4px; padding: 14px 16px; gap: 12px 18px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.55);
@@ -439,11 +442,22 @@
    bounding the width: 1.6 is the plot's own ratio, 992 by 620. Doing it with
    object-fit instead would letterbox inside a larger box and quietly break
    every pointer coordinate, which are worked out from the element's width. */
+/* The chart is the window now: fixed, edge to edge, with everything else
+   floating over it. Its own coordinates follow that box, so no letterboxing
+   and nothing stretched. */
 .page[data-wide="1"] .chart-scroll {
-  max-width: calc((100vh - 96px) * 1.6); margin: 0 auto; width: 100%;
+  position: fixed; inset: 0; z-index: 1; max-width: none; margin: 0;
 }
-/* The toggles are controls too, and they are wide and short, so they get the
-   bottom of the window rather than more of the left-hand panel. */
+.page[data-wide="1"] .chart-scroll canvas { width: 100% !important; height: 100% !important; }
+.page[data-wide="1"] .card { padding: 0; border: none; background: transparent; }
+/* The bar of buttons and the dark-window line ride above it rather than
+   pushing it down. */
+.page[data-wide="1"] .topbar {
+  position: fixed; right: 12px; top: 12px; width: auto; max-width: none; z-index: 46;
+}
+.page[data-wide="1"] .card-head { position: fixed; left: 16px; top: 20px; margin: 0; z-index: 46; }
+/* The toggles are controls too, and they are wide and short, so they get a
+   strip along the bottom rather than more of the left-hand panel. */
 .page[data-wide="1"] .legend-wrap {
   position: fixed; left: 12px; right: 12px; bottom: 10px; z-index: 45;
   background: rgba(18,18,18,0.94); border: 1px solid #3A362F; border-radius: 4px;
@@ -451,17 +465,6 @@
 }
 .page[data-wide="1"] .legend-wrap .layers { border-top-color: #2A2926; margin-top: 2px; }
 .page[data-wide="1"][data-controls="0"] .legend-wrap { display: none !important; }
-/* Leave room for that strip under the chart. */
-/* Room for the strip, and for the bar of buttons above. The strip is capped
-   rather than left to grow, so a narrow window that wraps the catalogue row
-   scrolls it instead of pushing it up over the chart's own axis. */
-.page[data-wide="1"] .chart-scroll { max-width: calc((100vh - 356px) * 1.6); }
-/* With the panels shut there is nothing along the bottom to leave room for, so
-   the chart takes it. Hiding the controls is the gesture for looking closely,
-   and it should be rewarded with a bigger chart rather than the same one. */
-.page[data-wide="1"][data-controls="0"] .chart-scroll {
-  max-width: calc((100vh - 150px) * 1.6);
-}
 </style>
 </helmet>
 <div class="page" data-wide="{{ wideAttr }}" data-controls="{{ ctrlAttr }}" style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2; filter: {{ nightFilter }};">
@@ -1377,7 +1380,10 @@ class Component extends DCLogic {
       return { x: (e.clientX - r.left) * (el.width / r.width) / S,
                y: (e.clientY - r.top) * (el.height / r.height) / S };
     };
-    const inPlot = p => p.x >= 64 && p.x <= 900 && p.y >= 16 && p.y <= 546;
+    // Taken from the axis the chart last drew rather than written in, now that
+    // the plot rectangle is whatever the window is.
+    const inPlot = p => { const a = this._axis; return !!a
+      && p.x >= a.X0 && p.x <= a.X1 && p.y >= a.Y0 && p.y <= a.Y1; };
     const view = () => this._view || (() => { const a = this._axis;
       return { raStart: a.axStart, raLen: a.axSpan, decMin: a.dBot, decMax: a.dTop }; })();
 
@@ -1527,7 +1533,8 @@ class Component extends DCLogic {
         return;
       }
       if (d.mode === 'point') {
-        const x = Math.max(64, Math.min(900, p.x)), y = Math.max(16, Math.min(546, p.y));
+        const ax = this._axis;
+        const x = Math.max(ax.X0, Math.min(ax.X1, p.x)), y = Math.max(ax.Y0, Math.min(ax.Y1, p.y));
         d.x1 = x; d.y1 = y;
         // Any real movement makes this a drag rather than a click, and a drag
         // must never delete. The old test compared start and end and called
@@ -1560,8 +1567,9 @@ class Component extends DCLogic {
       }
       // Tracked even for touch, which draws nothing: without it a swipe reads
       // as a zero-movement tap and strands a readout.
-      d.x1 = Math.max(64, Math.min(900, p.x));
-      d.y1 = Math.max(16, Math.min(546, p.y));
+      { const a = this._axis;
+        d.x1 = Math.max(a.X0, Math.min(a.X1, p.x));
+        d.y1 = Math.max(a.Y0, Math.min(a.Y1, p.y)); }
       if (d.touch) return;
       if (d.mode === 'select') { this.drawHeatmap(el); return; }
       // Pan. Full sky is a frame like any other, so this works there too and
@@ -2604,11 +2612,38 @@ class Component extends DCLogic {
   // ---------- heatmap ----------
   drawHeatmap(canvas) {
     if (!canvas) return;
-    const S = 2, W = 992, HH = 620;
+    // The drawing is laid out in its own coordinates with fixed margins around
+    // the plot - room for the declination labels on the left, the colour bar on
+    // the right, the RA axis underneath. Everything downstream works from X0,
+    // X1, Y0, Y1, so letting those follow the canvas is all it takes for the
+    // chart to hold any shape. In wide mode it is given the window's, which is
+    // what fills the screen properly rather than fitting a 1.6 picture into it
+    // and leaving the sides empty.
+    const S = 2, MARGIN = { l: 64, r: 92, t: 16, b: 74 };
+    let W = 992, HH = 620;
+    if (this.state.wide && canvas === this.canvas) {
+      const r = canvas.getBoundingClientRect();
+      if (r.width > 200 && r.height > 200) { W = Math.round(r.width); HH = Math.round(r.height); }
+      // The panels float over the chart, so the plot rectangle is inset to
+      // clear them and the axes stay readable. Measured off the panels rather
+      // than written in, so it follows whatever they actually do - and shutting
+      // them gives the plot the space back instead of leaving a hole where they
+      // were. The canvas itself still fills the window either way.
+      const clear = (sel, pick) => {
+        const e = document.querySelector(sel);
+        if (!e || getComputedStyle(e).display === 'none') return 0;
+        const b = e.getBoundingClientRect();
+        return (b.width > 4 && b.height > 4) ? Math.max(0, pick(b)) : 0;
+      };
+      MARGIN.l += clear('.controls', b => b.right - r.left + 12);
+      MARGIN.b += clear('.legend-wrap', b => r.bottom - b.top + 12);
+      MARGIN.t += Math.max(clear('.topbar', b => b.bottom - r.top + 10),
+                           clear('.card-head', b => b.bottom - r.top + 10));
+    }
     canvas.width = W * S; canvas.height = HH * S;
     const ctx = canvas.getContext('2d');
     ctx.scale(S, S);
-    const X0 = 64, X1 = 900, Y0 = 16, Y1 = 546;
+    const X0 = MARGIN.l, X1 = W - MARGIN.r, Y0 = MARGIN.t, Y1 = HH - MARGIN.b;
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
     // Centered mode rotates the RA axis to start at the Sun, which puts the
     // anti-solar point - where tonight's best targets transit - mid-chart.
@@ -3189,10 +3224,12 @@ class Component extends DCLogic {
     }
     ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
-    ctx.save(); ctx.translate(14, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.save(); ctx.translate(X0 - 50, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
     ctx.fillText('DECLINATION (\u00B0)', 0, 0); ctx.restore();
-    // colorbar
-    const CB = 928, cbW = 18;
+    // colorbar - just outside the plot on the right, wherever that now is. It
+    // used to sit at a fixed 928, which was the right edge back when the chart
+    // was always 992 wide and is the middle of it once the window sets the size.
+    const cbW = 18, CB = X1 + 28;
     const denomL = L >= 24 ? 24 : L;
     // A ramp of dark-on-dark says little, so the bar carries a sample star
     // chain under the veil: it shows what the mask actually does to the sky
@@ -3585,7 +3622,21 @@ class Component extends DCLogic {
       darkInfo, series, peaks, xTicks, yTicks, tickLabels, svgLegend,
       thrPct: String(s.thr),
       thrLabel: '>' + s.thr + '\u00B0',
-      hmRef: el => { this.canvas = el; if (el) { this.attachChartInput(el); this.drawHeatmap(el); } },
+      hmRef: el => {
+        this.canvas = el;
+        if (!el) return;
+        this.attachChartInput(el);
+        // In wide mode the canvas takes its size from its box, so a window
+        // resize changes the drawing's own coordinates and it has to be redone.
+        if (!this.__resizeBound) {
+          this.__resizeBound = true;
+          window.addEventListener('resize', () => {
+            clearTimeout(this._rzT);
+            this._rzT = setTimeout(() => { if (this.canvas) this.drawHeatmap(this.canvas); }, 120);
+          });
+        }
+        this.drawHeatmap(el);
+      },
       onLat: numHandler('lat', 'latText', -90, 90),
       onLon: numHandler('lon', 'lonText', -180, 180),
       onThr: e => { const v = Math.max(0, Math.min(85, Number(e.target.value)));
