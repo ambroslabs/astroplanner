@@ -401,11 +401,74 @@
   .moon-check { min-height: 44px !important; padding: 0 !important; }
   .moon-check input { width: 22px !important; height: 22px !important; }
 }
+
+/* ---------- wide mode ----------
+   Made for exploring rather than reading: the chart takes the whole window and
+   everything that is not the chart goes into a panel over it, out of the way
+   until it is wanted. The drawing has a fixed aspect - the plot rectangle is
+   laid out in its own coordinates - so the canvas is given the width and lets
+   its height follow, rather than being stretched to the viewport and quietly
+   turning every circle on it into an ellipse. */
+.page[data-wide="1"] { max-width: none; padding: 0 0 16px; gap: 0; }
+.page[data-wide="1"] .card,
+.page[data-wide="1"] .formula { max-width: none !important; }
+.page[data-wide="1"] .card {
+  border-radius: 0; border-left: none; border-right: none; padding: 10px 14px 14px;
+}
+/* The observer, the tab strip and the planet table are reference, not
+   controls, and none of them earn their vertical space while panning around. */
+.page[data-wide="1"] .bar,
+.page[data-wide="1"] .tabs,
+.page[data-wide="1"] .planet-table,
+.page[data-wide="1"] .formula,
+.page[data-wide="1"] .card-head > div:first-child { display: none !important; }
+/* Export writes a fixed-size picture and has its own dialog; in a mode about
+   moving around the sky it is a button you press by accident. */
+.page[data-wide="1"] .export-btn { display: none !important; }
+.page[data-wide="1"] .controls {
+  position: fixed; left: 12px; top: 62px; z-index: 45;
+  width: min(430px, calc(100vw - 24px)); max-height: calc(100vh - 80px);
+  overflow-y: auto; background: rgba(18,18,18,0.94); border: 1px solid #3A362F;
+  border-radius: 4px; padding: 14px 16px; gap: 12px 18px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+}
+.page[data-wide="1"][data-controls="0"] .controls { display: none !important; }
+.page[data-wide="1"] .heat-col { flex: 1 1 118px; }
+/* Fit the whole chart in the window rather than only its width. The canvas is
+   scaled by its CSS width and keeps its own aspect, so the height is bounded by
+   bounding the width: 1.6 is the plot's own ratio, 992 by 620. Doing it with
+   object-fit instead would letterbox inside a larger box and quietly break
+   every pointer coordinate, which are worked out from the element's width. */
+.page[data-wide="1"] .chart-scroll {
+  max-width: calc((100vh - 96px) * 1.6); margin: 0 auto; width: 100%;
+}
+/* The toggles are controls too, and they are wide and short, so they get the
+   bottom of the window rather than more of the left-hand panel. */
+.page[data-wide="1"] .legend-wrap {
+  position: fixed; left: 12px; right: 12px; bottom: 10px; z-index: 45;
+  background: rgba(18,18,18,0.94); border: 1px solid #3A362F; border-radius: 4px;
+  padding: 4px 14px 8px; max-height: 176px; overflow-y: auto;
+}
+.page[data-wide="1"] .legend-wrap .layers { border-top-color: #2A2926; margin-top: 2px; }
+.page[data-wide="1"][data-controls="0"] .legend-wrap { display: none !important; }
+/* Leave room for that strip under the chart. */
+/* Room for the strip, and for the bar of buttons above. The strip is capped
+   rather than left to grow, so a narrow window that wraps the catalogue row
+   scrolls it instead of pushing it up over the chart's own axis. */
+.page[data-wide="1"] .chart-scroll { max-width: calc((100vh - 356px) * 1.6); }
+/* With the panels shut there is nothing along the bottom to leave room for, so
+   the chart takes it. Hiding the controls is the gesture for looking closely,
+   and it should be rewarded with a bigger chart rather than the same one. */
+.page[data-wide="1"][data-controls="0"] .chart-scroll {
+  max-width: calc((100vh - 150px) * 1.6);
+}
 </style>
 </helmet>
-<div class="page" style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2; filter: {{ nightFilter }};">
+<div class="page" data-wide="{{ wideAttr }}" data-controls="{{ ctrlAttr }}" style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2; filter: {{ nightFilter }};">
     <svg width="0" height="0" style="position: absolute; width: 0; height: 0; pointer-events: none;" aria-hidden="true" focusable="false"><filter id="nightvision" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"></feColorMatrix></filter></svg>
     <div class="topbar" style="width: 100%; max-width: 1160px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+      <button sc-camel-on-click="{{ toggleControls }}" aria-pressed="{{ ctrlPressed }}" style="display: {{ ctrlShow }}; background: #161616; color: {{ ctrlFg }}; border: 1px solid {{ ctrlBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ ctrlTip }}"><span style="font-size: 15px; line-height: 13px;">&#9776;</span>Controls</button>
+      <button sc-camel-on-click="{{ toggleWide }}" aria-pressed="{{ widePressed }}" style="background: #161616; color: {{ wideFg }}; border: 1px solid {{ wideBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ wideTip }}"><span style="font-size: 15px; line-height: 13px;">&#8703;</span>Wide</button>
       <button sc-camel-on-click="{{ toggleFullscreen }}" ref="{{ fsRef }}" aria-pressed="{{ fsPressed }}" style="background: #161616; color: {{ fsFg }}; border: 1px solid {{ fsBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ fsTip }}"><span style="font-size: 15px; line-height: 13px;">&#9974;</span>{{ fsLabel }}</button>
       <button sc-camel-on-click="{{ toggleNight }}" aria-pressed="{{ nightPressed }}" style="background: #161616; color: {{ nightFg }}; border: 1px solid {{ nightBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ nightTip }}"><span style="font-size: 15px; line-height: 13px;">&#9681;</span>{{ nightLabel }}</button>
     </div>
@@ -452,7 +515,7 @@
       <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Hours above altitude threshold</div>
       <div style="display: flex; align-items: center; gap: 20px;">
         <div style="font-size: 17px; letter-spacing: 0.12em; text-transform: uppercase; color: #D9A960; font-weight: 700; white-space: nowrap;">Latitude {{ latLabel }}</div>
-        <button sc-camel-on-click="{{ openChartExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this chart">Export…</button>
+        <button class="export-btn" sc-camel-on-click="{{ openChartExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this chart">Export…</button>
       </div>
     </div>
     <div class="chart-scroll"><svg sc-camel-view-box="0 0 992 560" style="width: 100%; height: auto; display: block;">
@@ -598,41 +661,47 @@
       <div style="flex: 1;"></div>
       <button sc-camel-on-click="{{ clearPoints }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-left: auto;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Remove every marked point">Clear points</button>
       <button sc-camel-on-click="{{ resetChart }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Put the chart settings back to their defaults">Reset chart</button>
-      <button sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
+      <button class="export-btn" sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
     </div>
     <div class="chart-scroll"><canvas ref="{{ hmRef }}" style="width: 100%; height: auto; display: block;"></canvas></div>
-    <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
-    <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
-      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
-      <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
-      <button sc-camel-on-click="{{ toggleSplit }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opSplit }};" style-hover="color: #F6F5F2;" title="Where a target sets mid-night and returns before dawn"><span style="display: inline-block; width: 26px; height: 3px; background: repeating-linear-gradient(90deg, #D9A960 0 5px, transparent 5px 10px);"></span>split window</button>
-      <button sc-camel-on-click="{{ toggleFullDark }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opFullDark }};" style-hover="color: #F6F5F2;" title="The edge of the sky that is up for the whole dark window"><span style="display: inline-block; width: 28px; height: 3px; background: repeating-linear-gradient(90deg, #F6F5F2 0 8px, #0A0A0A 8px 14px);"></span>all-night boundary</button>
-      <button sc-camel-on-click="{{ toggleEcliptic }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opEcliptic }};" style-hover="color: #F6F5F2;" title="The path the Sun, Moon and planets follow"><span style="display: inline-block; width: 26px; height: 0; border-top: 2px dotted #C9C4B7;"></span>ecliptic</button>
-      <button sc-camel-on-click="{{ toggleMoon }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opMoon }};" style-hover="color: #F6F5F2;" title="The Moon tonight, ringed at the 30 degrees it washes out"><span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px dotted rgba(246,245,242,0.75); border-radius: 50%;"><span style="width: 7px; height: 7px; background: #F6F5F2; border-radius: 50%;"></span></span>Moon &#177; 30&#176; dimming radius</button>
-      <button sc-camel-on-click="{{ toggleSun }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opSun }};" style-hover="color: #F6F5F2;" title="Where the Sun sits, so you can see what it takes with it"><span style="display: inline-block; width: 15px; height: 15px; background: #F5C36A; border-radius: 50%;"></span>Sun</button>
-      <button sc-camel-on-click="{{ togglePlanets }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opPlanets }};" style-hover="color: #F6F5F2;" title="The planets at local midnight"><span style="display: inline-block; width: 10px; height: 10px; background: #93C4EE; border-radius: 50%; margin: 0 2px;"></span>Planets</button>
+    <!-- Hint and the two toggle rows travel together: wide mode lifts them
+         off the page into one strip along the bottom, and a wrapper is the
+         only way to move them as a unit. In the normal layout it is a plain
+         block around three blocks and changes nothing. -->
+    <div class="legend-wrap">
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">ctrl-drag</b> to box-select a region &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
+        <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
+        <button sc-camel-on-click="{{ toggleSplit }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opSplit }};" style-hover="color: #F6F5F2;" title="Where a target sets mid-night and returns before dawn"><span style="display: inline-block; width: 26px; height: 3px; background: repeating-linear-gradient(90deg, #D9A960 0 5px, transparent 5px 10px);"></span>split window</button>
+        <button sc-camel-on-click="{{ toggleFullDark }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opFullDark }};" style-hover="color: #F6F5F2;" title="The edge of the sky that is up for the whole dark window"><span style="display: inline-block; width: 28px; height: 3px; background: repeating-linear-gradient(90deg, #F6F5F2 0 8px, #0A0A0A 8px 14px);"></span>all-night boundary</button>
+        <button sc-camel-on-click="{{ toggleEcliptic }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opEcliptic }};" style-hover="color: #F6F5F2;" title="The path the Sun, Moon and planets follow"><span style="display: inline-block; width: 26px; height: 0; border-top: 2px dotted #C9C4B7;"></span>ecliptic</button>
+        <button sc-camel-on-click="{{ toggleMoon }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opMoon }};" style-hover="color: #F6F5F2;" title="The Moon tonight, ringed at the 30 degrees it washes out"><span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px dotted rgba(246,245,242,0.75); border-radius: 50%;"><span style="width: 7px; height: 7px; background: #F6F5F2; border-radius: 50%;"></span></span>Moon &#177; 30&#176; dimming radius</button>
+        <button sc-camel-on-click="{{ toggleSun }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opSun }};" style-hover="color: #F6F5F2;" title="Where the Sun sits, so you can see what it takes with it"><span style="display: inline-block; width: 15px; height: 15px; background: #F5C36A; border-radius: 50%;"></span>Sun</button>
+        <button sc-camel-on-click="{{ togglePlanets }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opPlanets }};" style-hover="color: #F6F5F2;" title="The planets at local midnight"><span style="display: inline-block; width: 10px; height: 10px; background: #93C4EE; border-radius: 50%; margin: 0 2px;"></span>Planets</button>
+      </div>
+      <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 4px; padding-top: 10px; border-top: 1px solid #2E2C27;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Catalogs <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
+        <sc-for list="{{ catToggles }}" as="c" hint-placeholder-count="10">
+          <span style="display: inline-flex; align-items: center; gap: 1px;">
+            <button sc-camel-on-click="{{ c.toggle }}" title="{{ c.tip }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ c.fg }};">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: {{ c.dot }}; border: 1px solid {{ c.ring }};"></span>{{ c.label }}
+            </button>
+            <label title="{{ c.nameTip }}" style="display: {{ c.nameShow }}; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: #8E897D; padding: 4px 6px 4px 2px;">
+              <input type="checkbox" checked="{{ c.nameOn }}" sc-camel-on-change="{{ c.toggleName }}" style="accent-color: #D9A960; width: 13px; height: 13px; margin: 0;">names
+            </label>
+          </span>
+        </sc-for>
+        <label title="Print every designation an object is known by, such as C 20, NGC 7000, rather than only the one its catalogue gives it" style="display: flex; align-items: center; gap: 7px; margin-left: auto; cursor: pointer; font-size: 12px; font-weight: 600; color: #8E897D;">
+          <input type="checkbox" checked="{{ catAliases }}" sc-camel-on-change="{{ onCatAliases }}" style="accent-color: #D9A960; width: 13px; height: 13px; margin: 0;">All IDs
+        </label>
+        <label title="How many object names to print. Names are ranked before they are cut, so the best-known survive longest; 0% prints none." style="display: flex; align-items: center; gap: 8px; margin-left: 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; cursor: pointer;">Names
+          <input type="range" min="0" max="100" step="5" value="{{ densityPct }}" sc-camel-on-input="{{ onDensity }}" style="width: 110px; accent-color: #D9A960;">
+          <span style="letter-spacing: 0; text-transform: none; color: #C9C4B7; min-width: 34px;">{{ densityLabel }}</span>
+        </label>
+      </div>
+      <sc-if value="{{ showPlanets }}" hint-placeholder-val="{{ true }}">
     </div>
-    <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 4px; padding-top: 10px; border-top: 1px solid #2E2C27;">
-      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Catalogs <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
-      <sc-for list="{{ catToggles }}" as="c" hint-placeholder-count="10">
-        <span style="display: inline-flex; align-items: center; gap: 1px;">
-          <button sc-camel-on-click="{{ c.toggle }}" title="{{ c.tip }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: {{ c.fg }};">
-            <span style="width: 10px; height: 10px; border-radius: 50%; background: {{ c.dot }}; border: 1px solid {{ c.ring }};"></span>{{ c.label }}
-          </button>
-          <label title="{{ c.nameTip }}" style="display: {{ c.nameShow }}; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: #8E897D; padding: 4px 6px 4px 2px;">
-            <input type="checkbox" checked="{{ c.nameOn }}" sc-camel-on-change="{{ c.toggleName }}" style="accent-color: #D9A960; width: 13px; height: 13px; margin: 0;">names
-          </label>
-        </span>
-      </sc-for>
-      <label title="Print every designation an object is known by, such as C 20, NGC 7000, rather than only the one its catalogue gives it" style="display: flex; align-items: center; gap: 7px; margin-left: auto; cursor: pointer; font-size: 12px; font-weight: 600; color: #8E897D;">
-        <input type="checkbox" checked="{{ catAliases }}" sc-camel-on-change="{{ onCatAliases }}" style="accent-color: #D9A960; width: 13px; height: 13px; margin: 0;">All IDs
-      </label>
-      <label title="How many object names to print. Names are ranked before they are cut, so the best-known survive longest; 0% prints none." style="display: flex; align-items: center; gap: 8px; margin-left: 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; cursor: pointer;">Names
-        <input type="range" min="0" max="100" step="5" value="{{ densityPct }}" sc-camel-on-input="{{ onDensity }}" style="width: 110px; accent-color: #D9A960;">
-        <span style="letter-spacing: 0; text-transform: none; color: #C9C4B7; min-width: 34px;">{{ densityLabel }}</span>
-      </label>
-    </div>
-    <sc-if value="{{ showPlanets }}" hint-placeholder-val="{{ true }}">
     <div class="planet-table" style="margin-top: 16px; border-top: 1px solid #2E2C27; padding-top: 12px;">
       <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-bottom: 8px;">Planets at local midnight</div>
       <div style="display: flex; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #5A5751; padding-bottom: 6px; border-bottom: 1px solid #2E2C27;">
@@ -696,7 +765,7 @@
   </div>
   </div>
   </sc-if>
-  <div style="width: 100%; max-width: 1160px; font-size: 13px; color: #5A5751;">cos H = (sin alt − sin φ sin δ) / (cos φ cos δ) · usable = overlap of [RA − H, RA + H] with the astronomical dark window (Sun below −18°), in local sidereal time</div>
+  <div class="formula" style="width: 100%; max-width: 1160px; font-size: 13px; color: #5A5751;">cos H = (sin alt − sin φ sin δ) / (cos φ cos δ) · usable = overlap of [RA − H, RA + H] with the astronomical dark window (Sun below −18°), in local sidereal time</div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1280, &quot;height&quot;: 1600}}">
@@ -864,7 +933,7 @@ class Component extends DCLogic {
   // Night vision is persisted like the sites, and like them belongs to neither
   // reset group: it is how you are looking at the screen, not what the chart
   // is showing, so neither reset button should switch the lights back on.
-  KEPT_DEFAULTS = { sites: [], night: false,
+  KEPT_DEFAULTS = { sites: [], night: false, wide: false, ctrlOpen: true,
     // How to write the file, not what is on the chart, so Reset chart leaves
     // these alone the way it leaves the saved sites alone.
     exScale: 1.5, exFormat: 'png', exQuality: 0.92, exNight: false };
@@ -3330,6 +3399,22 @@ class Component extends DCLogic {
       // One filter over the whole page, so the canvas and the SVG chart go red
       // with everything else and no drawing code has to know about the theme.
       nightFilter: s.night ? 'url(#nightvision)' : 'none',
+      wideAttr: s.wide ? '1' : '0',
+      ctrlAttr: s.ctrlOpen ? '1' : '0',
+      widePressed: s.wide ? 'true' : 'false',
+      wideFg: s.wide ? '#D9A960' : '#C9C4B7',
+      wideBorder: s.wide ? '#8C6A3F' : '#2E2C27',
+      wideTip: s.wide ? 'Back to the normal page'
+                      : 'Give the chart the whole window and put the controls in a panel over it',
+      toggleWide: () => this.setState({ wide: !s.wide, ctrlOpen: true }),
+      // Only meaningful in wide mode: everywhere else the controls are simply
+      // on the page and there is nothing to open or shut.
+      ctrlShow: s.wide ? 'flex' : 'none',
+      ctrlPressed: s.ctrlOpen ? 'true' : 'false',
+      ctrlFg: s.ctrlOpen ? '#D9A960' : '#C9C4B7',
+      ctrlBorder: s.ctrlOpen ? '#8C6A3F' : '#2E2C27',
+      ctrlTip: s.ctrlOpen ? 'Hide the controls panel' : 'Show the controls panel',
+      toggleControls: () => this.setState({ ctrlOpen: !s.ctrlOpen }),
       fsLabel: s.fs ? 'Exit full screen' : 'Full screen',
       fsPressed: s.fs ? 'true' : 'false',
       fsFg: s.fs ? '#D9A960' : '#C9C4B7',
