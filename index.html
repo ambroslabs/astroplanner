@@ -448,7 +448,15 @@
 .page[data-wide="1"] .chart-scroll {
   position: fixed; inset: 0; z-index: 1; max-width: none; margin: 0;
 }
-.page[data-wide="1"] .chart-scroll canvas { width: 100% !important; height: 100% !important; }
+.page[data-wide="1"] .chart-scroll { overflow: hidden; }
+/* Beats the phone rule that gives the canvas a 680px floor so the fixed-shape
+   chart can be scrolled sideways. Here the chart takes the shape of the screen,
+   so a floor would only push it off the edge of one. */
+.page[data-wide="1"] .chart-scroll > canvas {
+  min-width: 0 !important; width: 100% !important; height: 100% !important;
+  /* The map takes the gesture here, since there is no page under it to scroll. */
+  touch-action: none;
+}
 .page[data-wide="1"] .card { padding: 0; border: none; background: transparent; }
 /* The bar of buttons and the dark-window line ride above it rather than
    pushing it down. */
@@ -465,6 +473,46 @@
 }
 .page[data-wide="1"] .legend-wrap .layers { border-top-color: #2A2926; margin-top: 2px; }
 .page[data-wide="1"][data-controls="0"] .legend-wrap { display: none !important; }
+
+/* Phones, and any window too short for a side panel. The panel stops being a
+   column beside the map and becomes a sheet across the top of it, with the
+   toggles in a second sheet at the foot: on a screen this size nothing can sit
+   beside the map without taking most of it, so the honest arrangement is to
+   cover it while the controls are open and give it back whole when they shut.
+   The buttons lose their words and keep their glyphs, which is the difference
+   between four buttons fitting across a phone and not. */
+@media (max-width: 700px), (max-height: 560px) {
+  .page[data-wide="1"] .controls {
+    left: 6px; right: 6px; width: auto; top: 44px;
+    max-height: 43vh; padding: 10px 12px; gap: 8px 14px;
+  }
+  .page[data-wide="1"] .legend-wrap {
+    left: 6px; right: 6px; bottom: 6px; max-height: 30vh; padding: 2px 10px 6px;
+  }
+  .page[data-wide="1"] .topbar { top: 6px; right: 6px; gap: 5px; }
+  .page[data-wide="1"] .topbar button {
+    font-size: 0 !important; padding: 9px 11px !important; gap: 0 !important;
+  }
+  /* Only the glyph comes back. The runtime wraps an interpolated label in its
+     own span, so a rule for every span put the words back at full size on the
+     two buttons whose text is interpolated and left them off the two whose
+     text is literal - which looked like the rule half working. */
+  .page[data-wide="1"] .topbar button > span:first-child { font-size: 15px !important; }
+  /* Kept to whatever is left beside the buttons, and cut with an ellipsis
+     rather than allowed to run underneath them. */
+  .page[data-wide="1"] .card-head {
+    left: 8px; top: 12px; font-size: 11px;
+    max-width: calc(100vw - 200px); overflow: hidden;
+  }
+  .page[data-wide="1"] .card-head .dark-info {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;
+  }
+  .page[data-wide="1"] .card-head .dark-info { font-size: 11px !important; }
+  /* The phone stylesheet gives every control a row to itself, which is right on
+     a page you scroll and wrong in a panel that has to leave a map visible. */
+  .page[data-wide="1"] .heat-col { flex: 1 1 104px !important; }
+  .page[data-wide="1"] .controls > div:not(.heat-col) { flex: 0 1 auto !important; }
+}
 </style>
 </helmet>
 <div class="page" data-wide="{{ wideAttr }}" data-controls="{{ ctrlAttr }}" style="min-height: 100vh; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px 24px; box-sizing: border-box; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #F6F5F2; filter: {{ nightFilter }};">
@@ -1494,8 +1542,10 @@ class Component extends DCLogic {
                      mode: (e.ctrlKey || e.metaKey) ? 'select' : 'pan' };
       // Touch keeps its default gestures so the page still scrolls under a
       // swipe that starts on the chart; a tap has no movement to swallow and
-      // still reads out.
-      if (!this._drag.touch) {
+      // still reads out. Wide mode is the exception: the whole page is fixed
+      // there, so there is nothing for a swipe to scroll and refusing to pan
+      // just leaves a phone unable to move the map at all.
+      if (!this._drag.touch || this.state.wide) {
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         e.preventDefault();
       }
@@ -1570,7 +1620,7 @@ class Component extends DCLogic {
       { const a = this._axis;
         d.x1 = Math.max(a.X0, Math.min(a.X1, p.x));
         d.y1 = Math.max(a.Y0, Math.min(a.Y1, p.y)); }
-      if (d.touch) return;
+      if (d.touch && !this.state.wide) return;
       if (d.mode === 'select') { this.drawHeatmap(el); return; }
       // Pan. Full sky is a frame like any other, so this works there too and
       // simply translates the whole turn.
@@ -1649,7 +1699,7 @@ class Component extends DCLogic {
         this.setState({ probes: ps.concat([{ ra: ((ra % 24) + 24) % 24, dec }]) });
         return;
       }
-      // panning already applied itself as it went; touch never selects
+      // panning already applied itself as it went; touch never box-selects
       if (d.touch || d.mode !== 'select') { this.drawHeatmap(el); return; }
       // a box along only one axis is ambiguous, so ignore it rather than guess
       if (Math.abs(d.x1 - d.x0) < 14 || Math.abs(d.y1 - d.y0) < 14) { this.drawHeatmap(el); return; }
@@ -2619,7 +2669,8 @@ class Component extends DCLogic {
     // chart to hold any shape. In wide mode it is given the window's, which is
     // what fills the screen properly rather than fitting a 1.6 picture into it
     // and leaving the sides empty.
-    const S = 2, MARGIN = { l: 64, r: 92, t: 16, b: 74 };
+    const S = 2, BASE = { l: 64, r: 92, t: 16, b: 74 };
+    const MARGIN = Object.assign({}, BASE);
     let W = 992, HH = 620;
     if (this.state.wide && canvas === this.canvas) {
       const r = canvas.getBoundingClientRect();
@@ -2639,6 +2690,16 @@ class Component extends DCLogic {
       MARGIN.b += clear('.legend-wrap', b => r.bottom - b.top + 12);
       MARGIN.t += Math.max(clear('.topbar', b => b.bottom - r.top + 10),
                            clear('.card-head', b => b.bottom - r.top + 10));
+      // A phone has no room to give the axes their usual margins and still have
+      // a map left, so they shrink with the screen.
+      if (W < 620) { MARGIN.l -= 30; MARGIN.r -= 46; MARGIN.b -= 30; }
+      // And never inset the plot out of existence. On a small screen the panels
+      // cover the map whatever we do, so when clearing them would leave nothing
+      // worth drawing the plot keeps its own margins and lets them overlap -
+      // the map is whole again the moment they are shut.
+      if (W - MARGIN.l - MARGIN.r < 220) MARGIN.l = BASE.l;
+      if (HH - MARGIN.t - MARGIN.b < 170) MARGIN.b = BASE.b;
+      if (HH - MARGIN.t - MARGIN.b < 170) MARGIN.t = BASE.t;
     }
     canvas.width = W * S; canvas.height = HH * S;
     const ctx = canvas.getContext('2d');
