@@ -54,9 +54,9 @@ if [[ "${BUILD_BETA:-0}" == "1" ]]; then
   python3 - "$OUT/index.html" <<'BADGE'
 import sys
 path = sys.argv[1]
-badge = ('<div style="position:fixed;left:0;top:0;z-index:60;background:#8C2F2F;'
+badge = ('<div style="position:fixed;left:0;bottom:0;z-index:60;background:#8C2F2F;'
          'color:#fff;font:700 11px/1 Inter,sans-serif;letter-spacing:.14em;'
-         'padding:6px 10px;border-bottom-right-radius:3px;pointer-events:none">'
+         'padding:6px 10px;border-top-right-radius:3px;pointer-events:none">'
          'BETA</div>\n')
 html = open(path, encoding='utf-8').read()
 assert html.count('</body>') == 1, 'expected exactly one </body>'

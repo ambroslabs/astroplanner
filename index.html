@@ -512,6 +512,100 @@
      a page you scroll and wrong in a panel that has to leave a map visible. */
   .page[data-wide="1"] .heat-col { flex: 1 1 104px !important; }
   .page[data-wide="1"] .controls > div:not(.heat-col) { flex: 0 1 auto !important; }
+
+  /* One sheet, not two. The controls and the layer toggles were separate
+     fixed panels holding 43vh and 30vh of a phone between them, which left
+     the map a 140px sliver AND still clipped both - the controls alone are
+     890px of content, and a panel you cannot scroll to the end of is worse
+     than no panel. In wide mode the chart is fixed and out of the card's
+     flow, so the card is left holding exactly the two things that belong in
+     a menu, already in the right order: it can be the sheet itself.
+     Styled only while the controls are open, because the chart lives inside
+     the card and hiding the card would take the map with it. */
+  .page[data-wide="1"][data-controls="1"] .card {
+    position: fixed; left: 0; right: 0; top: 44px; bottom: 0; z-index: 45;
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    display: flex; flex-direction: column;
+    background: none !important; border: none !important; padding: 0 !important;
+  }
+  /* The chart is a child of the card, and a positioned descendant paints over
+     its parent's in-flow content - so the map covered the sheet completely.
+     Below the sheet's own sections, still above the page. The card's overflow
+     does not clip it: its containing block is the page, not the card. */
+  .page[data-wide="1"][data-controls="1"] .chart-scroll { z-index: -1; }
+  /* Which leaves the sections themselves to carry the panel, meeting in the
+     middle so the two read as one sheet. */
+  .page[data-wide="1"][data-controls="1"] .controls,
+  .page[data-wide="1"][data-controls="1"] .legend-wrap {
+    /* The offsets that placed them as floating panels are still in force and
+       shift a relative box just as happily as a fixed one - which is a 44px
+       hole under the top of the sheet and a 34px overlap in the middle of it. */
+    position: relative; top: auto; right: auto; bottom: auto; left: auto;
+    z-index: 2; width: auto; max-width: none; max-height: none;
+    overflow: visible; box-shadow: none; margin: 0 !important;
+    background: #141414; border: 1px solid #3A362F;
+  }
+  .page[data-wide="1"][data-controls="1"] .controls {
+    border-radius: 0; border-bottom: none !important; border-left: none; border-right: none;
+    padding: 12px 12px 14px !important;
+  }
+  .page[data-wide="1"][data-controls="1"] .legend-wrap {
+    border-radius: 0; border-top: 1px solid #2A2926; border-left: none; border-right: none;
+    /* clear of the home indicator on a phone that has one */
+    padding: 4px 12px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .page[data-wide="1"][data-controls="1"] .legend-wrap > div:first-child {
+    font-size: 11px !important; line-height: 1.45;
+  }
+  /* Two across where a group will take it. A phone sheet is a column, but a
+     column one control wide is a column nobody reaches the bottom of. */
+  /* The gap is inline on the element, so it beats a plain rule and two halves
+     plus 13px came to one pixel over the row - which wrapped every one of them
+     back to full width and looked like the rule doing nothing. */
+  .page[data-wide="1"][data-controls="1"] .controls { gap: 10px 12px !important; }
+  /* Every :not() counts towards specificity, so this beat the full-width rule
+     below on selector weight no matter which came last or how many !importants
+     they carried - the groups that ask for a whole row got half of one. The
+     exclusions are the fix: nothing here matches those groups at all. */
+  .page[data-wide="1"][data-controls="1"] .controls > div:not(.heat-col):not(.row-break):not(.wide-row):not(.find-group):not(.axis-group),
+  .page[data-wide="1"][data-controls="1"] .heat-col { flex: 1 1 calc(50% - 7px) !important; }
+  /* The row breaks are zero-height spacers that force the next control onto a
+     new line. Halving them along with everything else left a blank half-row
+     and pushed the control after each one into the right-hand column. */
+  .page[data-wide="1"][data-controls="1"] .controls > .row-break {
+    flex: 0 0 100% !important; height: 0 !important;
+  }
+  /* The date, the search and the frame buttons want the full width; they are
+     a row of controls each, not one control. */
+  /* The time control is eight things in a row - two sliders and six buttons -
+     and the phone rule that gives every range the full width broke it into six
+     rows on its own. It gets the width back and its sliders get to be sliders. */
+  .page[data-wide="1"][data-controls="1"] .time-col { flex: 1 1 100% !important; }
+  .page[data-wide="1"][data-controls="1"] .time-col input[type="range"]:first-of-type {
+    width: auto !important; flex: 1 1 90px !important;
+  }
+  .page[data-wide="1"][data-controls="1"] .time-col input[type="range"]:last-of-type {
+    width: 62px !important; flex: 0 0 62px !important;
+  }
+  .page[data-wide="1"][data-controls="1"] .time-col button {
+    padding: 6px 9px !important; min-width: 40px;
+  }
+  /* Page-sized padding put one frame button on each line. */
+  .page[data-wide="1"][data-controls="1"] .controls button { padding: 10px 12px !important; }
+  /* Clear points is pushed to the far right of a wide row on a page; in a
+     narrow sheet that is a button alone on a line with a hole beside it. */
+  .page[data-wide="1"][data-controls="1"] .controls > button { margin-left: 0 !important; }
+  /* Labels sized for a sheet rather than a page: two lines of heading above
+     every control is most of a phone screen before a control is reached. */
+  .page[data-wide="1"][data-controls="1"] .controls label,
+  .page[data-wide="1"][data-controls="1"] .controls > div > span:first-child {
+    font-size: 11px !important; letter-spacing: 0.08em !important;
+  }
+  .page[data-wide="1"][data-controls="1"] .controls > div.wide-row,
+  .page[data-wide="1"][data-controls="1"] .controls > div.find-group,
+  .page[data-wide="1"][data-controls="1"] .controls > div.axis-group {
+    flex: 1 1 100% !important;
+  }
 }
 </style>
 </helmet>
@@ -601,7 +695,7 @@
       <div class="dark-info" style="font-size: 16px; color: #D9A960; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;">{{ darkInfo }}</div>
     </div>
     <div class="controls" style="display: flex; align-items: flex-end; gap: 13px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #2E2C27;">
-      <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div class="wide-row" style="display: flex; flex-direction: column; gap: 6px;">
         <label for="date-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Date</label>
         <div style="display: flex; align-items: stretch; gap: 4px;">
         <button sc-camel-on-click="{{ prevDay }}" aria-label="Previous day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Back one day">&lt;</button>
@@ -609,7 +703,7 @@
         <button sc-camel-on-click="{{ nextDay }}" aria-label="Next day" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Forward one day">&gt;</button>
         </div>
       </div>
-      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 320px; min-width: 0;">
+      <div class="heat-col time-col" style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 320px; min-width: 0;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Time <span style="color: #4A463E;">&#183; {{ timeFrom }} &#8594; {{ timeTo }}</span></span>
         <div style="display: flex; align-items: center; gap: 8px; min-height: 38px; flex-wrap: wrap;">
           <button sc-camel-on-click="{{ timeBack }}" aria-label="Back four months" style="background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #C9C4B7; font-family: 'Inter', sans-serif; font-size: 16px; line-height: 20px; font-weight: 700; padding: 0 12px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Slide the span back four months">&#171;</button>
@@ -624,7 +718,7 @@
         </div>
       </div>
       <!-- when, on a row of its own -->
-      <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
+      <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Altitude threshold</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
@@ -675,7 +769,7 @@
         </div>
       </div>
       <!-- Find, on its own row: a hit reframes the chart, so it belongs beside Frame -->
-      <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
+      <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="find-group" style="display: flex; flex-direction: column; gap: 6px;">
         <label for="find-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Find object</label>
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -696,8 +790,8 @@
         </div>
       </div>
       <!-- forces Field, RA axis and Frame onto a row of their own -->
-      <div style="flex: 0 0 100%; height: 0; margin: 0;"></div>
-      <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
+      <div class="wide-row" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Frame</span>
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <button sc-camel-on-click="{{ fullSky }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Show all 24 hours of RA, centred on tonight's dark window">Full sky</button>
