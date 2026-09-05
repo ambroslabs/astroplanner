@@ -1376,8 +1376,48 @@ class Component extends DCLogic {
       else { raLen += 2 * mRa; raStart = ((raStart - mRa) % 24 + 24) % 24; }
     }
     const mDec = Math.max(3, (decMax - decMin) * 0.06);
-    return { raStart, raLen,
-             decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) };
+    return this.aspectFit({ raStart, raLen,
+             decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) });
+  }
+
+  // Keep the sky at a sane scale whatever shape the plot is. A portrait phone
+  // asked to show a full turn of RA across 250 pixels does not draw a wide
+  // chart small, it draws a crushed one - eight times more degrees per pixel
+  // across than down - so the answer is to show less sky rather than to squash
+  // what is shown.
+  //
+  // The reference is the layout the chart already had: a full turn and the
+  // whole declination range across a plot of 836 by 530, which is 1.268 times
+  // more compressed in RA than in declination. Holding that ratio means the
+  // ordinary desktop chart comes out of this unchanged - it is a fixed point of
+  // the arithmetic, not a special case in it.
+  RA_SQUASH = 1.268;
+  aspectFit(c) {
+    const a = this._axis;
+    const plotW = a ? a.X1 - a.X0 : 836, plotH = a ? a.Y1 - a.Y0 : 530;
+    if (!(plotW > 20 && plotH > 20)) return c;
+    let { raStart, raLen, decMin, decMax } = c;
+    let decSpan = decMax - decMin;
+    const mid = raStart + raLen / 2;
+    // Only a real crush is worth correcting. A wide monitor draws the full sky
+    // a little stretched in RA rather than squashed, and trimming declination
+    // to tidy that away would cost the poles - Polaris included - to fix
+    // something nobody would notice. So a third off the reference is tolerated
+    // and anything past that is pulled back to it.
+    const TOL = 1.35;
+    const wantRa = this.RA_SQUASH * decSpan * plotW / (15 * plotH);
+    if (raLen > wantRa * TOL) {
+      raLen = Math.max(0.5, wantRa);                     // tall narrow plot: show less RA
+    } else {
+      const wantDec = raLen * 15 * plotH / (this.RA_SQUASH * plotW);
+      if (decSpan > wantDec * TOL) decSpan = Math.max(4, wantDec);  // short wide plot: less sky
+    }
+    const dMid = (decMin + decMax) / 2;
+    decMin = dMid - decSpan / 2; decMax = dMid + decSpan / 2;
+    if (decMax > 90) { decMin -= decMax - 90; decMax = 90; }
+    if (decMin < -90) { decMax += -90 - decMin; decMin = -90; }
+    return { raStart: ((mid - raLen / 2) % 24 + 24) % 24, raLen,
+             decMin: Math.max(-90, decMin), decMax: Math.min(90, decMax) };
   }
   applyFit() { const c = this.fitFrame(); if (c) this.setState({ frame: c }); }
   // where the RA axis starts when nothing is framed
@@ -3693,7 +3733,13 @@ class Component extends DCLogic {
           this.__resizeBound = true;
           window.addEventListener('resize', () => {
             clearTimeout(this._rzT);
-            this._rzT = setTimeout(() => { if (this.canvas) this.drawHeatmap(this.canvas); }, 120);
+            this._rzT = setTimeout(() => {
+              if (!this.canvas) return;
+              // Redraw first so the plot rectangle is the new one, then re-fit
+              // against it - turning a phone changes what will fit on it.
+              this.drawHeatmap(this.canvas);
+              if (this.state.autoFrame) this.applyFit();
+            }, 120);
           });
         }
         this.drawHeatmap(el);
