@@ -463,7 +463,10 @@
 .page[data-wide="1"] .topbar {
   position: fixed; right: 12px; top: 12px; width: auto; max-width: none; z-index: 46;
 }
-.page[data-wide="1"] .card-head { position: fixed; left: 16px; top: 20px; margin: 0; z-index: 46; }
+.page[data-wide="1"] .card-head { position: fixed; left: 16px; top: 20px; margin: 0; z-index: 46;
+  /* It sits on the sky now rather than above it, so it carries its own
+     background the way the axis text does. */
+  text-shadow: 0 1px 3px #0A0A0A, 0 0 7px #0A0A0A; }
 /* The toggles are controls too, and they are wide and short, so they get a
    strip along the bottom rather than more of the left-hand panel. */
 .page[data-wide="1"] .legend-wrap {
@@ -2800,37 +2803,18 @@ class Component extends DCLogic {
     // afford to be soft; it cannot afford to be the wrong shape. The crisp
     // draw follows the moment the dragging stops.
     const S = (this._fastDraw && canvas === this.canvas) ? 1 : 2;
-    const BASE = { l: 64, r: 92, t: 16, b: 74 };
-    const MARGIN = Object.assign({}, BASE);
+    const MARGIN = { l: 64, r: 92, t: 16, b: 74 };
     let W = 992, HH = 620;
     if (this.state.wide && canvas === this.canvas) {
       const r = canvas.getBoundingClientRect();
       if (r.width > 200 && r.height > 200) { W = Math.round(r.width); HH = Math.round(r.height); }
-      // The panels float over the chart, so the plot rectangle is inset to
-      // clear them and the axes stay readable. Measured off the panels rather
-      // than written in, so it follows whatever they actually do - and shutting
-      // them gives the plot the space back instead of leaving a hole where they
-      // were. The canvas itself still fills the window either way.
-      const clear = (sel, pick) => {
-        const e = document.querySelector(sel);
-        if (!e || getComputedStyle(e).display === 'none') return 0;
-        const b = e.getBoundingClientRect();
-        return (b.width > 4 && b.height > 4) ? Math.max(0, pick(b)) : 0;
-      };
-      MARGIN.l += clear('.controls', b => b.right - r.left + 12);
-      MARGIN.b += clear('.legend-wrap', b => r.bottom - b.top + 12);
-      MARGIN.t += Math.max(clear('.topbar', b => b.bottom - r.top + 10),
-                           clear('.card-head', b => b.bottom - r.top + 10));
-      // A phone has no room to give the axes their usual margins and still have
-      // a map left, so they shrink with the screen.
-      if (W < 620) { MARGIN.l -= 30; MARGIN.r -= 46; MARGIN.b -= 30; }
-      // And never inset the plot out of existence. On a small screen the panels
-      // cover the map whatever we do, so when clearing them would leave nothing
-      // worth drawing the plot keeps its own margins and lets them overlap -
-      // the map is whole again the moment they are shut.
-      if (W - MARGIN.l - MARGIN.r < 220) MARGIN.l = BASE.l;
-      if (HH - MARGIN.t - MARGIN.b < 170) MARGIN.b = BASE.b;
-      if (HH - MARGIN.t - MARGIN.b < 170) MARGIN.t = BASE.t;
+      // Edge to edge. Every margin here exists to hold something beside the
+      // map - the declination numbers, the colour bar, the RA numbers - and in
+      // this mode all of that is drawn on top of the map instead, so there is
+      // nothing left for a margin to reserve. The panels float over it too.
+      // Inset for them and the map is a picture with a frame of furniture
+      // around it; overlay them and it is a map.
+      MARGIN.l = MARGIN.r = MARGIN.t = MARGIN.b = 0;
     }
     return { S, W, HH, X0: MARGIN.l, X1: W - MARGIN.r, Y0: MARGIN.t, Y1: HH - MARGIN.b };
   }
@@ -2844,6 +2828,8 @@ class Component extends DCLogic {
     // what fills the screen properly rather than fitting a 1.6 picture into it
     // and leaving the sides empty.
     const { S, W, HH, X0, X1, Y0, Y1 } = this.plotBox(canvas);
+    const overlay = this.state.wide && canvas === this.canvas;
+    this._overlayAxes = overlay;
     canvas.width = W * S; canvas.height = HH * S;
     const ctx = canvas.getContext('2d');
     ctx.scale(S, S);
@@ -2887,14 +2873,20 @@ class Component extends DCLogic {
       raTicks.push({ ra: 24, x: X0, label: '24' });
       for (let d = -90; d <= 90; d += 30) decTicks.push({ dec: d, grid: d > -90 && d < 90 });
     } else {
-      // pick a step that lands 5-12 ticks across whatever range is on screen
-      const raStep = [0.25, 0.5, 1, 2, 3, 4, 6].find(s => axSpan / s <= 12) || 6;
+      // Pick a step that lands a readable number of ticks across whatever range
+      // is on screen - counted against the width there is to print them in,
+      // not just the range. Twelve ticks is comfortable on a 836px plot and
+      // illegible on a 390px phone, where '23.5' next to '23.0' runs the two
+      // into each other. Wide enough and this is the same twelve as before.
+      const raRoom = Math.max(3, Math.min(12, Math.floor((X1 - X0) / 54)));
+      const raStep = [0.25, 0.5, 1, 2, 3, 4, 6].find(s => axSpan / s <= raRoom) || 6;
       for (let v = Math.ceil(axStart / raStep) * raStep; v < axStart + axSpan + 1e-9; v += raStep) {
         const ra = ((v % 24) + 24) % 24;
         raTicks.push({ ra, x: xOf(ra), label: raStep >= 1 ? String(Math.round(ra)) : ra.toFixed(1) });
       }
       const decSpan = dTop - dBot;
-      const dStep = [1, 2, 5, 10, 15, 30].find(s => decSpan / s <= 10) || 30;
+      const decRoom = Math.max(3, Math.min(10, Math.floor((Y1 - Y0) / 34)));
+      const dStep = [1, 2, 5, 10, 15, 30].find(s => decSpan / s <= decRoom) || 30;
       for (let v = Math.ceil(dBot / dStep) * dStep; v < dTop + 1e-9; v += dStep) decTicks.push({ dec: v, grid: true });
     }
     ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, HH);
@@ -3418,42 +3410,63 @@ class Component extends DCLogic {
                    Math.abs(d.x1 - d.x0), Math.abs(d.y1 - d.y0));
     }
     // frame + ticks + labels
-    ctx.strokeStyle = '#C9C4B7'; ctx.lineWidth = 1.5;
-    ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
+    // No frame when the plot is the window: the edge of the screen is the edge
+    // of the map, and a rule drawn along it is just a line in the way.
+    if (!overlay) {
+      ctx.strokeStyle = '#C9C4B7'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
+    }
     ctx.fillStyle = '#E8E4D8'; ctx.font = '600 16px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1;
+    // Ticks turn inwards and the numbers come inside with them.
     for (const t of raTicks) {
-      ctx.beginPath(); ctx.moveTo(t.x, Y1); ctx.lineTo(t.x, Y1 + 6); ctx.stroke();
-      ctx.fillText(t.label, t.x, Y1 + 26);
+      ctx.beginPath();
+      ctx.moveTo(t.x, overlay ? Y1 - 7 : Y1); ctx.lineTo(t.x, overlay ? Y1 : Y1 + 6); ctx.stroke();
+      this.axisText(ctx, t.label, t.x, overlay ? Y1 - 12 : Y1 + 26);
     }
-    ctx.textAlign = 'right';
+    ctx.textAlign = overlay ? 'left' : 'right';
     for (const t of decTicks) {
-      ctx.beginPath(); ctx.moveTo(X0 - 6, yOf(t.dec)); ctx.lineTo(X0, yOf(t.dec)); ctx.stroke();
-      ctx.fillText(String(t.dec), X0 - 12, yOf(t.dec) + 5);
+      const y = yOf(t.dec);
+      ctx.beginPath();
+      ctx.moveTo(overlay ? X0 : X0 - 6, y); ctx.lineTo(overlay ? X0 + 7 : X0, y); ctx.stroke();
+      // Clamped so a tick landing on the very edge still has its number on
+      // screen rather than half of one hanging off it.
+      this.axisText(ctx, String(t.dec), overlay ? X0 + 11 : X0 - 12,
+                    overlay ? Math.min(Math.max(y + 5, Y0 + 16), Y1 - 22) : y + 5);
     }
-    ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
-    ctx.save(); ctx.translate(X0 - 50, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
-    ctx.fillText('DECLINATION (\u00B0)', 0, 0); ctx.restore();
+    // The axis titles are the first thing to go: on a full-screen map the
+    // numbers say which axis is which, and the titles are two strips of
+    // furniture that were costing 58px and 50px of sky.
+    if (!overlay) {
+      ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('RIGHT ASCENSION (H)', (X0 + X1) / 2, Y1 + 58);
+      ctx.save(); ctx.translate(X0 - 50, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
+      ctx.fillText('DECLINATION (\u00B0)', 0, 0); ctx.restore();
+    }
     // colorbar - just outside the plot on the right, wherever that now is. It
     // used to sit at a fixed 928, which was the right edge back when the chart
     // was always 992 wide and is the middle of it once the window sets the size.
-    const cbW = 18, CB = X1 + 28;
+    // Inside the right edge now, and shortened so its readings have somewhere
+    // to sit: they move to the map side of the bar, which is the only side
+    // there is once the bar is against the edge of the screen.
+    const cbW = overlay ? 13 : 18;
+    const CB = overlay ? X1 - 12 - cbW : X1 + 28;
+    const BT = overlay ? Y0 + 46 : Y0, BB = overlay ? Y1 - 34 : Y1;
     const denomL = L >= 24 ? 24 : L;
     // A ramp of dark-on-dark says little, so the bar carries a sample star
     // chain under the veil: it shows what the mask actually does to the sky
     // at each level, clear at the top and hidden at the bottom.
-    ctx.fillStyle = '#161616'; ctx.fillRect(CB, Y0, cbW, Y1 - Y0);
+    ctx.fillStyle = '#161616'; ctx.fillRect(CB, BT, cbW, BB - BT);
     // the same lifted ground as the chart, so the bar reads the contrast
     // control even at the levels where the sample chain says little
     for (let i = 0; i <= 200; i++) {
-      const t = 1 - i / 200, y = Y0 + i / 200 * (Y1 - Y0);
+      const t = 1 - i / 200, y = BT + i / 200 * (BB - BT);
       const g = this.state.contrast * Math.pow(t, maskP);
       ctx.fillStyle = 'rgba(' + this.LIFT.join(',') + ',' + Math.max(0, Math.min(1, g)).toFixed(3) + ')';
-      ctx.fillRect(CB, y, cbW, (Y1 - Y0) / 200 + 1);
+      ctx.fillRect(CB, y, cbW, (BB - BT) / 200 + 1);
     }
     ctx.save();
-    ctx.beginPath(); ctx.rect(CB, Y0, cbW, Y1 - Y0); ctx.clip();
+    ctx.beginPath(); ctx.rect(CB, BT, cbW, BB - BT); ctx.clip();
     // A fixed opacity, not the constellation slider: this is a legend for the
     // mask and has to stay readable even with constellations turned off.
     ctx.globalAlpha = 0.75;
@@ -3461,7 +3474,7 @@ class Component extends DCLogic {
     for (let i = 0; i < N; i++) {
       // an irrational step keeps the chain from settling into a visible period
       nodes.push([CB + cbW / 2 + Math.sin(i * 2.399) * (cbW / 2 - 4.5),
-                  Y0 + 12 + i * (Y1 - Y0 - 24) / (N - 1)]);
+                  BT + 12 + i * (BB - BT - 24) / (N - 1)]);
     }
     ctx.strokeStyle = 'rgba(203,214,232,0.85)'; ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -3471,25 +3484,42 @@ class Component extends DCLogic {
     for (const q of nodes) { ctx.beginPath(); ctx.arc(q[0], q[1], 2.1, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
     for (let i = 0; i <= 200; i++) {
-      const t = 1 - i / 200, y = Y0 + i / 200 * (Y1 - Y0);
+      const t = 1 - i / 200, y = BT + i / 200 * (BB - BT);
       const a = this.state.maskStrength * (1 - Math.pow(t, maskP));
       ctx.fillStyle = 'rgba(8,8,8,' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
-      ctx.fillRect(CB, y, cbW, (Y1 - Y0) / 200 + 1);
+      ctx.fillRect(CB, y, cbW, (BB - BT) / 200 + 1);
     }
-    ctx.strokeStyle = '#8E897D'; ctx.strokeRect(CB, Y0, cbW, Y1 - Y0);
-    ctx.fillStyle = '#E8E4D8'; ctx.font = '600 13px Inter, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(denomL > 0 ? denomL.toFixed(1) + 'h' : '\u2014', CB + cbW + 6, Y0 + 12);
-    ctx.fillText('best', CB + cbW + 6, Y0 + 28);
-    ctx.fillText('0h', CB + cbW + 6, Y1 - 16);
-    ctx.fillText('none', CB + cbW + 6, Y1);
-    ctx.save(); ctx.translate(CB - 8, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = 'center'; ctx.font = '700 12px Inter, sans-serif'; ctx.fillStyle = '#8E897D';
-    ctx.fillText('USABLE DARK HOURS', 0, 0); ctx.restore();
+    ctx.strokeStyle = '#8E897D'; ctx.strokeRect(CB, BT, cbW, BB - BT);
+    ctx.fillStyle = '#E8E4D8'; ctx.font = '600 13px Inter, sans-serif';
+    // Above and below the bar when it is overlaid, rather than beside it -
+    // beside it is off the edge of the screen.
+    ctx.textAlign = overlay ? 'right' : 'left';
+    const lx = overlay ? CB - 7 : CB + cbW + 6;
+    this.axisText(ctx, denomL > 0 ? denomL.toFixed(1) + 'h' : '\u2014', lx, BT + 12);
+    this.axisText(ctx, 'best', lx, overlay ? BT + 27 : BT + 28);
+    this.axisText(ctx, '0h', lx, overlay ? BB - 16 : BB - 16);
+    this.axisText(ctx, 'none', lx, overlay ? BB - 2 : BB);
+    ctx.save(); ctx.translate(overlay ? CB - 5 : CB - 8, (BT + BB) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.font = '700 12px Inter, sans-serif';
+    ctx.fillStyle = overlay ? '#C9C4B7' : '#8E897D';
+    this.axisText(ctx, 'USABLE DARK HOURS', 0, 0); ctx.restore();
     if (L <= 0) {
       ctx.fillStyle = 'rgba(10,10,10,0.6)'; ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
       ctx.fillStyle = '#F6F5F2'; ctx.font = '800 24px Archivo, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('NO ASTRONOMICAL DARKNESS ON THIS DATE', (X0 + X1) / 2, (Y0 + Y1) / 2);
     }
+  }
+  // Axis text sits on the map in wide mode, so it carries its own background:
+  // a dark rounded stroke under the glyphs. Cheaper and steadier than a box,
+  // and it stays legible over the Milky Way as well as over empty sky.
+  axisText(ctx, text, x, y) {
+    if (this._overlayAxes) {
+      ctx.save();
+      ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+      ctx.strokeStyle = 'rgba(8,8,8,0.9)'; ctx.strokeText(text, x, y);
+      ctx.restore();
+    }
+    ctx.fillText(text, x, y);
   }
   dayNum(str) { const [y, m, d] = str.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86400000; }
   dayStr(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
