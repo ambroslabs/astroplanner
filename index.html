@@ -1393,9 +1393,13 @@ class Component extends DCLogic {
   // a wide monitor instead of trimming them away to tidy up a ratio.
   REF_PLOT = { w: 836, h: 530 };
   plotShape() {
-    const a = this._axis;
-    const w = a ? a.X1 - a.X0 : this.REF_PLOT.w, h = a ? a.Y1 - a.Y0 : this.REF_PLOT.h;
-    return (w > 20 && h > 20) ? w / h : this.REF_PLOT.w / this.REF_PLOT.h;
+    const ref = this.REF_PLOT.w / this.REF_PLOT.h;
+    if (!this.canvas) return ref;
+    // Measured live rather than read off the last draw, so a fit computed
+    // during a resize is against the size the canvas has now.
+    const b = this.plotBox(this.canvas);
+    const w = b.X1 - b.X0, h = b.Y1 - b.Y0;
+    return (w > 20 && h > 20) ? w / h : ref;
   }
   aspectFit(c) {
     const factor = this.plotShape() / (this.REF_PLOT.w / this.REF_PLOT.h);
@@ -2690,16 +2694,19 @@ class Component extends DCLogic {
     });
   }
   // ---------- heatmap ----------
-  drawHeatmap(canvas) {
-    if (!canvas) return;
-    // The drawing is laid out in its own coordinates with fixed margins around
-    // the plot - room for the declination labels on the left, the colour bar on
-    // the right, the RA axis underneath. Everything downstream works from X0,
-    // X1, Y0, Y1, so letting those follow the canvas is all it takes for the
-    // chart to hold any shape. In wide mode it is given the window's, which is
-    // what fills the screen properly rather than fitting a 1.6 picture into it
-    // and leaving the sides empty.
-    const S = 2, BASE = { l: 64, r: 92, t: 16, b: 74 };
+  // The plot rectangle for a canvas, worked out without drawing anything.
+  // A resize needs this before it draws: the frame it should draw depends on
+  // the shape it is about to be drawn at, and measuring first is what lets
+  // the whole resize be a single correct draw instead of a stretch and a snap.
+  plotBox(canvas) {
+    // Half resolution while a resize is being dragged. The chart is redrawn
+    // every frame of the drag to keep its geometry honest, and at 2x on a
+    // full screen that is seven million pixels to rasterise and upload each
+    // time - which costs more than the drawing does. A frame of the drag can
+    // afford to be soft; it cannot afford to be the wrong shape. The crisp
+    // draw follows the moment the dragging stops.
+    const S = (this._fastDraw && canvas === this.canvas) ? 1 : 2;
+    const BASE = { l: 64, r: 92, t: 16, b: 74 };
     const MARGIN = Object.assign({}, BASE);
     let W = 992, HH = 620;
     if (this.state.wide && canvas === this.canvas) {
@@ -2731,10 +2738,21 @@ class Component extends DCLogic {
       if (HH - MARGIN.t - MARGIN.b < 170) MARGIN.b = BASE.b;
       if (HH - MARGIN.t - MARGIN.b < 170) MARGIN.t = BASE.t;
     }
+    return { S, W, HH, X0: MARGIN.l, X1: W - MARGIN.r, Y0: MARGIN.t, Y1: HH - MARGIN.b };
+  }
+  drawHeatmap(canvas) {
+    if (!canvas) return;
+    // The drawing is laid out in its own coordinates with fixed margins around
+    // the plot - room for the declination labels on the left, the colour bar on
+    // the right, the RA axis underneath. Everything downstream works from X0,
+    // X1, Y0, Y1, so letting those follow the canvas is all it takes for the
+    // chart to hold any shape. In wide mode it is given the window's, which is
+    // what fills the screen properly rather than fitting a 1.6 picture into it
+    // and leaving the sides empty.
+    const { S, W, HH, X0, X1, Y0, Y1 } = this.plotBox(canvas);
     canvas.width = W * S; canvas.height = HH * S;
     const ctx = canvas.getContext('2d');
     ctx.scale(S, S);
-    const X0 = MARGIN.l, X1 = W - MARGIN.r, Y0 = MARGIN.t, Y1 = HH - MARGIN.b;
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
     // Centered mode rotates the RA axis to start at the Sun, which puts the
     // anti-solar point - where tonight's best targets transit - mid-chart.
@@ -2743,7 +2761,10 @@ class Component extends DCLogic {
     // east-left convention used for astronomical images.
     // A frame narrows what the axes span. axStart is the RA at the RIGHT edge,
     // since RA runs leftward, and the span shrinks with it.
-    const frame = this.state.frame;
+    // A resize hands the frame in directly. Waiting for it to go through
+    // state would cost a render between the measurement and the drawing,
+    // which is exactly the frame the old chart is visible stretched in.
+    const frame = (canvas === this.canvas && this._frameNow) || this.state.frame;
     // A full turn is a real position now, not the absence of one, so its origin
     // is honoured like any other. Ignoring it here was why zooming out to full
     // sky kept the rotation in state but drew the axis from RA 0.
@@ -3720,28 +3741,53 @@ class Component extends DCLogic {
         this.canvas = el;
         if (!el) return;
         this.attachChartInput(el);
-        // In wide mode the canvas takes its size from its box, so a window
-        // resize changes the drawing's own coordinates and it has to be redone.
+        // The canvas takes its size from its box in wide mode, so a resize
+        // changes the drawing's own coordinates. A ResizeObserver runs before
+        // the browser paints the new size, which is the only place a redraw
+        // can land without the old bitmap being shown stretched into it first.
         if (!this.__resizeBound) {
           this.__resizeBound = true;
-          window.addEventListener('resize', () => {
+          let first = true;
+          const relayout = () => {
+            if (!this.canvas || !this.state.wide) return;
+            // Measure, choose the frame, draw: one pass, so the chart is never
+            // shown at a size it was not drawn for. Going through state instead
+            // would put a render between the measuring and the drawing, and the
+            // stretched bitmap is what fills that gap.
+            const was = this._shape;
+            let f = this.state.frame;
+            if (this.state.autoFrame) f = this.fitFrame() || f;
+            else if (f && was > 0) {
+              const now = this.plotShape();
+              if (isFinite(now) && Math.abs(now / was - 1) > 0.005) f = this.scaleRa(f, now / was);
+            }
+            this._frameNow = f;
+            this._fastDraw = true;
+            this.drawHeatmap(this.canvas);
+            this._fastDraw = false;
+            // State catches up once the dragging stops. During the drag the
+            // drawing is already right, and a render per frame would only
+            // spend the budget that keeps it smooth.
             clearTimeout(this._rzT);
             this._rzT = setTimeout(() => {
-              if (!this.canvas) return;
-              // Redraw first so the plot rectangle is the new one, then re-fit
-              // against it - turning a phone changes what will fit on it.
-              const was = this._shape;
-              this.drawHeatmap(this.canvas);
-              if (this.state.autoFrame) { this.applyFit(); return; }
-              // A hand-picked frame keeps its declination too: the window got
-              // wider or narrower, so show correspondingly more or less RA at
-              // the same scale rather than restretching what is already there.
-              const now = this.plotShape();
-              const f = this.state.frame;
-              if (f && was > 0 && isFinite(now) && Math.abs(now / was - 1) > 0.01)
-                this.setState({ frame: this.scaleRa(f, now / was) });
-            }, 120);
+              this._frameNow = null;
+              // Back to full resolution now the size has settled.
+              if (f && f !== this.state.frame) this.setState({ frame: f });
+              else this.drawHeatmap(this.canvas);
+            }, 200);
+          };
+          const ro = new ResizeObserver(() => {
+            if (first) { first = false; return; }   // the observation on attach
+            // Drawn straight from the callback. The observer runs after layout
+            // and before the paint, so this redraw is in the same frame as the
+            // size that caused it; deferring it to a rAF is one stretched
+            // frame, every frame of the drag. It cannot re-enter, since the
+            // bitmap size it sets is not what the observer watches.
+            if (this._rzBusy) return;
+            this._rzBusy = true;
+            try { relayout(); } finally { this._rzBusy = false; }
           });
+          ro.observe(el);
         }
         this.drawHeatmap(el);
       },
