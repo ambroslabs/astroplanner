@@ -21,6 +21,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The root is always built from main, whichever branch set this running.
+      # Building it from the triggering ref meant a push to beta deployed beta
+      # over the top of the page people are using, which is the one thing the
+      # split exists to prevent.
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .main-src
+
       # Assembles dist/. No CF_WEB_ANALYTICS_TOKEN is passed on purpose: this
       # site is covered by Cloudflare Web Analytics *automatic* installation on
       # the ambroslabs.io zone, so the edge already injects a beacon into every
@@ -28,7 +38,10 @@ jobs:
       # and breaks both - see scripts/build.sh. Forks deploying elsewhere can
       # still set the variable to get a manually installed beacon.
       - name: Build
-        run: ./scripts/build.sh
+        env:
+          BUILD_SRC: ${{ github.workspace }}/.main-src
+          BUILD_OUT: ${{ github.workspace }}/dist
+        run: bash .main-src/scripts/build.sh
 
       # /beta is a second, complete copy of the site built from the beta
       # branch, so an experiment can be deployed and looked at without touching
