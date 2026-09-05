@@ -1380,44 +1380,34 @@ class Component extends DCLogic {
              decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) });
   }
 
-  // Keep the sky at a sane scale whatever shape the plot is. A portrait phone
-  // asked to show a full turn of RA across 250 pixels does not draw a wide
-  // chart small, it draws a crushed one - eight times more degrees per pixel
-  // across than down - so the answer is to show less sky rather than to squash
-  // what is shown.
+  // Declination sets the scale; RA is cropped or extended to whatever width the
+  // window has. Squashing RA to fit a full turn into a narrow plot does not
+  // draw a wide chart small, it draws an unreadable one - eight times as many
+  // degrees per pixel across as down on a phone held upright - and stretching
+  // it on a wide one is the same mistake in reverse. So the declination span is
+  // left exactly as fitted and the RA span moves with the shape of the plot.
   //
-  // The reference is the layout the chart already had: a full turn and the
-  // whole declination range across a plot of 836 by 530, which is 1.268 times
-  // more compressed in RA than in declination. Holding that ratio means the
-  // ordinary desktop chart comes out of this unchanged - it is a fixed point of
-  // the arithmetic, not a special case in it.
-  RA_SQUASH = 1.268;
-  aspectFit(c) {
+  // Measured against the layout the chart already had, 836 by 530, so the
+  // ordinary desktop chart is a fixed point: the factor is 1 there and nothing
+  // moves. Nothing here touches declination, which is what keeps the poles on
+  // a wide monitor instead of trimming them away to tidy up a ratio.
+  REF_PLOT = { w: 836, h: 530 };
+  plotShape() {
     const a = this._axis;
-    const plotW = a ? a.X1 - a.X0 : 836, plotH = a ? a.Y1 - a.Y0 : 530;
-    if (!(plotW > 20 && plotH > 20)) return c;
-    let { raStart, raLen, decMin, decMax } = c;
-    let decSpan = decMax - decMin;
-    const mid = raStart + raLen / 2;
-    // Only a real crush is worth correcting. A wide monitor draws the full sky
-    // a little stretched in RA rather than squashed, and trimming declination
-    // to tidy that away would cost the poles - Polaris included - to fix
-    // something nobody would notice. So a third off the reference is tolerated
-    // and anything past that is pulled back to it.
-    const TOL = 1.35;
-    const wantRa = this.RA_SQUASH * decSpan * plotW / (15 * plotH);
-    if (raLen > wantRa * TOL) {
-      raLen = Math.max(0.5, wantRa);                     // tall narrow plot: show less RA
-    } else {
-      const wantDec = raLen * 15 * plotH / (this.RA_SQUASH * plotW);
-      if (decSpan > wantDec * TOL) decSpan = Math.max(4, wantDec);  // short wide plot: less sky
-    }
-    const dMid = (decMin + decMax) / 2;
-    decMin = dMid - decSpan / 2; decMax = dMid + decSpan / 2;
-    if (decMax > 90) { decMin -= decMax - 90; decMax = 90; }
-    if (decMin < -90) { decMax += -90 - decMin; decMin = -90; }
+    const w = a ? a.X1 - a.X0 : this.REF_PLOT.w, h = a ? a.Y1 - a.Y0 : this.REF_PLOT.h;
+    return (w > 20 && h > 20) ? w / h : this.REF_PLOT.w / this.REF_PLOT.h;
+  }
+  aspectFit(c) {
+    const factor = this.plotShape() / (this.REF_PLOT.w / this.REF_PLOT.h);
+    if (!isFinite(factor) || Math.abs(factor - 1) < 0.01) return c;
+    return this.scaleRa(c, factor);
+  }
+  // Same crop about the middle, whatever the reason for it.
+  scaleRa(c, factor) {
+    const mid = c.raStart + c.raLen / 2;
+    const raLen = Math.max(0.25, Math.min(24, c.raLen * factor));
     return { raStart: ((mid - raLen / 2) % 24 + 24) % 24, raLen,
-             decMin: Math.max(-90, decMin), decMax: Math.min(90, decMax) };
+             decMin: c.decMin, decMax: c.decMax };
   }
   applyFit() { const c = this.fitFrame(); if (c) this.setState({ frame: c }); }
   // where the RA axis starts when nothing is framed
@@ -2765,6 +2755,9 @@ class Component extends DCLogic {
     const yOf = dec => Y0 + (dTop - dec) / (dTop - dBot) * (Y1 - Y0);
     // remembered for the drag-to-frame handler, which has to invert this mapping
     this._axis = { axStart, axSpan, dTop, dBot, X0, X1, Y0, Y1 };
+    // the shape this frame was drawn at, so a resize can tell how much wider
+    // or narrower the window just got and crop RA by exactly that much
+    if (canvas === this.canvas) this._shape = (X1 - X0) / (Y1 - Y0);
     this._view = frame ? { raStart: frame.raStart, raLen: frame.raLen, decMin: frame.decMin, decMax: frame.decMax }
                       : { raStart: raOrg, raLen: 24, decMin: -90, decMax: 90 };
     // A full 24h of RA in pixels. Equal to the plot width only when the axis
@@ -3737,8 +3730,16 @@ class Component extends DCLogic {
               if (!this.canvas) return;
               // Redraw first so the plot rectangle is the new one, then re-fit
               // against it - turning a phone changes what will fit on it.
+              const was = this._shape;
               this.drawHeatmap(this.canvas);
-              if (this.state.autoFrame) this.applyFit();
+              if (this.state.autoFrame) { this.applyFit(); return; }
+              // A hand-picked frame keeps its declination too: the window got
+              // wider or narrower, so show correspondingly more or less RA at
+              // the same scale rather than restretching what is already there.
+              const now = this.plotShape();
+              const f = this.state.frame;
+              if (f && was > 0 && isFinite(now) && Math.abs(now / was - 1) > 0.01)
+                this.setState({ frame: this.scaleRa(f, now / was) });
             }, 120);
           });
         }
