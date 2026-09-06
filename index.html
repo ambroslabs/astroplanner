@@ -2,7 +2,22 @@
 <html><head>
 <meta charset="utf-8">
 <title>Astronomy Planner</title>
-<meta name="description" content="Astrophotography session planner: usable dark hours by RA/Dec for a given site, date and altitude threshold.">
+<meta name="description" content="Plan an astrophotography session: usable dark hours for every patch of sky, by right ascension and declination, for your site, date and altitude threshold.">
+<link rel="canonical" href="https://astroplanner.ambroslabs.io/">
+<!-- Shared as a link more often than typed, so it carries its own card. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Astronomy Planner">
+<meta property="og:title" content="Astronomy Planner">
+<meta property="og:description" content="Plan an astrophotography session: usable dark hours for every patch of sky, by right ascension and declination, for your site, date and altitude threshold.">
+<meta property="og:url" content="https://astroplanner.ambroslabs.io/">
+<meta property="og:image" content="https://astroplanner.ambroslabs.io/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A chart of usable dark hours across the sky, by right ascension and declination.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Astronomy Planner">
+<meta name="twitter:description" content="Plan an astrophotography session: usable dark hours for every patch of sky, by right ascension and declination, for your site, date and altitude threshold.">
+<meta name="twitter:image" content="https://astroplanner.ambroslabs.io/assets/social-card.png">
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230A0A0A'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%2360B274'/%3E%3Ccircle cx='25' cy='7' r='2.5' fill='%23D9A960'/%3E%3C/svg%3E">
 <script>window.__resources = {"https://unpkg.com/react@18.3.1/umd/react.production.min.js": "assets/js/react.production.min.js", "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "assets/js/react-dom.production.min.js"};</script>
@@ -409,6 +424,11 @@
   .site-save { flex-wrap: wrap !important; }
   .site-save #site-name { width: auto !important; flex: 1 1 130px; min-width: 0; }
   .heat-col input[type="range"] { width: 100% !important; min-height: 44px !important; }
+  /* The spacer and the margin that shove the action buttons to the right end of
+     the controls row are right on a page-wide row and wrong on a phone, where
+     they only open a hole at the left of the line the buttons wrapped onto. */
+  .controls > .push { display: none !important; }
+  .controls > button { margin-left: 0 !important; }
   /* The time row is eight things, and a slider at 100% takes a line to itself
      and strands the two arrows either side of it - one above and one below the
      thing they step. The slider gives up room for exactly those two, so the
@@ -475,6 +495,16 @@
   min-width: 160px; justify-content: center;
 }
 .page[data-wide="1"] .export-btn { display: none !important; }
+/* A spacer that shoves the action buttons to the right end of the controls row.
+   That row is the full width of the page in the ordinary layout and the buttons
+   belong at its end; in wide mode the same row is a 430px panel, where the
+   spacer only opened a hole - Clear points stranded against the right edge with
+   Reset chart wrapped beneath it. */
+.page[data-wide="1"] .controls > .push { display: none !important; }
+/* Clear points is shoved right by a margin for the same reason, and it leaves
+   the same hole in a panel. Both go together, in the whole of wide mode rather
+   than only on a phone - the desktop panel is 464px, which is no wider. */
+.page[data-wide="1"] .controls > button { margin-left: 0 !important; }
 /* The site controls are a wide-mode stand-in for the observer bar, so they are
    only there when the bar is not. */
 .page:not([data-wide="1"]) .site-group { display: none !important; }
@@ -669,9 +699,6 @@
   }
   /* Page-sized padding put one frame button on each line. */
   .page[data-wide="1"][data-controls="1"] .controls button { padding: 10px 12px !important; }
-  /* Clear points is pushed to the far right of a wide row on a page; in a
-     narrow sheet that is a button alone on a line with a hole beside it. */
-  .page[data-wide="1"][data-controls="1"] .controls > button { margin-left: 0 !important; }
   /* Labels sized for a sheet rather than a page: two lines of heading above
      every control is most of a phone screen before a control is reached. */
   .page[data-wide="1"][data-controls="1"] .controls label,
@@ -889,7 +916,7 @@
           </label>
         </div>
       </div>
-      <div style="flex: 1;"></div>
+      <div class="push" style="flex: 1;"></div>
       <button sc-camel-on-click="{{ clearPoints }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-left: auto;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Remove every marked point">Clear points</button>
       <button sc-camel-on-click="{{ resetChart }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Put the chart settings back to their defaults">Reset chart</button>
       <button class="export-btn" sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
