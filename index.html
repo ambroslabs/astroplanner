@@ -408,6 +408,10 @@
   /* 44px minimum tap targets (were 34-39px, and 16px for the checkbox) */
   .bar button, .tabs button, .controls button,
   .bar input, .controls input, #obs-in { min-height: 44px !important; }
+  /* min-height is a content-box measure, so 44 plus the padding and border came
+     out 64 - a box half again as tall as the control it sits beside. The axis
+     ratio box is the one that shows it, being inline with a checkbox. */
+  .controls label > input[type="number"] { box-sizing: border-box; }
   .planet-table span { font-size: 13px !important; }
   /* Four columns of fixed width plus their gaps came to more than a 320px
      phone has, and the last one carries a word that will not shrink, so the
@@ -910,9 +914,9 @@
             Auto
           </label>
         
-          <label style="display: flex; flex-direction: column; gap: 3px;" title="Degrees of right ascension across for each degree of declination down, when a view fills the standard chart. Fit usable picks it from the sky you can use; Full sky puts it back.">
-            <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5A5751;">Axis ratio</span>
-            <input type="number" min="0.2" max="40" step="0.05" sc-camel-value="{{ ratioText }}" sc-camel-on-change="{{ onRatio }}" style="width: 84px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 7px 9px; outline: none;">
+          <label style="display: flex; align-items: center; gap: 8px; white-space: nowrap;" title="Degrees of right ascension across for each degree of declination down, when a view fills the standard chart. Fit usable picks it from the sky you can use; Full sky puts it back.">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Axis ratio</span>
+            <input type="number" min="0.2" max="40" step="0.05" sc-camel-value="{{ ratioText }}" sc-camel-on-change="{{ onRatio }}" style="width: 84px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 10px; outline: none;">
           </label>
         </div>
       </div>
