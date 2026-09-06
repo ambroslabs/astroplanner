@@ -431,6 +431,20 @@
    not wrap and do not shrink now; the row wraps instead, which is the honest
    way to run out of width. */
 .topbar { flex-wrap: wrap; }
+/* Three labelled buttons need about 500px to sit on one row. Below that one of
+   them wraps onto a row of its own, which looked worse than the ragged shapes
+   it replaced. So they become the same glyph squares wide mode already uses on
+   a phone: one row, one shape, in both modes, at every width. */
+@media (max-width: 520px) {
+  .topbar button {
+    font-size: 0 !important; padding: 9px 11px !important;
+    gap: 0 !important; min-width: 40px !important;
+  }
+  /* Only the glyph comes back - the runtime wraps an interpolated label in a
+     span of its own, so a rule for every span puts the words back on the two
+     buttons whose text is interpolated and leaves them off the rest. */
+  .topbar button > span:first-child { font-size: 15px !important; }
+}
 .topbar button {
   white-space: nowrap; flex: 0 0 auto;
   min-width: 160px; justify-content: center;
