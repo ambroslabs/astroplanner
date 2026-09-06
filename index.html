@@ -858,6 +858,11 @@
             <input type="checkbox" checked="{{ autoFrame }}" sc-camel-on-change="{{ onAutoFrame }}" style="accent-color: #D9A960; width: 16px; height: 16px;">
             Auto
           </label>
+        
+          <label style="display: flex; flex-direction: column; gap: 3px;" title="Degrees of right ascension across for each degree of declination down, when a view fills the standard chart. Fit usable picks it from the sky you can use; Full sky puts it back.">
+            <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5A5751;">Axis ratio</span>
+            <input type="number" min="0.2" max="40" step="0.05" sc-camel-value="{{ ratioText }}" sc-camel-on-change="{{ onRatio }}" style="width: 84px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 7px 9px; outline: none;">
+          </label>
         </div>
       </div>
       <div style="flex: 1;"></div>
@@ -1114,6 +1119,10 @@ class Component extends DCLogic {
     // '' follows the site, then the browser, then sidereal; 'LST' pins it to
     // sidereal; anything else is an IANA zone the user picked.
     tz: '',
+    // Degrees of RA across for each degree of declination down, when a view
+    // fills the standard chart. Fitting to the usable sky picks it; full sky
+    // puts it back; and it is here so it can simply be typed.
+    ratio: 2.5884,
     frame: null, autoFrame: true,
     // start of the span the time slider covers; '' means centre it on the date
     winStart: '',
@@ -1505,7 +1514,9 @@ class Component extends DCLogic {
   // ---------- framing ----------
   // Bounding box of the sky that gets any usable dark time, plus a margin.
   // Returns null when nothing is usable, so callers can leave the frame alone.
-  fitFrame() {
+  // The usable region itself. fitFrame then squares it with the ratio; fitting
+  // *to* the region needs it before that happens, so the two are separate.
+  fitRegion() {
     const dark = this.darkWindow(), L = dark.L, lat = this.state.lat, thr = this.state.thr;
     const N = 288, M = 181;
     const hit = new Array(N).fill(false);
@@ -1542,8 +1553,27 @@ class Component extends DCLogic {
       else { raLen += 2 * mRa; raStart = ((raStart - mRa) % 24 + 24) % 24; }
     }
     const mDec = Math.max(3, (decMax - decMin) * 0.06);
-    return this.aspectFit({ raStart, raLen,
-             decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) });
+    return { raStart, raLen,
+             decMin: Math.max(-90, decMin - mDec), decMax: Math.min(90, decMax + mDec) };
+  }
+  fitFrame() { return this.aspectFit(this.fitRegion()); }
+  // Fitting to the usable sky sets the shape as well as the frame: the region
+  // has a shape of its own, and the point of the button is to see that region,
+  // not to see it squared off against whatever shape was in force. Full sky
+  // puts the shape back, which is what makes it the way out again.
+  // The region's own shape, and deliberately not "whatever makes it fill the
+  // window I am in". Targeting the window put 2.5884 on a desktop and 8.5454
+  // on a phone for the same sky, which is a number that has stopped meaning
+  // anything - and it is a setting you can type, so it has to keep still. At
+  // the standard chart the two are the same thing anyway.
+  ratioFor(c) {
+    const dec = c.decMax - c.decMin;
+    if (!(dec > 0)) return this.state.ratio;
+    // Kept exact rather than rounded to what the box shows. Rounding here to
+    // four places moved the fitted view by a ten-thousandth of an hour, which
+    // is a twentieth of a pixel and still enough to land some label on the
+    // other side of a rounding. The box rounds for reading; the state does not.
+    return c.raLen * 15 / dec;
   }
 
   // The chart is drawn at one fixed scale relationship between the two axes:
@@ -1557,7 +1587,22 @@ class Component extends DCLogic {
   // The number is the one the ordinary desktop fit already produced, so that
   // view is unchanged to the pixel and everything else is brought into line
   // with it rather than the other way round.
-  RA_DEC_RATIO = 1.640961045865352;
+  // The chart's own shape, as degrees of RA across for each degree of
+  // declination down when a view fills the standard 836x530 chart. 2.5884 is
+  // what the ordinary fit at the default site already came to, so the chart
+  // opens exactly as it did.
+  //
+  // Stored in those units because they are the ones you can see; the invariant
+  // underneath is the scale relationship, which is this divided by the standard
+  // chart's own aspect. It has to be the scale that is held rather than the
+  // shape, or a view would keep its shape in a window of a different shape and
+  // letterbox in every one of them.
+  RATIO_DEFAULT = 2.5884;
+  REF_ASPECT = 836 / 530;
+  ratioK() {
+    const r = this.state.ratio;
+    return (isFinite(r) && r > 0.05 ? r : this.RATIO_DEFAULT) / this.REF_ASPECT;
+  }
   plotShape() {
     const ref = 836 / 530;
     if (!this.canvas) return ref;
@@ -1580,7 +1625,7 @@ class Component extends DCLogic {
     if (!c) return c;
     const A = this.plotShape();
     if (!isFinite(A) || A <= 0) return c;
-    const K = this.RA_DEC_RATIO;
+    const K = this.ratioK();
     const span = Math.min(180, Math.max(c.decMax - c.decMin, c.raLen * 15 / (K * A)));
     const dMid = (c.decMin + c.decMax) / 2;
     let decMin = dMid - span / 2, decMax = dMid + span / 2;
@@ -1589,17 +1634,25 @@ class Component extends DCLogic {
     return this.aspectFit({ raStart: c.raStart, raLen: c.raLen,
                             decMin: Math.max(-90, decMin), decMax: Math.min(90, decMax) });
   }
-  aspectFit(c) {
+  aspectFit(c, k) {
     if (!c) return c;
     const A = this.plotShape();
     if (!isFinite(A) || A <= 0) return c;
     const mid = c.raStart + c.raLen / 2;
     const raLen = Math.min(24, Math.max(0.05,
-      this.RA_DEC_RATIO * (c.decMax - c.decMin) * A / 15));
+      (k || this.ratioK()) * (c.decMax - c.decMin) * A / 15));
     return { raStart: ((mid - raLen / 2) % 24 + 24) % 24, raLen,
              decMin: c.decMin, decMax: c.decMax };
   }
-  applyFit() { const c = this.fitFrame(); if (c) this.setState({ frame: c }); }
+  applyFit() {
+    const region = this.fitRegion();
+    if (!region) return;
+    // Squared against the ratio just chosen rather than the one still in state,
+    // which is the one being replaced. On the standard chart this returns the
+    // region unchanged; in a window of another shape it fills that instead.
+    const ratio = this.ratioFor(region);
+    this.setState({ ratio, frame: this.aspectFit(region, ratio / this.REF_ASPECT) });
+  }
   // where the RA axis starts when nothing is framed
   // The canonical frame starts at RA 0; every other position is a frame that
   // has been translated away from it.
@@ -3215,8 +3268,9 @@ class Component extends DCLogic {
     // restretching the sky.
     {
       const fw = X1 - X0, fh = Y1 - Y0;
-      const sc = Math.max((dTop - dBot) / fh, (axSpan * 15) / (this.RA_DEC_RATIO * fw));
-      const ew = (axSpan * 15) / (this.RA_DEC_RATIO * sc), eh = (dTop - dBot) / sc;
+      const K = this.ratioK();
+      const sc = Math.max((dTop - dBot) / fh, (axSpan * 15) / (K * fw));
+      const ew = (axSpan * 15) / (K * sc), eh = (dTop - dBot) / sc;
       // A pixel of slack: a view already at the ratio lands here with float
       // noise, and letterboxing it by a hundredth of a pixel would move
       // everything the ordinary chart draws.
@@ -4014,8 +4068,7 @@ class Component extends DCLogic {
     // render - without this, a fresh load shows Auto ticked and no frame.
     if (this.state.autoFrame) {
       this._frameSig = this.frameSignature();
-      const c = this.fitFrame();
-      if (c) this.setState({ frame: c });
+      this.applyFit();
     } else if (this.state.frame) {
       // A frame restored from a previous session was fitted to whatever window
       // it was drawn in. Bring it to the ratio now, or it arrives letterboxed
@@ -4037,7 +4090,7 @@ class Component extends DCLogic {
     // so the setState here settles instead of looping.
     if (this.state.autoFrame) {
       const sig = this.frameSignature();
-      if (sig !== this._frameSig) { this._frameSig = sig; const c = this.fitFrame(); if (c) { this.setState({ frame: c }); return; } }
+      if (sig !== this._frameSig) { this._frameSig = sig; this.applyFit(); return; }
     }
     this.ensureCatalogs();
     this.drawHeatmap(this.canvas);
@@ -4377,19 +4430,32 @@ class Component extends DCLogic {
       deleteSite: () => this.deleteSite(),
       fitFrameNow: () => this.applyFit(),
       // back to the canonical turn: whole sky, starting at RA 0
-      fullSky: () => this.setState({ frame: null, autoFrame: false }),
+      fullSky: () => this.setState({ frame: null, autoFrame: false, ratio: this.RATIO_DEFAULT }),
       // the whole sky, translated so tonight's dark window sits in the middle
-      centerUsable: () => this.setFrame({ raStart: this.darkWindow().sun.ra, raLen: 24, decMin: -90, decMax: 90 }),
+      centerUsable: () => {
+        this.setState({ ratio: this.RATIO_DEFAULT });
+        this.setFrame({ raStart: this.darkWindow().sun.ra, raLen: 24, decMin: -90, decMax: 90 });
+      },
       autoFrame: s.autoFrame,
       onAutoFrame: e => {
         const on = e.target.checked;
         // turning it on should fit straight away, not wait for the next change
-        if (on) { const c = this.fitFrame(); this._frameSig = this.frameSignature();
-          this.setState(c ? { autoFrame: true, frame: c } : { autoFrame: true }); }
+        if (on) { this._frameSig = this.frameSignature(); this.applyFit();
+          this.setState({ autoFrame: true }); }
         else this.setState({ autoFrame: false });
       },
       resetSite: () => this.resetSite(),
       toggleMoon: () => this.setState({ showMoon: !this.state.showMoon }),
+      ratioText: (Math.round(s.ratio * 1e4) / 1e4).toString(),
+      onRatio: e => {
+        const v = parseFloat(e.target.value);
+        const ratio = isFinite(v) && v > 0.05 ? Math.min(40, v) : this.RATIO_DEFAULT;
+        // Typing a shape is framing by hand, so it stops the automatic fit the
+        // way panning does, and takes effect on the view already drawn rather
+        // than at whatever redraws next.
+        this.setState({ ratio, autoFrame: false,
+                        frame: this.aspectFit(this.state.frame, ratio / this.REF_ASPECT) });
+      },
       onTz: e => this.setState({ tz: (e && e.target ? e.target.value : '') || '' }),
       togglePlanets: () => this.setState({ showPlanets: !this.state.showPlanets }),
       toggleUsable: () => this.setState({ showUsable: !this.state.showUsable }),
