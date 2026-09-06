@@ -409,6 +409,18 @@
   .site-save { flex-wrap: wrap !important; }
   .site-save #site-name { width: auto !important; flex: 1 1 130px; min-width: 0; }
   .heat-col input[type="range"] { width: 100% !important; min-height: 44px !important; }
+  /* The time row is eight things, and a slider at 100% takes a line to itself
+     and strands the two arrows either side of it - one above and one below the
+     thing they step. The slider gives up room for exactly those two, so the
+     line it sits on is the line they sit on, and the buttons that are not
+     arrows fall to the next line together. Wide mode already fits all six on
+     one line and is left alone. */
+  .page:not([data-wide="1"]) .time-col input[type="range"]:first-of-type {
+    width: auto !important; flex: 1 1 calc(100% - 110px) !important;
+  }
+  .page:not([data-wide="1"]) .time-col input[type="range"]:last-of-type {
+    width: 62px !important; flex: 0 0 62px !important;
+  }
   .heat-col { flex: 1 1 100% !important; }
   .layers button { min-height: 44px !important; }
   .moon-check { min-height: 44px !important; padding: 0 !important; }
@@ -716,46 +728,6 @@
       </div>
     <sc-if value="{{ geoMsg }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #8E897D; padding-bottom: 12px;">{{ geoMsg }}</span></sc-if>
   </div>
-  <div class="tabs" style="width: 100%; max-width: 1160px; display: flex; gap: 8px; border-bottom: 1px solid #2E2C27;">
-    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
-      <button sc-camel-on-click="{{ t.pick }}" title="{{ t.tip }}" style="background: none; border: none; border-bottom: 2px solid {{ t.line }}; color: {{ t.fg }}; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 18px; cursor: pointer;">{{ t.label }}</button>
-    </sc-for>
-  </div>
-  <sc-if value="{{ showChartTab }}" hint-placeholder-val="{{ true }}">
-  <div data-screen-label="Reference chart" class="panel card" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 28px 36px 24px; box-sizing: border-box;">
-    <div class="card-head" style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px;">
-      <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Hours above altitude threshold</div>
-      <div style="display: flex; align-items: center; gap: 20px;">
-        <div style="font-size: 17px; letter-spacing: 0.12em; text-transform: uppercase; color: #D9A960; font-weight: 700; white-space: nowrap;">Latitude {{ latLabel }}</div>
-        <button class="export-btn" sc-camel-on-click="{{ openChartExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this chart">Export…</button>
-      </div>
-    </div>
-    <div class="chart-scroll"><svg sc-camel-view-box="0 0 992 560" style="width: 100%; height: auto; display: block;">
-      <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="7">
-        <line x1="64" x2="968" sc-camel-y1="{{ t.y }}" sc-camel-y2="{{ t.y }}" stroke="#2A2926" stroke-width="1"></line>
-      </sc-for>
-      <sc-for list="{{ xTicks }}" as="t" hint-placeholder-count="13">
-        <line y1="496" y2="502" sc-camel-x1="{{ t.x }}" sc-camel-x2="{{ t.x }}" stroke="#8E897D" stroke-width="1"></line>
-      </sc-for>
-      <sc-for list="{{ peaks }}" as="p" hint-placeholder-count="5">
-        <line y1="16" y2="496" sc-camel-x1="{{ p.x }}" sc-camel-x2="{{ p.x }}" stroke="{{ p.color }}" stroke-width="2" stroke-dasharray="7 6" opacity="0.9"></line>
-      </sc-for>
-      <sc-for list="{{ series }}" as="s" hint-placeholder-count="5">
-        <path sc-camel-d="{{ s.path }}" fill="none" stroke="{{ s.color }}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"></path>
-      </sc-for>
-      <sc-for list="{{ peaks }}" as="p" hint-placeholder-count="5">
-        <circle sc-camel-cx="{{ p.x }}" sc-camel-cy="{{ p.y }}" r="6" fill="{{ p.color }}" stroke="#161616" stroke-width="2"></circle>
-      </sc-for>
-      <line x1="64" x2="968" y1="496" y2="496" stroke="#C9C4B7" stroke-width="1.5"></line>
-      <line x1="64" x2="64" y1="16" y2="496" stroke="#C9C4B7" stroke-width="1.5"></line>
-      <text x="516" y="554" text-anchor="middle" style="font-size: 17px; fill: #F6F5F2; font-weight: 700; font-family: Inter, sans-serif; letter-spacing: 0.06em;">DECLINATION (°)</text>
-      <text x="14" y="256" text-anchor="middle" transform="rotate(-90 14 256)" style="font-size: 17px; fill: #F6F5F2; font-weight: 700; font-family: Inter, sans-serif; letter-spacing: 0.06em;">HOURS ABOVE ALTITUDE</text>
-      <g>{{ tickLabels }}</g>
-      <g>{{ svgLegend }}</g>
-    </svg></div>
-  </div>
-  </sc-if>
-  <sc-if value="{{ showHeatTab }}" hint-placeholder-val="{{ false }}">
   <div data-screen-label="Dark-sky heatmap" class="panel card" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 28px 36px 20px; box-sizing: border-box;">
     <div class="card-head" style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap;">
       <div style="font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1.1; color: #F6F5F2;">Usable dark hours by RA / Dec</div>
@@ -1035,7 +1007,6 @@
     </div>
   </div>
   </div>
-  </sc-if>
   <div class="formula" style="width: 100%; max-width: 1160px; font-size: 13px; color: #5A5751;">cos H = (sin alt − sin φ sin δ) / (cos φ cos δ) · usable = overlap of [RA − H, RA + H] with the astronomical dark window (Sun below −18°), in local sidereal time</div>
 </div>
 </x-dc>
@@ -1166,7 +1137,7 @@ class Component extends DCLogic {
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
-    stars: 1, milkyway: 0.25, contrast: 0.35, tab: 'heat',
+    stars: 1, milkyway: 0.25, contrast: 0.35,
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     // '' follows the site, then the browser, then sidereal; 'LST' pins it to
     // sidereal; anything else is an IANA zone the user picked.
@@ -3222,34 +3193,6 @@ class Component extends DCLogic {
     return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
   }
   // ---------- reference chart data ----------
-  geom() {
-    const X0 = 64, X1 = 968, Y0 = 16, Y1 = 496;
-    return { X0, X1, Y0, Y1, xOf: d => X0 + (d + 90) / 180 * (X1 - X0), yOf: h => Y1 - h / 24 * (Y1 - Y0) };
-  }
-  compute(lat) {
-    const { xOf, yOf } = this.geom();
-    const colors = ['#F3EDDC', '#F5C36A', '#F49E85', '#96D7A0', '#93C4EE'];
-    return [0, 20, 40, 60, 80].map((alt, i) => {
-      let path = '', maxH = -1, maxDec = 0;
-      for (let dec = -90; dec <= 90.001; dec += 0.25) {
-        const d = Math.min(dec, 90), h = this.hoursAbove(lat, alt, d);
-        if (h > maxH) { maxH = h; maxDec = d; }
-        path += (path ? ' L' : 'M') + xOf(d).toFixed(1) + ' ' + yOf(h).toFixed(1);
-      }
-      let circ = null;
-      if (maxH >= 23.999) {
-        const dc = 90 - Math.abs(lat) + alt;
-        if (dc <= 90.001) circ = Math.min(dc, 90) * (lat < 0 ? -1 : 1);
-      }
-      const peakDec = circ !== null ? circ : maxDec, peakH = circ !== null ? 24 : maxH;
-      return {
-        alt, color: colors[i], path, peakDec, peakH,
-        hoursLabel: circ !== null ? '24h' : (maxH <= 0 ? '0h' : maxH.toFixed(1) + 'h'),
-        decLabel: maxH <= 0 ? '\u2014' : '\u03B4 ' + (circ !== null ? (lat < 0 ? '\u2264 ' : '\u2265 ') : '') + peakDec.toFixed(1) + '\u00B0',
-        show: maxH > 0,
-      };
-    });
-  }
   // ---------- heatmap ----------
   // The plot rectangle for a canvas, worked out without drawing anything.
   // A resize needs this before it draws: the frame it should draw depends on
@@ -4155,35 +4098,6 @@ class Component extends DCLogic {
   // ---------- render ----------
   renderVals() {
     const s = this.state, lat = s.lat;
-    const { xOf, yOf } = this.geom();
-    const data = this.compute(lat);
-    const series = data.map(d => ({ path: d.path, color: d.color }));
-    const peaks = data.filter(d => d.show).map(d => ({ x: xOf(d.peakDec), y: yOf(d.peakH), color: d.color }));
-    const xTicks = [], yTicks = [];
-    for (let d = -90; d <= 90; d += 15) xTicks.push({ x: xOf(d), label: String(d) });
-    for (let h = 0; h <= 24; h += 4) yTicks.push({ y: yOf(h), ty: yOf(h) + 4, label: String(h) });
-    const fam = 'Inter, sans-serif';
-    const lblStyle = { fontSize: 16, fill: '#E8E4D8', fontWeight: 600, fontFamily: fam };
-    const tickLabels = React.createElement('g', null,
-      yTicks.map((t, i) => React.createElement('text', { key: 'y' + i, x: 52, y: t.ty, textAnchor: 'end', style: lblStyle }, t.label)),
-      xTicks.map((t, i) => React.createElement('text', { key: 'x' + i, x: t.x, y: 520, textAnchor: 'middle', style: lblStyle }, t.label))
-    );
-    const hdrStyle = { fontSize: 13, fontWeight: 700, fill: '#8E897D', letterSpacing: '0.1em', fontFamily: fam };
-    const lx = lat >= 0 ? 92 : 560;
-    const svgLegend = React.createElement('g', null,
-      React.createElement('rect', { x: lx - 12, y: 20, width: 350, height: 220, fill: '#161616', opacity: 0.88 }),
-      React.createElement('text', { x: lx + 172, y: 44, textAnchor: 'end', style: hdrStyle }, 'PEAK'),
-      React.createElement('text', { x: lx + 196, y: 44, style: hdrStyle }, 'DECLINATION'),
-      data.map((d, i) => {
-        const ly = 76 + i * 33;
-        return React.createElement('g', { key: i },
-          React.createElement('line', { x1: lx, x2: lx + 30, y1: ly - 5, y2: ly - 5, stroke: d.color, strokeWidth: 4.5, strokeLinecap: 'round' }),
-          React.createElement('text', { x: lx + 40, y: ly, style: { fontSize: 16.5, fontWeight: 700, fill: '#F6F5F2', fontFamily: fam } }, 'Alt > ' + d.alt + '\u00B0'),
-          React.createElement('text', { x: lx + 172, y: ly, textAnchor: 'end', style: { fontSize: 16.5, fontWeight: 600, fill: '#E8E4D8', fontFamily: fam } }, d.hoursLabel),
-          React.createElement('text', { x: lx + 196, y: ly, style: { fontSize: 16.5, fontWeight: 500, fill: '#C9C4B7', fontFamily: fam } }, d.decLabel)
-        );
-      })
-    );
     const dark = this.darkWindow();
     const darkInfo = dark.L <= 0 ? 'No astronomical darkness' :
       dark.L >= 24 ? 'Dark all day \u00B7 24.0h' :
@@ -4391,7 +4305,7 @@ class Component extends DCLogic {
           hoursColor: p.hours > 0 ? '#D9A960' : '#5A5751',
         })),
       latLabel: Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N'),
-      darkInfo, series, peaks, xTicks, yTicks, tickLabels, svgLegend,
+      darkInfo,
       thrPct: String(s.thr),
       thrLabel: '>' + s.thr + '\u00B0',
       hmRef: el => {
@@ -4531,17 +4445,6 @@ class Component extends DCLogic {
       toggleSun: () => this.setState({ showSun: !this.state.showSun }),
       geoMsg: this.state.geoMsg,
       obsSel: this.state.obsSel,
-      showChartTab: this.state.tab === 'chart',
-      showHeatTab: this.state.tab === 'heat',
-      tabs: [
-        { id: 'heat', label: 'Usable dark hours', tip: 'Usable hours for every patch of sky, by RA and declination' },
-        { id: 'chart', label: 'Hours above altitude', tip: 'Hours above 0, 20, 40, 60 and 80 degrees, against declination' },
-      ].map(t => ({
-        label: t.label, tip: t.tip,
-        line: this.state.tab === t.id ? '#D9A960' : 'transparent',
-        fg: this.state.tab === t.id ? '#F6F5F2' : '#8E897D',
-        pick: () => this.setState({ tab: t.id }),
-      })),
       obsOptions: [{ value: 'custom', label: 'Custom / my location' }].concat(this.allSites().map(o => ({ value: o.id, label: o.name }))),
       onObs: e => {
         const o = this.allSites().find(x => x.id === e.target.value);
@@ -4560,7 +4463,6 @@ class Component extends DCLogic {
           { timeout: 10000 }
         );
       },
-      openChartExport: () => this.openExport('chart'),
       openHeatExport: () => this.openExport('heat'),
       exOpen: !!s.exOpen,
       exName: s.exName || '',
@@ -4718,9 +4620,7 @@ class Component extends DCLogic {
     const s = this.state;
     const site = s.obsSel && s.obsSel !== 'custom' ? this.slug(this.obsName().replace(/ \u00B7 $/, '')) : '';
     const lat = 'lat' + (s.lat < 0 ? 'm' : '') + Math.abs(s.lat).toFixed(2).replace('.', '-');
-    return which === 'chart'
-      ? ['hours-above-altitude', site, lat].filter(Boolean).join('-')
-      : ['dark-hours-map', site, s.date, lat].filter(Boolean).join('-');
+    return ['dark-hours-map', site, s.date, lat].filter(Boolean).join('-');
   }
 
   exportOpts() {
@@ -4730,7 +4630,7 @@ class Component extends DCLogic {
 
   async buildExport(which, opts) {
     await document.fonts.ready;
-    const cv = which === 'chart' ? this.buildChartExport(opts) : this.buildHeatExport(opts);
+    const cv = this.buildHeatExport(opts);
     if (opts.night) this.redFilter(cv);
     return cv;
   }
@@ -4787,22 +4687,6 @@ class Component extends DCLogic {
     this.setState({ exOpen: false });
   }
 
-  buildChartExport(opts) {
-    const s = this.state, lat = s.lat, data = this.compute(lat);
-    const chartW = 1160 - 72, sc = chartW / 992, chartH = 560 * sc;
-    const yFoot = 92 + chartH + 12;
-    const { cv, ctx, W, PAD } = this.exportSetup(yFoot + 44, opts.scale);
-    ctx.fillStyle = '#F6F5F2'; ctx.font = '800 28px Archivo, sans-serif';
-    ctx.fillText('HOURS ABOVE ALTITUDE THRESHOLD', PAD, 58);
-    ctx.fillStyle = '#D9A960'; ctx.font = '700 15px Inter, sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('LATITUDE ' + Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N'), W - PAD, 58);
-    ctx.textAlign = 'left';
-    ctx.save(); ctx.translate(PAD, 92); ctx.scale(sc, sc);
-    this.drawChart(ctx, data, null, lat);
-    ctx.restore();
-    this.exportFooter(ctx, W, PAD, yFoot, this.obsName() + '\u03C6 ' + Math.abs(lat).toFixed(1) + '\u00B0 ' + (lat < 0 ? 'S' : 'N') + ' \u00B7 hours per sidereal day above each altitude threshold');
-    return cv;
-  }
   buildHeatExport(opts) {
     const s = this.state, dark = this.darkWindow();
     const chartW = 1160 - 72, sc = chartW / 992, hmH = 620 * sc;
@@ -4840,59 +4724,6 @@ class Component extends DCLogic {
     this.exportLegend(ctx, W, PAD, yLegend);
     this.exportFooter(ctx, W, PAD, yFoot, this.locFooter() + ' \u00B7 threshold Alt > ' + s.thr + '\u00B0 \u00B7 Sun below \u221218\u00B0');
     return cv;
-  }
-  drawChart(ctx, data, dark, lat) { // draws 992x560 reference chart at ctx origin
-    const { xOf, yOf } = this.geom();
-    ctx.strokeStyle = '#2A2926'; ctx.lineWidth = 1;
-    for (let h = 0; h <= 24; h += 4) { const y = yOf(h); ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(968, y); ctx.stroke(); }
-    ctx.strokeStyle = '#8E897D';
-    for (let d = -90; d <= 90; d += 15) { const x = xOf(d); ctx.beginPath(); ctx.moveTo(x, 496); ctx.lineTo(x, 502); ctx.stroke(); }
-    ctx.setLineDash([7, 6]); ctx.lineWidth = 2; ctx.globalAlpha = 0.9;
-    for (const d of data) if (d.show) { const x = xOf(d.peakDec); ctx.strokeStyle = d.color; ctx.beginPath(); ctx.moveTo(x, 16); ctx.lineTo(x, 496); ctx.stroke(); }
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
-    ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    for (const d of data) {
-      ctx.strokeStyle = d.color; ctx.beginPath();
-      let first = true;
-      for (let dec = -90; dec <= 90.001; dec += 0.25) {
-        const dd = Math.min(dec, 90), x = xOf(dd), y = yOf(this.hoursAbove(lat, d.alt, dd));
-        if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-    for (const d of data) if (d.show) {
-      ctx.fillStyle = d.color; ctx.strokeStyle = '#161616'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(xOf(d.peakDec), yOf(d.peakH), 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    }
-    ctx.strokeStyle = '#C9C4B7'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(64, 496); ctx.lineTo(968, 496); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(64, 16); ctx.lineTo(64, 496); ctx.stroke();
-    ctx.fillStyle = '#E8E4D8'; ctx.font = '600 16px Inter, sans-serif';
-    ctx.textAlign = 'right';
-    for (let h = 0; h <= 24; h += 4) ctx.fillText(String(h), 52, yOf(h) + 4);
-    ctx.textAlign = 'center';
-    for (let d = -90; d <= 90; d += 15) ctx.fillText(String(d), xOf(d), 520);
-    ctx.fillStyle = '#F6F5F2'; ctx.font = '700 17px Inter, sans-serif';
-    ctx.fillText('DECLINATION (\u00B0)', 516, 554);
-    ctx.save(); ctx.translate(14, 256); ctx.rotate(-Math.PI / 2);
-    ctx.fillText('HOURS ABOVE ALTITUDE', 0, 0); ctx.restore();
-    const lx = lat >= 0 ? 92 : 560;
-    ctx.globalAlpha = 0.88; ctx.fillStyle = '#161616'; ctx.fillRect(lx - 12, 20, 350, 220); ctx.globalAlpha = 1;
-    ctx.fillStyle = '#8E897D'; ctx.font = '700 13px Inter, sans-serif';
-    ctx.textAlign = 'right'; ctx.fillText('PEAK', lx + 172, 44);
-    ctx.textAlign = 'left'; ctx.fillText('DECLINATION', lx + 196, 44);
-    data.forEach((d, i) => {
-      const ly = 76 + i * 33;
-      ctx.strokeStyle = d.color; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(lx, ly - 5); ctx.lineTo(lx + 30, ly - 5); ctx.stroke();
-      ctx.fillStyle = '#F6F5F2'; ctx.font = '700 16.5px Inter, sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText('Alt > ' + d.alt + '\u00B0', lx + 40, ly);
-      ctx.fillStyle = '#E8E4D8'; ctx.font = '600 16.5px Inter, sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText(d.hoursLabel, lx + 172, ly);
-      ctx.fillStyle = '#C9C4B7'; ctx.font = '500 16.5px Inter, sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(d.decLabel, lx + 196, ly);
-    });
-    ctx.textAlign = 'left';
   }
 }
 </script>
