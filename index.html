@@ -741,7 +741,7 @@
       <div class="site-group" style="display: flex; flex-direction: column; gap: 6px;">
         <label for="site-in-w" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Site</label>
         <div style="display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap;">
-          <sc-raw-select id="site-in-w" value="{{ obsSel }}" sc-camel-on-change="{{ onObs }}" style="flex: 1 1 190px; min-width: 0; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
+          <sc-raw-select id="site-in-w" value="{{ obsSel }}" sc-camel-on-change="{{ onObs }}" style="flex: 1 1 100%; width: 100%; min-width: 0; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
             <sc-for list="{{ obsOptions }}" as="o" hint-placeholder-count="7">
               <option value="{{ o.value }}">{{ o.label }}</option>
             </sc-for>
@@ -755,6 +755,16 @@
             <input id="lon-w" type="number" min="-180" max="180" step="0.5" sc-camel-value="{{ lonText }}" sc-camel-on-change="{{ onLon }}" style="width: 88px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
           </div>
           <button sc-camel-on-click="{{ useMyLocation }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Read latitude and longitude from this device">Use my location</button>
+        </div>
+        <div style="display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <label for="site-name-w" style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5A5751;">Save as</label>
+            <input id="site-name-w" type="text" placeholder="Site name" value="{{ siteName }}" sc-camel-on-input="{{ onSiteName }}" style="width: 168px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
+          </div>
+          <button sc-camel-on-click="{{ saveSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Save these coordinates under the name on the left">Save</button>
+          <sc-if value="{{ isSavedSite }}" hint-placeholder-val="{{ false }}">
+            <button sc-camel-on-click="{{ deleteSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Forget this saved site">Delete</button>
+          </sc-if>
         </div>
         <sc-if value="{{ geoMsg }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #8E897D;">{{ geoMsg }}</span></sc-if>
       </div>
