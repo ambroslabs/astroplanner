@@ -394,7 +394,20 @@
   .bar button, .tabs button, .controls button,
   .bar input, .controls input, #obs-in { min-height: 44px !important; }
   .planet-table span { font-size: 13px !important; }
-  .planet-table > div > span:first-child { flex: 0 0 74px !important; }
+  /* Four columns of fixed width plus their gaps came to more than a 320px
+     phone has, and the last one carries a word that will not shrink, so the
+     row pushed the page wider than the screen. They give way in proportion
+     now rather than each insisting on its own width. */
+  .planet-table > div { gap: 6px !important; }
+  .planet-table > div > span { min-width: 0 !important; overflow: hidden; text-overflow: ellipsis; }
+  .planet-table > div > span:first-child { flex: 1 1 66px !important; }
+  .planet-table > div > span:nth-child(2),
+  .planet-table > div > span:nth-child(3) { flex: 0 1 60px !important; }
+  .planet-table > div > span:last-child { flex: 0 1 auto !important; }
+  /* Save and Delete sit beside the name box while there is room for them and
+     drop below it when there is not, instead of running off the card. */
+  .site-save { flex-wrap: wrap !important; }
+  .site-save #site-name { width: auto !important; flex: 1 1 130px; min-width: 0; }
   .heat-col input[type="range"] { width: 100% !important; min-height: 44px !important; }
   .heat-col { flex: 1 1 100% !important; }
   .layers button { min-height: 44px !important; }
@@ -693,7 +706,7 @@
       <button sc-camel-on-click="{{ resetSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-bottom: 1px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Go back to the default site, keeping any you have saved">Reset site</button>
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label for="site-name" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Save these coordinates as</label>
-        <div style="display: flex; align-items: stretch; gap: 8px;">
+        <div class="site-save" style="display: flex; align-items: stretch; gap: 8px;">
           <input id="site-name" type="text" placeholder="Site name" value="{{ siteName }}" sc-camel-on-input="{{ onSiteName }}" style="width: 190px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;">
           <button sc-camel-on-click="{{ saveSite }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Save these coordinates under the name on the left">Save</button>
           <sc-if value="{{ isSavedSite }}" hint-placeholder-val="{{ false }}">
