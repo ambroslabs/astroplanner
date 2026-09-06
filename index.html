@@ -1101,6 +1101,12 @@ class Component extends DCLogic {
     { id: 'vdb', label: 'van den Bergh', pfx: 'vdB', color: '#8FD1D1', n: 158, file: 'vdb.fe173aa9fdeb.txt' },
     { id: 'lynds', label: 'Lynds dark', pfx: 'LDN', color: '#9C8FA8', n: 1787, file: 'lynds.e076bd266086.txt' },
     { id: 'arp', label: 'Arp', pfx: 'Arp', color: '#D19AC0', n: 338, file: 'arp.d9469aa3720d.txt' },
+    // Not a deep-sky catalogue: stars, and only the ones a person can name.
+    // A star is here if it has a proper name, a Bayer letter or a Flamsteed
+    // number, and absent if all it has is catalogue numbers - which is what
+    // takes the Bright Star Catalogue's 9,110 down to 3,266.
+    { id: 'stars', label: 'Named stars', pfx: '', color: '#DDE4EE', n: 3266,
+      stars: true, file: 'stars.658896d567cf.txt' },
   ];
   // Where the catalogue files are fetched from. Relative by default, so a clone
   // works from any directory and straight off the disk. The beta build rewrites
@@ -2272,7 +2278,36 @@ class Component extends DCLogic {
 
   // Each row is a delta from the row before it, so decoding is a running total.
   // scripts/build-catalogs.py writes them and documents the field order.
+  // The star file is its own shape: no type, no size, no cross-reference, and
+  // three names instead of one. What it shares with the rest is the row it
+  // produces, so everything downstream - drawing, labelling, clicking, the
+  // search - carries on without knowing which kind of file it came from.
+  parseStars(txt, def) {
+    const out = [];
+    let id = 0, ra = 0, dec = 0;
+    for (const line of txt.split('\n')) {
+      if (!line || line[0] === '#') continue;
+      const f = line.split(',');
+      ra += parseInt(f[0], 36); dec += parseInt(f[1], 36);
+      if (!isFinite(ra) || !isFinite(dec)) continue;
+      const con = f[3] || '', bayer = f[4] || '', flam = f[5] || '', proper = f[6] || '';
+      // The order the label is chosen in: the name someone would say, then the
+      // letter, then the number. Whatever is not chosen becomes the rest of
+      // the star's names, which is what the panel shows when it is clicked.
+      const forms = [proper, bayer && bayer + ' ' + con, flam && flam + ' ' + con].filter(Boolean);
+      out.push({
+        id: ++id, cat: def.id,
+        ra: ((ra / 3600 / 15) % 24 + 24) % 24, dec: dec / 3600,
+        mag: parseInt(f[2], 36) / 100, type: 'Star', con,
+        maj: null, min: null, pa: null, desig: '', hub: '', sbr: null,
+        name: '', label: forms[0], alt: forms.slice(1),
+      });
+    }
+    return out;
+  }
+
   parseCatalog(txt, def) {
+    if (def.stars) return this.parseStars(txt, def);
     const out = [];
     let id = 0, ra = 0, dec = 0;
     for (const line of txt.split('\n')) {
@@ -2403,7 +2438,14 @@ class Component extends DCLogic {
         const y = yOf(o.dec);
         x -= period * Math.round((x - midX) / period);
         const majPx = o.maj ? o.maj / 60 * pxPerDeg : 0;
-        let r = o.mag == null ? 1.9 : Math.max(1.4, 3.6 - o.mag * 0.17);
+        // Stars get a steeper curve than deep-sky objects do. The catalogue
+        // scale is nearly flat because a nebula's brightness says little about
+        // how big it looks; for stars the magnitude is the whole appearance,
+        // and Sirius against a sixth-magnitude neighbour should read as the
+        // difference it is.
+        let r = o.mag == null ? 1.9
+              : def.stars ? Math.max(1.1, 4.4 - o.mag * 0.45)
+              : Math.max(1.4, 3.6 - o.mag * 0.17);
         // Cull by the object's own extent, not by its centre. A fixed margin
         // drops an ellipse whose middle has just left the crop while most of it
         // is still on screen, so panning made large objects appear from nowhere
@@ -2591,6 +2633,10 @@ class Component extends DCLogic {
     const out = [];
     out.push({ t: o.label, size: 15, weight: 700, color: def.color });
     if (o.name) out.push({ t: o.name, size: 13, color: '#F6F5F2' });
+    // A star is labelled by one of its names and has the others here. The
+    // chart shows the name you would say; the panel shows what else it is
+    // called, which is the part you cannot fit on a chart.
+    if (o.alt && o.alt.length) out.push({ t: o.alt.join('  \u00B7  '), size: 13, color: '#F6F5F2' });
     const kind = this.OBJ_TYPES[o.type] || o.type || '';
     const con = o.con ? (this.CONST_NAMES[o.con] || o.con) : '';
     const where = kind + (con ? ' in ' + con : '');
@@ -2806,6 +2852,13 @@ class Component extends DCLogic {
         const desig = o.label.toLowerCase().replace(/[\s-]+/g, '');
         let score = null;
         if (desig.indexOf(flat) === 0) score = desig === flat ? 0 : 1;
+        // A star wears one of its names and keeps the rest. Searching for the
+        // one it is not currently labelled with should still find it - nobody
+        // should have to know that this chart calls 9 CMa "Sirius".
+        else if (o.alt && o.alt.some(a => {
+          const d = a.toLowerCase().replace(/[\s-]+/g, '');
+          return d.indexOf(flat) === 0;
+        })) score = 1;
         else if (o.name && o.name.toLowerCase().indexOf(needle) >= 0) {
           score = o.name.toLowerCase().indexOf(needle) === 0 ? 2 : 3;
         }
