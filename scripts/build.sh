@@ -39,6 +39,7 @@ cp -r "$ROOT/assets" "$OUT/assets"
 # ODbL and CC BY-SA both make it a condition of use, and the page links to it.
 # Served as .txt so a browser shows it rather than offering to download it.
 cp "$ROOT/ATTRIBUTION.md" "$OUT/attribution.txt"
+cp "$ROOT/LICENSE" "$OUT/license.txt"
 cp -r "$ROOT/licenses" "$OUT/licenses"
 
 if [[ -n "${CF_WEB_ANALYTICS_TOKEN:-}" ]]; then
@@ -86,11 +87,12 @@ BASE
   python3 - "$OUT/index.html" <<'ATTR'
 import sys
 path = sys.argv[1]
-old = 'href="/attribution.txt"'
-new = 'href="/beta/attribution.txt"'
 html = open(path, encoding='utf-8').read()
-assert html.count(old) == 1, 'expected exactly one attribution link'
-open(path, 'w', encoding='utf-8').write(html.replace(old, new))
+for old, new in [('href="/attribution.txt"', 'href="/beta/attribution.txt"'),
+                 ('href="/license.txt"', 'href="/beta/license.txt"')]:
+    assert html.count(old) == 1, 'expected exactly one ' + old
+    html = html.replace(old, new)
+open(path, 'w', encoding='utf-8').write(html)
 ATTR
   echo "build: stamped as beta"
 fi

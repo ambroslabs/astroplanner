@@ -8,6 +8,10 @@ this file is part of what the site distributes, not a footnote to it.
 A plain-text copy is served at <https://astroplanner.ambroslabs.io/attribution.txt>
 and linked from the chart itself.
 
+The planner's own source code is MIT licensed — see [LICENSE](LICENSE). That
+licence covers the code and nothing else: everything listed below arrived under
+someone else's terms and keeps them.
+
 ---
 
 ## Deep-sky object catalogues

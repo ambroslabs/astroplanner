@@ -123,6 +123,14 @@ and the two sit side by side. The beta build rewrites its fetch path to the
 absolute one to make that possible; the default stays relative so a clone still
 runs from any directory.
 
+## Licence
+
+The source code is MIT licensed — see [LICENSE](LICENSE).
+
+That covers the code only. The catalogues, the timezone raster and the
+typefaces are other people's work under their own terms, two of them
+share-alike, and the MIT licence neither covers nor overrides them.
+
 ## Data, attribution and licences
 
 The catalogues, the timezone raster and the typefaces all come from other
