@@ -1633,11 +1633,12 @@ class Component extends DCLogic {
 
     // Topmost first: the readouts are drawn in order, so the last one painted
     // is the one on top and the one a press should pick up.
-    const boxAt = p => {
-      const list = this._probeBoxes || [];
+    const boxAt = (p, pad) => {
+      const list = this._probeBoxes || [], g = pad || 0;
       for (let i = list.length - 1; i >= 0; i--) {
         const b = list[i];
-        if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) return b;
+        if (p.x >= b.x - g && p.x <= b.x + b.w + g
+         && p.y >= b.y - g && p.y <= b.y + b.h + g) return b;
       }
       return null;
     };
@@ -1645,11 +1646,11 @@ class Component extends DCLogic {
     // The crosshair itself, for moving the point rather than its label. Tested
     // after the box, since the box is drawn on top and should win where they
     // overlap.
-    const pointAt = p => {
+    const pointAt = (p, pad) => {
       const list = this._probeBoxes || [];
       for (let i = list.length - 1; i >= 0; i--) {
         const b = list[i];
-        if (Math.hypot(p.x - b.px, p.y - b.py) <= 11) return b;
+        if (Math.hypot(p.x - b.px, p.y - b.py) <= 11 + (pad || 0)) return b;
       }
       return null;
     };
@@ -1733,8 +1734,16 @@ class Component extends DCLogic {
         e.preventDefault();
         return;
       }
+      // Labels, points and panels used to be mouse-only: a finger fell straight
+      // through to the pan underneath, so dragging a label on a phone moved the
+      // map instead, and tapping one added a stray point on the way past. They
+      // answer to a finger in wide mode now, which is where the canvas owns the
+      // gesture - in the ordinary layout there is a page to scroll and grabbing
+      // at things would be taking that away.
+      const grab = e.pointerType !== 'touch' || this.state.wide;
+      const pad = e.pointerType === 'touch' ? 7 : 0;
       // Panels sit above everything, so they get first refusal on a press.
-      const panel = e.pointerType === 'touch' ? null : (() => {
+      const panel = !grab ? null : (() => {
         const list = this._infoBoxes || [];
         for (let i = list.length - 1; i >= 0; i--) {
           const b2 = list[i];
@@ -1745,26 +1754,29 @@ class Component extends DCLogic {
       if (panel) {
         this._drag = { mode: 'panel', idx: panel.i, moved: false,
                        ox: p.x - panel.x, oy: p.y - panel.y,
-                       x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         e.preventDefault();
         return;
       }
-      const onPoint = e.pointerType === 'touch' ? null : pointAt(p);
-      if (onPoint && !boxAt(p)) {
+      const onPoint = grab ? pointAt(p, pad) : null;
+      if (onPoint && !boxAt(p, pad)) {
         // Where the readout sits right now, so it can be held there while the
         // point travels underneath it.
         this._drag = { mode: 'point', idx: onPoint.i, moved: false,
                        lockX: onPoint.x, lockY: onPoint.y,
-                       x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         e.preventDefault();
         return;
       }
-      const hit = e.pointerType === 'touch' ? null : boxAt(p);
+      const hit = grab ? boxAt(p, pad) : null;
       if (hit) {
         this._drag = { mode: 'label', idx: hit.i, ox: p.x - hit.x, oy: p.y - hit.y,
-                       x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         e.preventDefault();
         return;
@@ -3584,18 +3596,22 @@ class Component extends DCLogic {
     // colorbar - just outside the plot on the right, wherever that now is. It
     // used to sit at a fixed 928, which was the right edge back when the chart
     // was always 992 wide and is the middle of it once the window sets the size.
-    // Inside the right edge now, and shortened so its readings have somewhere
-    // to sit: they move to the map side of the bar, which is the only side
-    // there is once the bar is against the edge of the screen.
+    // The bar lies along the bottom on a narrow screen. Standing at the right
+    // edge it costs 13px of width plus the width of its readings, and on a
+    // phone held upright that is the scarce direction - the same 60-odd pixels
+    // buys far more sky lying down, where the only thing under it is the RA
+    // axis it now sits above. Landscape keeps it at the side, where height is
+    // the scarce direction instead.
+    const flat = overlay && W < 700;
     const cbW = overlay ? 13 : 18;
     const CB = overlay ? X1 - 12 - cbW : X1 + 28;
-    // The buttons float over the top-right corner, which is exactly where the
-    // bar hangs, so it starts below them rather than under them. Measured off
-    // the bar itself rather than written in: the buttons are a row of words on
-    // a desktop and a row of glyphs on a phone, and those are not the same
-    // height. Only the top is affected - the bar keeps the rest of the height.
+    // Standing up, the buttons float over the top-right corner, which is
+    // exactly where the bar hangs, so it starts below them rather than under
+    // them. Measured off the buttons rather than written in: they are a row of
+    // words on a desktop and a row of glyphs on a phone, and those are not the
+    // same height. Only the top is affected - the bar keeps the rest.
     let barTop = Y0 + 46;
-    if (overlay) {
+    if (overlay && !flat) {
       const tb = document.querySelector('.topbar');
       if (tb) {
         const tbb = tb.getBoundingClientRect(), cr = canvas.getBoundingClientRect();
@@ -3605,29 +3621,41 @@ class Component extends DCLogic {
     const BT = overlay ? Math.min(barTop, Y0 + (Y1 - Y0) * 0.4) : Y0;
     this._barTop = BT;   // remembered like _axis, so a test can check it clears the buttons
     const BB = overlay ? Y1 - 34 : Y1;
+    // One rectangle either way, so everything below is written once. Lying
+    // down it clears the declination numbers on the left and sits above the RA
+    // numbers; standing it is the strip it always was.
+    const bar = flat ? { x: X0 + 44, y: Y1 - 46, w: (X1 - 12) - (X0 + 44), h: 13 }
+                     : { x: CB, y: BT, w: cbW, h: BB - BT };
+    this._barRect = bar; this._barFlat = flat;
+    // Slice i of 200, running from best to none - down the bar, or along it.
+    const slice = i => flat
+      ? { x: bar.x + i / 200 * bar.w, y: bar.y, w: bar.w / 200 + 1, h: bar.h }
+      : { x: bar.x, y: bar.y + i / 200 * bar.h, w: bar.w, h: bar.h / 200 + 1 };
     const denomL = L >= 24 ? 24 : L;
     // A ramp of dark-on-dark says little, so the bar carries a sample star
     // chain under the veil: it shows what the mask actually does to the sky
-    // at each level, clear at the top and hidden at the bottom.
-    ctx.fillStyle = '#161616'; ctx.fillRect(CB, BT, cbW, BB - BT);
+    // at each level, clear at the best end and hidden at the other.
+    ctx.fillStyle = '#161616'; ctx.fillRect(bar.x, bar.y, bar.w, bar.h);
     // the same lifted ground as the chart, so the bar reads the contrast
     // control even at the levels where the sample chain says little
     for (let i = 0; i <= 200; i++) {
-      const t = 1 - i / 200, y = BT + i / 200 * (BB - BT);
+      const t = 1 - i / 200, r = slice(i);
       const g = this.state.contrast * Math.pow(t, maskP);
       ctx.fillStyle = 'rgba(' + this.LIFT.join(',') + ',' + Math.max(0, Math.min(1, g)).toFixed(3) + ')';
-      ctx.fillRect(CB, y, cbW, (BB - BT) / 200 + 1);
+      ctx.fillRect(r.x, r.y, r.w, r.h);
     }
     ctx.save();
-    ctx.beginPath(); ctx.rect(CB, BT, cbW, BB - BT); ctx.clip();
+    ctx.beginPath(); ctx.rect(bar.x, bar.y, bar.w, bar.h); ctx.clip();
     // A fixed opacity, not the constellation slider: this is a legend for the
     // mask and has to stay readable even with constellations turned off.
     ctx.globalAlpha = 0.75;
     const N = 20, nodes = [];
     for (let i = 0; i < N; i++) {
       // an irrational step keeps the chain from settling into a visible period
-      nodes.push([CB + cbW / 2 + Math.sin(i * 2.399) * (cbW / 2 - 4.5),
-                  BT + 12 + i * (BB - BT - 24) / (N - 1)]);
+      const along = i / (N - 1), wob = Math.sin(i * 2.399);
+      nodes.push(flat
+        ? [bar.x + 12 + along * (bar.w - 24), bar.y + bar.h / 2 + wob * (bar.h / 2 - 4.5)]
+        : [bar.x + bar.w / 2 + wob * (bar.w / 2 - 4.5), bar.y + 12 + along * (bar.h - 24)]);
     }
     ctx.strokeStyle = 'rgba(203,214,232,0.85)'; ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -3637,25 +3665,41 @@ class Component extends DCLogic {
     for (const q of nodes) { ctx.beginPath(); ctx.arc(q[0], q[1], 2.1, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
     for (let i = 0; i <= 200; i++) {
-      const t = 1 - i / 200, y = BT + i / 200 * (BB - BT);
+      const t = 1 - i / 200, r = slice(i);
       const a = this.state.maskStrength * (1 - Math.pow(t, maskP));
       ctx.fillStyle = 'rgba(8,8,8,' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
-      ctx.fillRect(CB, y, cbW, (BB - BT) / 200 + 1);
+      ctx.fillRect(r.x, r.y, r.w, r.h);
     }
-    ctx.strokeStyle = '#8E897D'; ctx.strokeRect(CB, BT, cbW, BB - BT);
+    ctx.strokeStyle = '#8E897D'; ctx.strokeRect(bar.x, bar.y, bar.w, bar.h);
     ctx.fillStyle = '#E8E4D8'; ctx.font = '600 13px Inter, sans-serif';
-    // Above and below the bar when it is overlaid, rather than beside it -
-    // beside it is off the edge of the screen.
-    ctx.textAlign = overlay ? 'right' : 'left';
-    const lx = overlay ? CB - 7 : CB + cbW + 6;
-    this.axisText(ctx, denomL > 0 ? denomL.toFixed(1) + 'h' : '\u2014', lx, BT + 12);
-    this.axisText(ctx, 'best', lx, overlay ? BT + 27 : BT + 28);
-    this.axisText(ctx, '0h', lx, overlay ? BB - 16 : BB - 16);
-    this.axisText(ctx, 'none', lx, overlay ? BB - 2 : BB);
-    ctx.save(); ctx.translate(overlay ? CB - 5 : CB - 8, (BT + BB) / 2); ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = 'center'; ctx.font = '700 12px Inter, sans-serif';
-    ctx.fillStyle = overlay ? '#C9C4B7' : '#8E897D';
-    this.axisText(ctx, 'USABLE DARK HOURS', 0, 0); ctx.restore();
+    const bestL = denomL > 0 ? denomL.toFixed(1) + 'h' : '—';
+    if (flat) {
+      // One line above the bar: the two ends at the two ends, and the title in
+      // the middle if what is left will hold it. Measured rather than assumed,
+      // because the width here is a phone's and the title is not short.
+      const ty = bar.y - 7;
+      ctx.textAlign = 'left';  this.axisText(ctx, bestL + ' best', bar.x, ty);
+      ctx.textAlign = 'right'; this.axisText(ctx, '0h none', bar.x + bar.w, ty);
+      const used = ctx.measureText(bestL + ' best').width + ctx.measureText('0h none').width;
+      ctx.font = '700 12px Inter, sans-serif'; ctx.fillStyle = '#C9C4B7';
+      if (bar.w - used - 24 > ctx.measureText('USABLE DARK HOURS').width) {
+        ctx.textAlign = 'center';
+        this.axisText(ctx, 'USABLE DARK HOURS', bar.x + bar.w / 2, ty);
+      }
+    } else {
+      // Above and below the bar when it is overlaid, rather than beside it -
+      // beside it is off the edge of the screen.
+      ctx.textAlign = overlay ? 'right' : 'left';
+      const lx = overlay ? bar.x - 7 : bar.x + bar.w + 6;
+      this.axisText(ctx, bestL, lx, BT + 12);
+      this.axisText(ctx, 'best', lx, overlay ? BT + 27 : BT + 28);
+      this.axisText(ctx, '0h', lx, BB - 16);
+      this.axisText(ctx, 'none', lx, overlay ? BB - 2 : BB);
+      ctx.save(); ctx.translate(overlay ? bar.x - 5 : bar.x - 8, (BT + BB) / 2); ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center'; ctx.font = '700 12px Inter, sans-serif';
+      ctx.fillStyle = overlay ? '#C9C4B7' : '#8E897D';
+      this.axisText(ctx, 'USABLE DARK HOURS', 0, 0); ctx.restore();
+    }
     if (L <= 0) {
       ctx.fillStyle = 'rgba(10,10,10,0.6)'; ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
       ctx.fillStyle = '#F6F5F2'; ctx.font = '800 24px Archivo, sans-serif'; ctx.textAlign = 'center';
