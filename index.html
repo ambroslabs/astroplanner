@@ -478,6 +478,13 @@
   padding: 4px 14px 8px; max-height: 176px; overflow-y: auto;
 }
 .page[data-wide="1"] .legend-wrap .layers { border-top-color: #2A2926; margin-top: 2px; }
+/* Credit for the data, in the strip that carries the other reference matter. */
+.credits {
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid #2A2926;
+  font-size: 11px; line-height: 1.65; color: #5A5751;
+}
+.credits a { color: #8E897D; text-decoration: underline; text-underline-offset: 2px; }
+.credits a:hover { color: #C9C4B7; }
 .page[data-wide="1"][data-controls="0"] .legend-wrap { display: none !important; }
 
 /* Phones, and any window too short for a side panel. The panel stops being a
@@ -895,7 +902,18 @@
           <span style="letter-spacing: 0; text-transform: none; color: #C9C4B7; min-width: 34px;">{{ densityLabel }}</span>
         </label>
       </div>
-      <sc-if value="{{ showPlanets }}" hint-placeholder-val="{{ true }}">
+            <!-- Three of the sources make attribution a condition of use rather than a
+           courtesy, so the credit travels with the page. The long version is
+           served alongside it. -->
+      <div class="credits">
+        Data &#183; <a href="https://github.com/mattiaverga/OpenNGC" target="_blank" rel="noopener">OpenNGC</a> (CC BY-SA 4.0)
+        &#183; Sharpless, Barnard, van den Bergh, Lynds and Arp via <a href="https://vizier.cds.unistra.fr/" target="_blank" rel="noopener">VizieR</a>,
+        names from <a href="https://simbad.cds.unistra.fr/" target="_blank" rel="noopener">SIMBAD</a>, both CDS Strasbourg
+        &#183; list membership from <a href="https://en.wikipedia.org/wiki/Messier_object" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA 4.0)
+        &#183; time zones from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors (ODbL) via <a href="https://github.com/evansiroky/timezone-boundary-builder" target="_blank" rel="noopener">timezone-boundary-builder</a>
+        &#183; <a href="/attribution.txt" target="_blank" rel="noopener">full attribution and licences</a>
+      </div>
+<sc-if value="{{ showPlanets }}" hint-placeholder-val="{{ true }}">
     </div>
     <div class="planet-table" style="margin-top: 16px; border-top: 1px solid #2E2C27; padding-top: 12px;">
       <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-bottom: 8px;">Planets at local midnight</div>

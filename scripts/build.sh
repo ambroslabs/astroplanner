@@ -35,6 +35,11 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 cp "$ROOT/index.html" "$OUT/index.html"
 if [[ "${BUILD_WORKER:-1}" != "0" ]]; then cp "$ROOT/_worker.js" "$OUT/_worker.js"; fi
 cp -r "$ROOT/assets" "$OUT/assets"
+# The attribution travels with the deployment, not only with the repository:
+# ODbL and CC BY-SA both make it a condition of use, and the page links to it.
+# Served as .txt so a browser shows it rather than offering to download it.
+cp "$ROOT/ATTRIBUTION.md" "$OUT/attribution.txt"
+cp -r "$ROOT/licenses" "$OUT/licenses"
 
 if [[ -n "${CF_WEB_ANALYTICS_TOKEN:-}" ]]; then
   python3 - "$OUT/index.html" "$CF_WEB_ANALYTICS_TOKEN" <<'PY'

@@ -122,3 +122,12 @@ once for both, while a catalogue beta has changed lands under a different name
 and the two sit side by side. The beta build rewrites its fetch path to the
 absolute one to make that possible; the default stays relative so a clone still
 runs from any directory.
+
+## Data, attribution and licences
+
+The catalogues, the timezone raster and the typefaces all come from other
+people's work, some of it under licences that make attribution a condition of
+use rather than a courtesy. [ATTRIBUTION.md](ATTRIBUTION.md) records every
+source, what is taken from it, and what its licence asks; the full licence
+texts are in `licenses/` and `assets/fonts/`. The same document is served with
+the site at `/attribution.txt` and linked from the chart.
