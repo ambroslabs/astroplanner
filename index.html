@@ -1598,6 +1598,10 @@ class Component extends DCLogic {
   // shape, or a view would keep its shape in a window of a different shape and
   // letterbox in every one of them.
   RATIO_DEFAULT = 2.5884;
+  // The whole sky is 24h across and 180 degrees down, and 24 x 15 / 180 is 2.
+  // Derived rather than written so it is visibly the same measure as the one
+  // ratioFor takes off a fitted region.
+  WHOLE_SKY = 24 * 15 / 180;
   REF_ASPECT = 836 / 530;
   ratioK() {
     const r = this.state.ratio;
@@ -4430,10 +4434,15 @@ class Component extends DCLogic {
       deleteSite: () => this.deleteSite(),
       fitFrameNow: () => this.applyFit(),
       // back to the canonical turn: whole sky, starting at RA 0
-      fullSky: () => this.setState({ frame: null, autoFrame: false, ratio: this.RATIO_DEFAULT }),
+      // Both of these show the whole sky, so both set the shape of the whole
+      // sky - the same rule Fit usable follows, which is that a framing button
+      // sets the shape of the view it is about to show. 24h over 180 degrees
+      // is 2, and at that shape the whole sky fills the chart instead of
+      // sitting letterboxed inside it.
+      fullSky: () => this.setState({ frame: null, autoFrame: false, ratio: this.WHOLE_SKY }),
       // the whole sky, translated so tonight's dark window sits in the middle
       centerUsable: () => {
-        this.setState({ ratio: this.RATIO_DEFAULT });
+        this.setState({ ratio: this.WHOLE_SKY });
         this.setFrame({ raStart: this.darkWindow().sun.ra, raLen: 24, decMin: -90, decMax: 90 });
       },
       autoFrame: s.autoFrame,
