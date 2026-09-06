@@ -80,6 +80,18 @@ html = open(path, encoding='utf-8').read()
 assert html.count(old) == 1, 'expected exactly one CATALOG_BASE'
 open(path, 'w', encoding='utf-8').write(html.replace(old, new))
 BASE
+  # The attribution is deployed with each copy, so the beta page must link to
+  # its own rather than to the root's - which carries main's data, and does not
+  # exist at all until this reaches main.
+  python3 - "$OUT/index.html" <<'ATTR'
+import sys
+path = sys.argv[1]
+old = 'href="/attribution.txt"'
+new = 'href="/beta/attribution.txt"'
+html = open(path, encoding='utf-8').read()
+assert html.count(old) == 1, 'expected exactly one attribution link'
+open(path, 'w', encoding='utf-8').write(html.replace(old, new))
+ATTR
   echo "build: stamped as beta"
 fi
 echo "build: $OUT ready ($(find "$OUT" -type f | wc -l) files)"
