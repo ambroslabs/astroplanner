@@ -1,4 +1,4 @@
-# Imaging Planner
+# Astronomy Planner
 
 A single-page astrophotography session planner. For a given site, date and
 altitude threshold it shows how many hours of astronomical darkness (Sun below
@@ -113,7 +113,9 @@ Until the `beta` branch exists, `/beta` is built from `main` and is simply the
 same site.
 
 The two keep separate saved settings - `imaging-planner/v1` and
-`imaging-planner/v1/beta` - because they share an origin, and one key would mean
+`imaging-planner/v1/beta`, which keep the project's old name so that nobody's
+stored sites and points are orphaned by a rename - because they share an origin,
+and one key would mean
 testing on beta quietly rewrote the settings of the page being used for real.
 
 They share one catalogue directory. The file names are hashes of their contents,
