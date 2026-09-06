@@ -425,6 +425,9 @@
 /* Export writes a fixed-size picture and has its own dialog; in a mode about
    moving around the sky it is a button you press by accident. */
 .page[data-wide="1"] .export-btn { display: none !important; }
+/* The site controls are a wide-mode stand-in for the observer bar, so they are
+   only there when the bar is not. */
+.page:not([data-wide="1"]) .site-group { display: none !important; }
 .page[data-wide="1"] .controls {
   position: fixed; left: 12px; top: 52px; z-index: 45;
   width: min(430px, calc(100vw - 24px));
@@ -570,7 +573,7 @@
      below on selector weight no matter which came last or how many !importants
      they carried - the groups that ask for a whole row got half of one. The
      exclusions are the fix: nothing here matches those groups at all. */
-  .page[data-wide="1"][data-controls="1"] .controls > div:not(.heat-col):not(.row-break):not(.wide-row):not(.find-group):not(.axis-group):not(.tz-group),
+  .page[data-wide="1"][data-controls="1"] .controls > div:not(.heat-col):not(.row-break):not(.wide-row):not(.find-group):not(.axis-group):not(.tz-group):not(.site-group),
   .page[data-wide="1"][data-controls="1"] .heat-col { flex: 1 1 calc(50% - 7px) !important; }
   /* The row breaks are zero-height spacers that force the next control onto a
      new line. Halving them along with everything else left a blank half-row
@@ -606,6 +609,7 @@
   }
   .page[data-wide="1"][data-controls="1"] .controls > div.wide-row,
   .page[data-wide="1"][data-controls="1"] .controls > div.tz-group,
+  .page[data-wide="1"][data-controls="1"] .controls > div.site-group,
   .page[data-wide="1"][data-controls="1"] .controls > div.find-group,
   .page[data-wide="1"][data-controls="1"] .controls > div.axis-group {
     flex: 1 1 100% !important;
@@ -724,11 +728,35 @@
       <!-- when, on a row of its own -->
             <div class="tz-group" style="display: flex; flex-direction: column; gap: 6px;">
         <label for="tz-in" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Times in</label>
-        <sc-raw-select id="tz-in" value="{{ tzSel }}" sc-camel-on-change="{{ onTz }}" style="width: 100%; max-width: 260px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
+        <sc-raw-select id="tz-in" value="{{ tzSel }}" sc-camel-on-change="{{ onTz }}" style="width: 100%; max-width: 330px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
           <sc-for list="{{ tzOptions }}" as="o" hint-placeholder-count="4">
             <option value="{{ o.value }}">{{ o.label }}</option>
           </sc-for>
         </sc-raw-select>
+      </div>
+      <!-- Wide mode hides the observer bar along with the rest of the page, which
+           left no way to change where you are observing from without leaving the
+           mode. The same controls, in the panel that wide mode does show. Hidden
+           in the ordinary layout, where the bar itself is on screen. -->
+      <div class="site-group" style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="site-in-w" style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Site</label>
+        <div style="display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap;">
+          <sc-raw-select id="site-in-w" value="{{ obsSel }}" sc-camel-on-change="{{ onObs }}" style="flex: 1 1 190px; min-width: 0; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
+            <sc-for list="{{ obsOptions }}" as="o" hint-placeholder-count="7">
+              <option value="{{ o.value }}">{{ o.label }}</option>
+            </sc-for>
+          </sc-raw-select>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <label for="lat-w" style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5A5751;">Lat °N</label>
+            <input id="lat-w" type="number" min="-90" max="90" step="0.5" sc-camel-value="{{ latText }}" sc-camel-on-change="{{ onLat }}" style="width: 82px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <label for="lon-w" style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5A5751;">Lon °E</label>
+            <input id="lon-w" type="number" min="-180" max="180" step="0.5" sc-camel-value="{{ lonText }}" sc-camel-on-change="{{ onLon }}" style="width: 88px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 8px 10px; outline: none;">
+          </div>
+          <button sc-camel-on-click="{{ useMyLocation }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Read latitude and longitude from this device">Use my location</button>
+        </div>
+        <sc-if value="{{ geoMsg }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #8E897D;">{{ geoMsg }}</span></sc-if>
       </div>
 <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
