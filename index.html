@@ -424,6 +424,17 @@
 .page[data-wide="1"] .card-head > div:first-child { display: none !important; }
 /* Export writes a fixed-size picture and has its own dialog; in a mode about
    moving around the sky it is a button you press by accident. */
+/* The top buttons are one size and one shape wherever they appear. Left to
+   themselves they were 95, 138, 153 and 156 wide, and on a narrow window the
+   two long labels wrapped to a second line and stood 54px tall beside their
+   38px neighbours - four different shapes in a row of four buttons. They do
+   not wrap and do not shrink now; the row wraps instead, which is the honest
+   way to run out of width. */
+.topbar { flex-wrap: wrap; }
+.topbar button {
+  white-space: nowrap; flex: 0 0 auto;
+  min-width: 160px; justify-content: center;
+}
 .page[data-wide="1"] .export-btn { display: none !important; }
 /* The site controls are a wide-mode stand-in for the observer bar, so they are
    only there when the bar is not. */
@@ -505,6 +516,9 @@
   .page[data-wide="1"] .topbar { top: 6px; right: 6px; gap: 5px; }
   .page[data-wide="1"] .topbar button {
     font-size: 0 !important; padding: 9px 11px !important; gap: 0 !important;
+    /* Square, and the same square for each: the glyphs are not the same width
+       as one another, so left alone a row of four came out 37, 37, 35 and 33. */
+    min-width: 40px !important;
   }
   /* Only the glyph comes back. The runtime wraps an interpolated label in its
      own span, so a rule for every span put the words back at full size on the
@@ -4172,7 +4186,7 @@ class Component extends DCLogic {
       ctrlBorder: s.ctrlOpen ? '#8C6A3F' : '#2E2C27',
       ctrlTip: s.ctrlOpen ? 'Hide the controls panel' : 'Show the controls panel',
       toggleControls: () => this.setState({ ctrlOpen: !s.ctrlOpen }),
-      fsLabel: s.fs ? 'Exit full screen' : 'Full screen',
+      fsLabel: 'Full screen',
       fsPressed: s.fs ? 'true' : 'false',
       fsFg: s.fs ? '#D9A960' : '#C9C4B7',
       fsBorder: s.fs ? '#8C6A3F' : '#2E2C27',
@@ -4289,7 +4303,7 @@ class Component extends DCLogic {
       densityPct: String(Math.round(s.catDensity * 100)),
       densityLabel: s.catDensity > 0 ? Math.round(s.catDensity * 100) + '%' : 'off',
       onDensity: e => this.setState({ catDensity: Number(e.target.value) / 100 }),
-      nightLabel: s.night ? 'Night vision on' : 'Night vision',
+      nightLabel: 'Night vision',
       nightPressed: s.night ? 'true' : 'false',
       // Active reads as gold text on a gold border, the way the play button
       // already shows itself running. A filled button would have made the
