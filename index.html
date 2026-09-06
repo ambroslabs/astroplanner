@@ -454,11 +454,13 @@
    only there when the bar is not. */
 .page:not([data-wide="1"]) .site-group { display: none !important; }
 .page[data-wide="1"] .controls {
-  position: fixed; left: 12px; top: 52px; z-index: 45;
+  /* Below the dark-window line, which is below the buttons: three fixed things
+     in the top-left corner, stacked rather than laid over one another. */
+  position: fixed; left: 12px; top: 86px; z-index: 45;
   width: min(430px, calc(100vw - 24px));
   /* Stop above the bottom strip rather than running under it - the panel is
      scrollable, so the room it loses costs nothing but a scroll. */
-  max-height: calc(100vh - 292px);
+  max-height: calc(100vh - 326px);
   overflow-y: auto; background: rgba(18,18,18,0.94); border: 1px solid #3A362F;
   border-radius: 4px; padding: 14px 16px; gap: 12px 18px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.55);
@@ -491,7 +493,14 @@
 .page[data-wide="1"] .topbar {
   position: fixed; right: 12px; top: 12px; width: auto; max-width: none; z-index: 46;
 }
-.page[data-wide="1"] .card-head { position: fixed; left: 16px; top: 20px; margin: 0; z-index: 46;
+/* Below the buttons rather than beside them. Sharing that line meant the two
+   were only clear of each other while the window was wide enough to keep them
+   apart: at 900px this line reached under Controls and at 760px under Wide as
+   well, and being drawn later at the same z-index it took their clicks. A row
+   of its own cannot collide however long the line gets or how narrow the
+   window is, which beats any amount of measuring the two against each other. */
+.page[data-wide="1"] .card-head { position: fixed; left: 16px; top: 58px; margin: 0; z-index: 46;
+  max-width: calc(100vw - 32px);
   /* It sits on the sky now rather than above it, so it carries its own
      background the way the axis text does. */
   text-shadow: 0 1px 3px #0A0A0A, 0 0 7px #0A0A0A; }
@@ -541,9 +550,11 @@
   .page[data-wide="1"] .topbar button > span:first-child { font-size: 15px !important; }
   /* Kept to whatever is left beside the buttons, and cut with an ellipsis
      rather than allowed to run underneath them. */
+  /* The glyph row is shorter than the labelled one, so the line moves up with
+     it - and it gets the whole width now that it is not dodging anything. */
   .page[data-wide="1"] .card-head {
-    left: 8px; top: 12px; font-size: 11px;
-    max-width: calc(100vw - 200px); overflow: hidden;
+    left: 8px; top: 46px; font-size: 11px;
+    max-width: calc(100vw - 16px); overflow: hidden;
   }
   .page[data-wide="1"] .card-head .dark-info {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;
@@ -564,7 +575,7 @@
      Styled only while the controls are open, because the chart lives inside
      the card and hiding the card would take the map with it. */
   .page[data-wide="1"][data-controls="1"] .card {
-    position: fixed; left: 0; right: 0; top: 44px; bottom: 0; z-index: 45;
+    position: fixed; left: 0; right: 0; top: 68px; bottom: 0; z-index: 45;
     overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     display: flex; flex-direction: column;
     background: none !important; border: none !important; padding: 0 !important;
