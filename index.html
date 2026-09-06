@@ -817,7 +817,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">shift-scroll</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -1588,11 +1588,13 @@ class Component extends DCLogic {
     const view = () => this._view || (() => { const a = this._axis;
       return { raStart: a.axStart, raLen: a.axSpan, decMin: a.dBot, decMax: a.dTop }; })();
 
-    // Shift-wheel zooms about the cursor, so the sky under the pointer stays
-    // put. A bare wheel is left alone and scrolls the page: the chart is tall
-    // enough that owning the wheel outright made it a trap on the way past.
+    // The wheel zooms about the cursor, so the sky under the pointer stays put.
+    // In the ordinary layout it needs shift: the chart is tall enough that
+    // owning the wheel outright made it a trap on the way past. Wide mode is
+    // the whole window with nothing behind it to scroll, so there the bare
+    // wheel is free to do the obvious thing.
     el.addEventListener('wheel', e => {
-      if (!e.shiftKey) return;
+      if (!e.shiftKey && !this.state.wide) return;
       const p = pos(e);
       if (!inPlot(p)) return;
       const a = this._axis, v = view();
@@ -1641,9 +1643,76 @@ class Component extends DCLogic {
       return null;
     };
 
+    // Two fingers on the map. Only in wide mode: that is the one place the
+    // canvas owns the gesture (touch-action: none), and taking the pinch
+    // anywhere else would be taking the page's own zoom away from it.
+    const pinchable = () => this.state.wide;
+    const touches = this._touches = new Map();
+    const twoTouches = () => { const it = touches.values(); return [it.next().value, it.next().value]; };
+    const pinchStart = () => {
+      const [a1, b1] = twoTouches();
+      const a = this._axis, v = view();
+      const mx = (a1.x + b1.x) / 2, my = (a1.y + b1.y) / 2;
+      // The sky under the midpoint at the moment the gesture began. Everything
+      // afterwards is worked out from this and the view it started in, rather
+      // than accumulated move by move, so the map does not creep during a long
+      // pinch and returning the fingers returns the view.
+      const u = 1 - (mx - a.X0) / (a.X1 - a.X0), w = (my - a.Y0) / (a.Y1 - a.Y0);
+      this._pinch = { d0: Math.hypot(a1.x - b1.x, a1.y - b1.y) || 1,
+                      raAt: v.raStart + u * v.raLen,
+                      decAt: v.decMax - w * (v.decMax - v.decMin),
+                      raLen0: v.raLen, decSpan0: v.decMax - v.decMin };
+      // A pinch is not a pan and must not land as a tap on the point under it.
+      this._drag = null;
+    };
+    const pinchMove = () => {
+      const q = this._pinch; if (!q) return;
+      const [a1, b1] = twoTouches();
+      if (!a1 || !b1) return;
+      const a = this._axis;
+      const d = Math.hypot(a1.x - b1.x, a1.y - b1.y);
+      if (!(d > 0)) return;
+      const f = q.d0 / d;                       // fingers apart -> smaller span
+      const raLen = Math.max(0.5, Math.min(24, q.raLen0 * f));
+      const dSpan = Math.max(5, Math.min(180, q.decSpan0 * f));
+      // Placed so the sky it started on stays under the fingers, which is what
+      // makes the pinch pan as well as zoom without any separate handling.
+      const mx = (a1.x + b1.x) / 2, my = (a1.y + b1.y) / 2;
+      const u = 1 - (mx - a.X0) / (a.X1 - a.X0), w = (my - a.Y0) / (a.Y1 - a.Y0);
+      const top = q.decAt + w * dSpan;
+      this.setFrame({ raStart: q.raAt - u * raLen, raLen,
+                      decMax: top, decMin: top - dSpan });
+    };
+    const dropTouch = e => {
+      if (!touches.has(e.pointerId)) return;
+      touches.delete(e.pointerId);
+      // Three fingers down and one lifts: the pair the gesture was measured
+      // from is gone, so measure again rather than jump.
+      if (this._pinch && touches.size === 2) { pinchStart(); return; }
+      if (this._pinch && touches.size < 2) {
+        this._pinch = null;
+        // One finger left: carry on as a pan from where it is, rather than
+        // going dead until it lifts. noTap, because it never was a tap.
+        const rest = touches.values().next().value;
+        if (rest) this._drag = { x0: rest.x, y0: rest.y, x1: rest.x, y1: rest.y,
+                                 px: rest.x, py: rest.y, touch: true, mode: 'pan',
+                                 moved: true, noTap: true };
+      }
+    };
+
     el.addEventListener('pointerdown', e => {
       const p = pos(e);
       if (!inPlot(p)) return;
+      if (e.pointerType === 'touch' && pinchable()) {
+        touches.set(e.pointerId, p);
+        if (touches.size === 2) {
+          pinchStart();
+          try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+          e.preventDefault();
+          return;
+        }
+        if (touches.size > 2) { e.preventDefault(); return; }
+      }
       // Panels sit above everything, so they get first refusal on a press.
       const panel = e.pointerType === 'touch' ? null : (() => {
         const list = this._infoBoxes || [];
@@ -1701,6 +1770,10 @@ class Component extends DCLogic {
     });
 
     el.addEventListener('pointermove', e => {
+      if (touches.has(e.pointerId)) {
+        touches.set(e.pointerId, pos(e));
+        if (this._pinch) { pinchMove(); e.preventDefault(); return; }
+      }
       const d = this._drag;
       if (!d) {
         // Say the box can be picked up before anyone tries it.
@@ -1782,10 +1855,17 @@ class Component extends DCLogic {
                      decMin: v.decMin + (dy / (a.Y1 - a.Y0)) * dSpan });
     });
 
-    const finish = () => {
+    const finish = e => {
+      const wasPinch = !!this._pinch;
+      if (e) dropTouch(e);
+      if (this._pinch) return;                            // still two fingers down
+      // The finger that ended the pinch: dropTouch has already left the other
+      // one panning, so clearing _drag here would be undoing that.
+      if (wasPinch) { this.drawHeatmap(el); return; }
       const d = this._drag;
       this._drag = null;
       if (!d) return;
+      if (d.noTap) { this.drawHeatmap(el); return; }
       const a = this._axis;
       if (d.mode === 'panel') { this.drawHeatmap(el); return; }
       if (d.mode === 'point') {
@@ -1853,7 +1933,10 @@ class Component extends DCLogic {
     el.addEventListener('pointerup', finish);
     // A cancel is the browser taking the gesture over to scroll: drop it
     // outright rather than letting it land as a tap.
-    el.addEventListener('pointercancel', () => { this._drag = null; this.drawHeatmap(el); });
+    el.addEventListener('pointercancel', e => {
+      dropTouch(e); this._drag = null; this._pinch = null; touches.clear();
+      this.drawHeatmap(el);
+    });
   }
 
   // ---------- settings persistence ----------
@@ -3710,6 +3793,9 @@ class Component extends DCLogic {
       // One filter over the whole page, so the canvas and the SVG chart go red
       // with everything else and no drawing code has to know about the theme.
       nightFilter: s.night ? 'url(#nightvision)' : 'none',
+      // Wide mode owns the wheel outright and takes a pinch; the ordinary
+      // layout has a page behind it and needs the modifier.
+      zoomHint: s.wide ? 'scroll or pinch' : 'shift-scroll',
       wideAttr: s.wide ? '1' : '0',
       ctrlAttr: s.ctrlOpen ? '1' : '0',
       widePressed: s.wide ? 'true' : 'false',
