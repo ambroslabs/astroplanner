@@ -1585,6 +1585,17 @@ class Component extends DCLogic {
     // the plot rectangle is whatever the window is.
     const inPlot = p => { const a = this._axis; return !!a
       && p.x >= a.X0 && p.x <= a.X1 && p.y >= a.Y0 && p.y <= a.Y1; };
+    // The close control on an info panel. 15px square is a mouse target, not a
+    // finger one, so touch gets a margin around it without the drawing growing.
+    const closeAt = (p, pad) => {
+      const list = this._infoBoxes || [], g = pad || 0;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const b2 = list[i];
+        if (p.x >= b2.cx - g && p.x <= b2.cx + b2.cw + g
+         && p.y >= b2.cy - g && p.y <= b2.cy + b2.ch + g) return b2;
+      }
+      return null;
+    };
     const view = () => this._view || (() => { const a = this._axis;
       return { raStart: a.axStart, raLen: a.axSpan, decMin: a.dBot, decMax: a.dTop }; })();
 
@@ -1713,6 +1724,15 @@ class Component extends DCLogic {
         }
         if (touches.size > 2) { e.preventDefault(); return; }
       }
+      // Dismissing a panel is the one thing about them that has to work under a
+      // finger as well as a pointer, so it is tested before the branch that
+      // touch skips.
+      const closer = closeAt(p, e.pointerType === 'touch' ? 11 : 0);
+      if (closer) {
+        this.setState({ info: (this.state.info || []).filter((_, k) => k !== closer.i) });
+        e.preventDefault();
+        return;
+      }
       // Panels sit above everything, so they get first refusal on a press.
       const panel = e.pointerType === 'touch' ? null : (() => {
         const list = this._infoBoxes || [];
@@ -1723,13 +1743,6 @@ class Component extends DCLogic {
         return null;
       })();
       if (panel) {
-        const onClose = p.x >= panel.cx && p.x <= panel.cx + panel.cw
-                     && p.y >= panel.cy && p.y <= panel.cy + panel.ch;
-        if (onClose) {
-          this.setState({ info: (this.state.info || []).filter((_, k) => k !== panel.i) });
-          e.preventDefault();
-          return;
-        }
         this._drag = { mode: 'panel', idx: panel.i, moved: false,
                        ox: p.x - panel.x, oy: p.y - panel.y,
                        x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: false };
@@ -1783,7 +1796,8 @@ class Component extends DCLogic {
           const overPanel = panels.some(b2 => q.x >= b2.x && q.x <= b2.x + b2.w
                                            && q.y >= b2.y && q.y <= b2.y + b2.h);
           const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q));
-          const want = over ? 'move' : '';
+          // A button, not something to drag, so it says so.
+          const want = (inPlot(q) && closeAt(q)) ? 'pointer' : (over ? 'move' : '');
           if (el.style.cursor !== want) el.style.cursor = want;
         }
         return;
@@ -2408,7 +2422,27 @@ class Component extends DCLogic {
     return out;
   }
 
+  // The Sun, the Moon and the planets are not in any catalogue, but a panel
+  // only wants a row and a colour, so they get given both. Position is worked
+  // out at the same local midnight the chart draws them at, so the panel and
+  // the marker can never disagree.
+  SKY_KIND = { Sun: 'The Sun', Moon: 'The Moon', Pluto: 'Dwarf planet' };
+  skyBody(id) {
+    const n = this.daysJ2000() + 0.5;
+    let q, color;
+    if (id === 'Moon') { q = this.moonPos(n); color = '#F6F5F2'; }
+    else if (id === 'Sun') { q = this.bodyPos(null, n); color = '#F5C36A'; }
+    else {
+      const pl = this.PLANETS.find(b => b.id === id);
+      if (!pl) return null;
+      q = this.bodyPos(pl, n); color = '#93C4EE';
+    }
+    return { o: { id, label: id.toUpperCase(), ra: q.ra, dec: q.dec,
+                  type: this.SKY_KIND[id] || 'Planet' },
+             def: { id: 'sky', color } };
+  }
   infoObject(e) {
+    if (e.cat === 'sky') return this.skyBody(e.id);
     const rows = this.catalogRows(e.cat);
     if (!rows) return null;
     const o = rows.find(r => r.id === e.id);
@@ -3194,6 +3228,9 @@ class Component extends DCLogic {
         ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#F6F5F2'; ctx.font = '700 13px Inter, sans-serif'; ctx.textAlign = 'left';
         ctx.fillText('MOON', mx + 12, my + 4);
+        // Clickable like a catalogue object. drawCatalogs empties _objHits and
+        // runs before this, so appending here is safe.
+        (this._objHits || []).push({ x: mx, y: my, r: 10, cat: 'sky', id: 'Moon' });
         const ring = [], r0 = 30;
         for (let th = 0; th <= 360; th += 5) {
           const sD = this.sd(m.dec) * this.cd(r0) + this.cd(m.dec) * this.sd(r0) * this.cd(th);
@@ -3220,11 +3257,11 @@ class Component extends DCLogic {
         const bodies = [];
         if (this.state.showSun) {
           const sun = this.bodyPos(null, n + 0.5);
-          bodies.push({ ra: sun.ra, dec: sun.dec, label: 'SUN', color: '#F5C36A', r: 9 });
+          bodies.push({ id: 'Sun', ra: sun.ra, dec: sun.dec, label: 'SUN', color: '#F5C36A', r: 9 });
         }
         if (this.state.showPlanets) {
           for (const p of this.planetData())
-            bodies.push({ ra: p.ra, dec: p.dec, label: p.id.toUpperCase(), color: '#93C4EE', r: 5 });
+            bodies.push({ id: p.id, ra: p.ra, dec: p.dec, label: p.id.toUpperCase(), color: '#93C4EE', r: 5 });
         }
 
         for (const b of bodies) {
@@ -3241,6 +3278,10 @@ class Component extends DCLogic {
 
           ctx.fillStyle = b.color; ctx.strokeStyle = '#161616'; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.arc(px, py, b.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          // A planet is a 5px dot, which is a target for a mouse and not for a
+          // finger, so the hit radius is the one a tap needs rather than the
+          // one it is drawn at.
+          (this._objHits || []).push({ x: px, y: py, r: Math.max(9, b.r), cat: 'sky', id: b.id });
           // a leader line when the label had to move off the marker
           if (Math.abs(best.y - (py + 4)) > 6) {
             ctx.strokeStyle = 'rgba(147,196,238,0.5)'; ctx.lineWidth = 1;
