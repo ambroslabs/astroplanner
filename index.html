@@ -3804,14 +3804,37 @@ class Component extends DCLogic {
     // 8192 exponents against seventy thousand, which is still nothing.
     const POW = new Float32Array(8193);
     for (let i = 0; i <= 8192; i++) POW[i] = Math.pow(i / 8192, maskP);
+    // arcOverlap, unrolled into this loop. It was seventy thousand calls, each
+    // re-deciding four things that cannot change inside a row - whether the
+    // night is all dark, whether it is not dark at all, whether the object is
+    // up the whole turn - and taking two modulos to find one offset. The
+    // offset walks linearly across a row instead, and since a row spans at
+    // most a whole turn it can wrap at most once, so a single comparison
+    // replaces the modulos. Rows that are constant are recognised as constant.
+    const allDark = L >= 24, noDark = L <= 0;
+    const dRa = axSpan / cols, ra0 = axStart + axSpan;
     for (let r = 0; r < rows; r++) {
       const dec = dTop - r * (dTop - dBot) / (rows - 1);
       const H = this.hoursAbove(lat, thr, dec) / 2;
+      const twoH = 2 * H;
+      // What this row is: a flat value, or a ramp to be walked.
+      const flat = allDark ? Math.min(twoH, 24)
+                 : noDark || twoH <= 0 ? 0
+                 : twoH >= 24 ? Math.min(L, 24) : null;
+      // e is how far the object's window starts after dusk, at column 0.
+      const e0 = flat !== null ? 0 : ((dark.dusk - ra0 + H) % 24 + 24) % 24;
       for (let c = 0; c < cols; c++) {
-        // column position is a chart offset, so it carries both the axis
-        // rotation and the east-left direction
-        const ra = axStart + (1 - c / cols) * axSpan;
-        const u = L >= 24 ? Math.min(2 * H, 24) : (L <= 0 ? 0 : this.arcOverlap(ra - H, 2 * H, dark.dusk, L));
+        let u;
+        if (flat !== null) u = flat;
+        else {
+          let e = e0 + c * dRa;
+          if (e >= 24) e -= 24;          // a row spans at most one turn
+          const hi = e + L;
+          u = (hi > e ? Math.min(twoH, hi) - e : 0);
+          if (u < 0) u = 0;
+          const wrap = Math.min(twoH, e - 24 + L);
+          if (wrap > 0) u += wrap;
+        }
         const t = denom > 0 ? u / denom : 0;
         const k = (r * cols + c) * 4;
         // Falloff shapes both layers, so ground and veil always agree on how
