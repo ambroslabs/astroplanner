@@ -2768,6 +2768,8 @@ class Component extends DCLogic {
   // out at the same local midnight the chart draws them at, so the panel and
   // the marker can never disagree.
   SKY_KIND = { Sun: 'The Sun', Moon: 'The Moon', Pluto: 'Dwarf planet' };
+  SKY_LABEL = 'Sun, Moon & planets';
+  skyBodyList() { return ['Sun', 'Moon'].concat(this.PLANETS.map(p => p.id)); }
   skyBody(id) {
     const n = this.daysJ2000() + 0.5;
     let q, color;
@@ -2790,6 +2792,14 @@ class Component extends DCLogic {
     return o ? { o, def: this.catalogDef(e.cat) } : null;
   }
 
+  // Open a panel without the toggling. The search uses this: arriving at an
+  // object should show you what you arrived at, and a toggle would shut the
+  // panel again for anyone who searched the same thing twice.
+  openInfo(cat, id) {
+    const list = this.state.info || [];
+    if (list.some(e => e.cat === cat && e.id === id)) return;
+    this.setState({ info: list.concat([{ cat, id }]) });
+  }
   toggleInfo(cat, id) {
     const list = this.state.info || [];
     const at = list.findIndex(e => e.cat === cat && e.id === id);
@@ -2912,9 +2922,22 @@ class Component extends DCLogic {
   }
 
   goToObject(o) {
+    if (o.cat === 'sky') {
+      // The bodies have their own switches rather than a catalogue layer, so
+      // this turns on the one that shows the thing just asked for.
+      const flag = o.id === 'Sun' ? 'showSun' : o.id === 'Moon' ? 'showMoon' : 'showPlanets';
+      this.setState({ [flag]: true, searchMsg: o.label });
+      this.setFrame(this.frameFor(o));
+      this.openInfo('sky', o.id);
+      return;
+    }
     this.setState({ cats: Object.assign({}, this.state.cats, { [o.cat]: true }),
                     searchMsg: (o.label + (o.name ? ' · ' + o.name : '')) });
     this.setFrame(this.frameFor(o));
+    // Say what was found, not just where it is: the frame alone lands you on a
+    // patch of sky with the thing somewhere in it, and on a crowded one that is
+    // not an answer.
+    this.openInfo(o.cat, o.id);
   }
 
   // Suggestions come out of whatever is loaded, and typing pulls the rest in
@@ -2965,6 +2988,20 @@ class Component extends DCLogic {
         out.push({ o, def, s: score * 100 + (rank[def.id] || 0)
                               + (o.mag == null ? 14 : o.mag) });
       }
+    }
+    // The Sun, the Moon and the planets are in no catalogue, so the loop above
+    // cannot reach them - and they are precisely the things a person types by
+    // name. Without this, "Mars" answered with the star Marsic and "Sun" with
+    // the Sunflower Galaxy, which are the right answers to a question nobody
+    // asked. Matched from the start of the name, so they win those two.
+    for (const id of this.skyBodyList()) {
+      const f = this.skyBody(id);
+      if (!f) continue;
+      const desig = f.o.label.toLowerCase();
+      if (desig.indexOf(flat) !== 0) continue;
+      out.push({ o: Object.assign({}, f.o, { cat: 'sky', name: '', alt: [] }),
+                 def: { id: 'sky', label: this.SKY_LABEL, color: f.def.color },
+                 s: (desig === flat ? 0 : 1) * 100 });
     }
     out.sort((a, b) => a.s - b.s);
     // One row per catalogue the object is in, not one row per object. An
