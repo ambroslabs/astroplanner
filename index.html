@@ -880,6 +880,19 @@
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ catOpacityLabel }}</span>
         </div>
       </div>
+      <!-- Stars are lit separately from the catalogues, and by default by the
+           zoom. Three thousand of them across the whole sky bury what the
+           chart is about; two of them at half a degree are the subject. -->
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Stars</span>
+        <div style="display: flex; align-items: center; gap: 8px; height: 38px;" title="{{ starTip }}">
+          <input aria-label="Star brightness" type="range" min="0" max="100" step="5" value="{{ starOpacityPct }}" sc-camel-on-input="{{ onStarOpacity }}" style="width: 74px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ starOpacityLabel }}</span>
+          <label class="moon-check" style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; font-weight: 600; color: #C9C4B7;">
+            <input type="checkbox" checked="{{ starAuto }}" sc-camel-on-change="{{ onStarAuto }}" style="accent-color: #D9A960; width: 15px; height: 15px; margin: 0;">Auto
+          </label>
+        </div>
+      </div>
       <!-- Find, on its own row: a hit reframes the chart, so it belongs beside Frame -->
       <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="find-group" style="display: flex; flex-direction: column; gap: 6px;">
@@ -1210,6 +1223,9 @@ class Component extends DCLogic {
     // which is why there is no separate on/off beside it.
     catDensity: 1,
     catOpacity: 1,
+    // null means the zoom decides. A number means the reader has decided, and
+    // then it stays put however far in or out they go.
+    starOpacity: null,
     // Print every designation an object is known by, not only the one the most
     // prominent catalogue gives it.
     catAliases: false,
@@ -2368,6 +2384,27 @@ class Component extends DCLogic {
     return '';
   }
 
+  // Stars are lit separately from the deep-sky layers, and by default by the
+  // zoom. Zoomed out there are three thousand of them over the whole sky and
+  // they bury the thing the chart is actually about; zoomed into half a degree
+  // there are two or three and they are the subject. One slider position
+  // cannot serve both, so the default is not a position at all.
+  //
+  // Interpolated on a log of the declination span, because zoom is
+  // multiplicative - halving the span should feel like one step at every
+  // scale, not a bigger step near the bottom.
+  STAR_DIM = 0.34;        // across the whole sky
+  STAR_BRIGHT = 1;        // at the deepest zoom
+  starOpacity(span) {
+    const set = this.state.starOpacity;
+    if (set != null) return set;          // the user has said, so it is said
+    const a = this._axis;
+    const d = span != null ? span : (a ? a.dTop - a.dBot : 180);
+    const t = Math.log(Math.max(this.MIN_DEC, Math.min(180, d)) / this.MIN_DEC)
+            / Math.log(180 / this.MIN_DEC);
+    return this.STAR_BRIGHT + (this.STAR_DIM - this.STAR_BRIGHT) * t;
+  }
+
   ensureCatalogs() {
     const on = this.state.cats || {};
     for (const c of this.CATALOGS) if (on[c.id]) this.loadCatalog(c.id);
@@ -2516,8 +2553,9 @@ class Component extends DCLogic {
         // Where every drawn object ended up, so a click can find one.
         this._objHits.push({ x, y, r, cat: def.id, id: o.id });
       }
-      ctx.globalAlpha = 0.9 * op; ctx.fillStyle = def.color; ctx.fill(marks);
-      ctx.globalAlpha = 0.8 * op; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
+      const dop = def.stars ? this.starOpacity(dTop - dBot) : op;
+      ctx.globalAlpha = 0.9 * dop; ctx.fillStyle = def.color; ctx.fill(marks);
+      ctx.globalAlpha = 0.8 * dop; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke(shapes);
     }
     ctx.globalAlpha = op;
     if (this.state.catDensity > 0) this.labelCatalogs(ctx, cand, g, this.state.catAliases ? alias : null);
@@ -2531,6 +2569,7 @@ class Component extends DCLogic {
   labelCatalogs(ctx, cand, g, alias) {
     if (!cand.length) return;
     const op = this.state.catOpacity;
+    const starOp = this.starOpacity(g.dTop != null ? g.dTop - g.dBot : null);
     const { X0, X1, Y0, Y1 } = g;
     const names = this.state.catNames || {};
 
@@ -2640,6 +2679,10 @@ class Component extends DCLogic {
       // before the label's own background, so the background caps it cleanly.
       // Only when the label actually moved: at the nearest ring the line would
       // be a few pixels of noise between two things already side by side.
+      // A star's label fades with the star it belongs to, so the two are one
+      // thing at every zoom rather than a bright name over a faint dot.
+      const cop = c.def.stars ? starOp : op;
+      ctx.globalAlpha = cop;
       const ex = Math.max(bx, Math.min(c.ax, bx + bw)), ey = Math.max(by, Math.min(c.ay, by + bh));
       const vx = c.ax - ex, vy = c.ay - ey, len = Math.hypot(vx, vy);
       // Always drawn, however short. The old rule skipped the line whenever the
@@ -2651,7 +2694,7 @@ class Component extends DCLogic {
         ctx.beginPath(); ctx.moveTo(ex, ey);
         const stop = Math.min(len - 1, 3);
         ctx.lineTo(c.ax - vx / len * stop, c.ay - vy / len * stop); ctx.stroke();
-        ctx.globalAlpha = op;
+        ctx.globalAlpha = cop;
       }
       this._catBoxes.push({ x: bx, y: by, w: bw, h: bh });
       ctx.fillStyle = 'rgba(10,10,10,0.7)';
@@ -4424,6 +4467,16 @@ class Component extends DCLogic {
       milkyLabel: Math.round(s.milkyway * 100) + '%',
       contrastPct: String(Math.round(s.contrast * 100)),
       contrastLabel: Math.round(s.contrast * 100) + '%',
+      starAuto: s.starOpacity == null,
+      starOpacityPct: String(Math.round(this.starOpacity() * 100)),
+      starOpacityLabel: Math.round(this.starOpacity() * 100) + '%',
+      // Moving the slider is the reader saying so, which is what turns the
+      // automatic behaviour off; the checkbox hands it back.
+      onStarOpacity: e => this.setState({ starOpacity: Number(e.target.value) / 100 }),
+      onStarAuto: e => this.setState({ starOpacity: e.target.checked ? null : this.starOpacity() }),
+      starTip: s.starOpacity == null
+        ? 'Star brightness follows the zoom: dim across the whole sky, full at the deepest zoom. Move the slider to set it yourself.'
+        : 'Star brightness is fixed where you set it. Tick Auto to let the zoom decide again.',
       catOpacityPct: String(Math.round(s.catOpacity * 100)),
       catOpacityLabel: Math.round(s.catOpacity * 100) + '%',
       onCatOpacity: e => this.setState({ catOpacity: Number(e.target.value) / 100 }),
