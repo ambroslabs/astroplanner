@@ -79,6 +79,19 @@ Catalogue*.
 - <https://en.wikipedia.org/wiki/Caldwell_catalogue>
 - <https://en.wikipedia.org/wiki/Herschel_400_Catalogue>
 
+### VI/49 — the constellation boundaries
+
+The 88 regions the IAU fixed in 1930, as Eugene Delporte drew them: vertices on
+the equinox of B1875, where every boundary is a line of constant right ascension
+or constant declination. `assets/catalogs/bounds.*.txt` is built from
+`constbnd.dat` by `scripts/build-constellations.py`, which keeps Delporte's own
+vertices and leaves the precession to J2000 to the page.
+
+- VizieR catalogue: VI/49, *Constellation Boundary Data* (Davenhall & Leggett, 1989)
+- `constbnd.dat` prepared in 2007 by Bill J. Gray
+- Service: <https://vizier.cds.unistra.fr/> — DOI [10.26093/cds/vizier](https://doi.org/10.26093/cds/vizier)
+- Rules of usage: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+
 ---
 
 ## Time zones

@@ -874,6 +874,13 @@
         </div>
       </div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Boundaries</span>
+        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+          <input aria-label="Constellation boundary opacity" type="range" min="0" max="100" step="5" value="{{ boundsPct }}" sc-camel-on-input="{{ onBounds }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ boundsLabel }}</span>
+        </div>
+      </div>
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Objects</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
           <input aria-label="Catalogue object opacity" type="range" min="0" max="100" step="5" value="{{ catOpacityPct }}" sc-camel-on-input="{{ onCatOpacity }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
@@ -988,6 +995,7 @@
         &#183; Sharpless, Barnard, van den Bergh, Lynds and Arp via <a href="https://vizier.cds.unistra.fr/" target="_blank" rel="noopener">VizieR</a>,
         names from <a href="https://simbad.cds.unistra.fr/" target="_blank" rel="noopener">SIMBAD</a>, both CDS Strasbourg
         &#183; list membership from <a href="https://en.wikipedia.org/wiki/Messier_object" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA 4.0)
+        &#183; constellation boundaries from <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/VI/49" target="_blank" rel="noopener">VI/49</a> after Delporte (1930)
         &#183; time zones from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors (ODbL) via <a href="https://github.com/evansiroky/timezone-boundary-builder" target="_blank" rel="noopener">timezone-boundary-builder</a>
         &#183; <a href="/attribution.txt" target="_blank" rel="noopener">full attribution and licences</a>
         <br>Planner &#169; 2026 Ambros Labs, <a href="/license.txt" target="_blank" rel="noopener">MIT licensed</a> &#183; the data above is not ours and keeps its own terms
@@ -1197,6 +1205,9 @@ class Component extends DCLogic {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
     stars: 1, milkyway: 0.25, contrast: 0.35,
+    // The 88 regions. Quieter than the figures by default: they are a
+    // reference grid, and the chart is not about them.
+    bounds: 0.45,
     // null = whole sky; otherwise { raStart, raLen, decMin, decMax } in absolute RA/Dec
     // '' follows the site, then the browser, then sidereal; 'LST' pins it to
     // sidereal; anything else is an IANA zone the user picked.
@@ -1599,6 +1610,143 @@ class Component extends DCLogic {
       s: [[19.891,24.08],[19.478,24.66],[20.018,27.75],[20.263,27.81]],
       l: [[0,1],[1,2],[1,3]] },
   ];
+
+  // ---------- constellation boundaries ----------
+  // The figures above are the shapes people recognise. These are the regions:
+  // the 88 areas the IAU divided the sky into in 1930, which between them
+  // account for every point on the sphere. An object is "in Cygnus" because of
+  // these lines and not because of the swan.
+  //
+  // Delporte drew them along meridians and parallels of B1875, so in that frame
+  // every edge is a line of constant right ascension or constant declination
+  // and nothing else. The file keeps them that way - 1,562 exact vertices
+  // rather than the 12,948-point J2000 list a published version has to carry to
+  // describe the curves - and the two lines of trigonometry below carry them up
+  // to J2000 once, at load.
+  BOUNDS_FILE = 'bounds.2188a34ccbd8.txt';
+  // How far a drawn edge may stray from the truth, in degrees. Half a pixel at
+  // the deepest zoom the chart allows, which is where a curve this shallow
+  // could first be seen at all.
+  BOUNDS_TOL = 0.002;
+  // IAU 1976 precession from the equinox of B1875.0 to J2000, as three angles
+  // in radians. Fixed numbers: the boundaries have one epoch and it never moves.
+  B1875 = { ze: -0.0139738040, z: -0.0139678004, th: -0.0121491672 };
+  loadBounds() {
+    if (this._bounds || this._boundsLoad) return this._boundsLoad || Promise.resolve(this._bounds);
+    this._boundsLoad = fetch(this.CATALOG_BASE + this.BOUNDS_FILE)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(txt => { this._bounds = this.parseBounds(txt); this._boundsLoad = null;
+                     this.setState({ catTick: (this.state.catTick || 0) + 1 });
+                     return this._bounds; })
+      .catch(() => { this._boundsLoad = null; this._bounds = null; this._boundsFail = true; return null; });
+    return this._boundsLoad;
+  }
+  // B1875 (RA in seconds of time, Dec in arcminutes) to J2000 (hours, degrees).
+  precess(raSec, decMin) {
+    const D = this.D2R, a = raSec / 240 * D, d = decMin / 60 * D;
+    const B = this.B1875;
+    let x = Math.cos(d) * Math.cos(a), y = Math.cos(d) * Math.sin(a), z = Math.sin(d), t;
+    let c = Math.cos(-B.ze), s = Math.sin(-B.ze);
+    t = c * x - s * y; y = s * x + c * y; x = t;
+    c = Math.cos(B.th); s = Math.sin(B.th);
+    t = c * x + s * z; z = -s * x + c * z; x = t;
+    c = Math.cos(-B.z); s = Math.sin(-B.z);
+    t = c * x - s * y; y = s * x + c * y; x = t;
+    return [((Math.atan2(y, x) / D / 15) % 24 + 24) % 24,
+            Math.asin(Math.max(-1, Math.min(1, z))) / D];
+  }
+  parseBounds(txt) {
+    const polys = [];
+    for (const ln of txt.split('\n')) {
+      if (!ln || ln[0] === '#') continue;
+      const f = ln.split('|');
+      let ra = parseInt(f[1].split(',')[0], 10), dec = parseInt(f[1].split(',')[1], 10);
+      const pts = [[ra, dec]];
+      for (const st of f[2].split(',')) {
+        const d = parseInt(st.slice(1), 36);
+        if (st[0] === 'a') ra = ((ra + d) % 86400 + 86400) % 86400; else dec += d;
+        pts.push([ra, dec]);
+      }
+      pts.pop();                       // the last step closes the ring
+      polys.push({ id: f[0], pts });
+    }
+    // Every interior edge belongs to two constellations, so drawing each
+    // polygon whole would draw 1,562 edges to show 866. Keyed on the pair of
+    // endpoints, in the order that sorts, so both owners produce one key.
+    const seen = new Set(), segs = [];
+    for (const p of polys) {
+      for (let i = 0; i < p.pts.length; i++) {
+        const a = p.pts[i], b = p.pts[(i + 1) % p.pts.length];
+        const ka = a[0] + ':' + a[1], kb = b[0] + ':' + b[1];
+        const key = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        segs.push(this.densify(a, b));
+      }
+    }
+    // For naming a region: the constant-declination edges, which are all a ray
+    // cast towards the pole has to cross, plus a note of the one polygon that
+    // encircles the north pole and so has its crossings the wrong way round.
+    for (const p of polys) {
+      const h = [];
+      let wind = 0;
+      for (let i = 0; i < p.pts.length; i++) {
+        const a = p.pts[i], b = p.pts[(i + 1) % p.pts.length];
+        const dra = ((b[0] - a[0] + 43200) % 86400 + 86400) % 86400 - 43200;
+        wind += dra;
+        if (a[1] === b[1]) h.push([a[1], a[0], a[0] + dra]);
+      }
+      p.h = h;
+      p.ncp = Math.abs(wind) > 43200 && p.pts.reduce((s, v) => s + v[1], 0) > 0;
+    }
+    return { polys, segs };
+  }
+  // A B1875 edge is straight; its J2000 image is a shallow curve. Split it
+  // until the chord is within tolerance and return the J2000 points.
+  densify(a, b) {
+    const A = this.precess(a[0], a[1]), B = this.precess(b[0], b[1]);
+    const out = [A];
+    const rec = (t0, t1, p0, p1, depth) => {
+      const tm = (t0 + t1) / 2;
+      const q = this.precess(a[0] + (b[0] - a[0]) * tm, a[1] + (b[1] - a[1]) * tm);
+      const dx = ((p1[0] - p0[0] + 12) % 24 + 24) % 24 - 12;
+      const mx = p0[0] + dx / 2, my = (p0[1] + p1[1]) / 2;
+      const ex = ((q[0] - mx + 12) % 24 + 24) % 24 - 12;
+      if (Math.hypot(ex * 15 * this.cd(q[1]), q[1] - my) > this.BOUNDS_TOL && depth < 9) {
+        rec(t0, tm, p0, q, depth + 1); out.push(q); rec(tm, t1, q, p1, depth + 1);
+      }
+    };
+    rec(0, 1, A, B, 0);
+    out.push(B);
+    return out;
+  }
+  // Which constellation a J2000 position falls in. Cast a ray north and count
+  // the constant-declination edges above it: an odd count means inside, except
+  // for the polygon that wraps the pole, where it means the opposite.
+  constellationAt(ra, dec) {
+    const b = this._bounds;
+    if (!b) return null;
+    const B = this.B1875, D = this.D2R, a0 = ra * 15 * D, d0 = dec * D;
+    let x = Math.cos(d0) * Math.cos(a0), y = Math.cos(d0) * Math.sin(a0), z = Math.sin(d0), t;
+    let c = Math.cos(B.z), s = Math.sin(B.z);
+    t = c * x - s * y; y = s * x + c * y; x = t;
+    c = Math.cos(-B.th); s = Math.sin(-B.th);
+    t = c * x + s * z; z = -s * x + c * z; x = t;
+    c = Math.cos(B.ze), s = Math.sin(B.ze);
+    t = c * x - s * y; y = s * x + c * y; x = t;
+    const qr = ((Math.atan2(y, x) / D / 15) % 24 + 24) % 24 * 3600;
+    const qd = Math.asin(Math.max(-1, Math.min(1, z))) / D * 60;
+    for (const p of b.polys) {
+      let n = 0;
+      for (const [ed, r0, r1] of p.h) {
+        if (ed <= qd) continue;
+        const lo = Math.min(r0, r1), hi = Math.max(r0, r1);
+        if (((qr - lo) % 86400 + 86400) % 86400 < hi - lo) n++;
+      }
+      if ((n % 2 === 1) !== p.ncp) return p.id;
+    }
+    return null;
+  }
 
   // ---------- framing ----------
   // Bounding box of the sky that gets any usable dark time, plus a margin.
@@ -2737,7 +2885,12 @@ class Component extends DCLogic {
     // called, which is the part you cannot fit on a chart.
     if (o.alt && o.alt.length) out.push({ t: o.alt.join('  \u00B7  '), size: 13, color: '#F6F5F2' });
     const kind = this.OBJ_TYPES[o.type] || o.type || '';
-    const con = o.con ? (this.CONST_NAMES[o.con] || o.con) : '';
+    // Most catalogue rows arrive knowing their constellation. The ones that do
+    // not - the planets, the Moon, the handful of stars carried in from the IAU
+    // name list - can be told, now that the chart holds the regions.
+    let ab = o.con;
+    if (!ab) { if (this._bounds) ab = this.constellationAt(o.ra, o.dec); else if (!this._boundsFail) this.loadBounds(); }
+    const con = ab ? (this.CONST_NAMES[ab] || ab) : '';
     const where = kind + (con ? ' in ' + con : '');
     if (where.trim()) out.push({ t: where, size: 12, color: '#C9C4B7' });
     if (o.maj) {
@@ -3661,6 +3814,87 @@ class Component extends DCLogic {
       }
       ctx.restore();
     };
+    // The 88 regions, as opposed to the 88 figures. Political borders on a map
+    // of the sky: fine, unemphatic, and rectilinear because Delporte drew them
+    // along B1875 meridians and parallels - the slight lean and bend is a
+    // century and a quarter of precession, and is the honest shape.
+    const drawBounds = () => {
+      const op = this.state.bounds;
+      if (!(op > 0)) return;
+      if (!this._bounds) { if (!this._boundsFail) this.loadBounds(); return; }
+      ctx.save();
+      ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+      ctx.globalAlpha = op;
+      // Dashed, and in a tone that belongs to neither neighbour. Solid warm
+      // grey is the graticule and solid blue-white is the figures, and a
+      // boundary that reads as either is worse than none: the whole point of
+      // the layer is that these lines mean something the grid does not.
+      ctx.strokeStyle = '#9AA3AE'; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      for (const seg of this._bounds.segs) {
+        let px = null;
+        for (const [ra, dec] of seg) {
+          const x = xOf(ra), y = yOf(dec);
+          if (px === null || Math.abs(x - px) > wrapPx / 2) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          px = x;
+        }
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+      // Name each region where it can be seen rather than at a fixed anchor:
+      // zoomed in, the middle of Cygnus is usually off the screen, and a
+      // lattice of unlabelled lines is the one thing worse than no lattice.
+      // Sample the visible area, ask each sample what it is standing in, and
+      // put the name on the sample nearest the middle of its own group.
+      const key = axStart + '/' + axSpan + '/' + dTop + '/' + dBot + '/' + (X1 - X0) + '/' + (Y1 - Y0);
+      if (this._bndKey !== key) {
+        const step = 46, groups = new Map();
+        for (let x = X0 + step / 2; x < X1; x += step) {
+          for (let y = Y0 + step / 2; y < Y1; y += step) {
+            const ra = ((axStart + (1 - (x - X0) / (X1 - X0)) * axSpan) % 24 + 24) % 24;
+            const id = this.constellationAt(ra, dTop - (y - Y0) / (Y1 - Y0) * (dTop - dBot));
+            if (!id) continue;
+            if (!groups.has(id)) groups.set(id, []);
+            groups.get(id).push([x, y]);
+          }
+        }
+        const cand = [];
+        for (const [id, pts] of groups) {
+          let mx = 0, my = 0;
+          for (const p of pts) { mx += p[0]; my += p[1]; }
+          mx /= pts.length; my /= pts.length;
+          let best = pts[0], bd = Infinity;
+          for (const p of pts) {
+            const d = (p[0] - mx) * (p[0] - mx) + (p[1] - my) * (p[1] - my);
+            if (d < bd) { bd = d; best = p; }
+          }
+          cand.push({ id, x: best[0], y: best[1], n: pts.length });
+        }
+        // Whole-sky puts 88 names on one chart and CORONA AUSTRALIS is not a
+        // short word, so the ones with the most of themselves on screen get
+        // first refusal and anything that would land on top of an earlier name
+        // goes unlabelled. Zoomed in there is room for everyone and nothing is
+        // dropped; zoomed out the big regions are the ones worth naming.
+        cand.sort((a, b) => b.n - a.n);
+        ctx.font = '700 11px Inter, sans-serif';
+        const out = [], taken = [];
+        for (const c of cand) {
+          const t = (this.CONST_NAMES[c.id] || c.id).toUpperCase();
+          const w = ctx.measureText(t).width;
+          const box = { x: c.x - w / 2 - 3, y: c.y - 11, w: w + 6, h: 14 };
+          if (taken.some(b => box.x < b.x + b.w && box.x + box.w > b.x &&
+                              box.y < b.y + b.h && box.y + box.h > b.y)) continue;
+          taken.push(box);
+          out.push({ t, x: c.x, y: c.y });
+        }
+        this._bndKey = key; this._bndLabels = out;
+      }
+      ctx.font = '700 11px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#9AA3AE';
+      for (const l of this._bndLabels) ctx.fillText(l.t, l.x, l.y);
+      ctx.textAlign = 'left';
+      ctx.restore();
+    };
     const drawConstellations = () => {
       ctx.save();
       ctx.globalAlpha = this.state.stars;
@@ -3685,6 +3919,9 @@ class Component extends DCLogic {
               ctx.beginPath(); ctx.arc(px + off, py, 1.7, 0, Math.PI * 2); ctx.fill();
             }
           }
+          // The regions carry the names when they are drawn, and one copy of
+          // CYGNUS on the chart is enough.
+          if (this.state.bounds > 0 && this._bounds) continue;
           // label at the circular mean RA, so wrapped figures land sensibly
           let cx = 0, cy = 0;
           for (const [ra] of con.s) { cx += Math.cos(ra / 24 * 2 * Math.PI); cy += Math.sin(ra / 24 * 2 * Math.PI); }
@@ -3907,7 +4144,7 @@ class Component extends DCLogic {
       // past the veil and stay bright. The Sun does exactly that when centred.
       ctx.save();
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
-      drawMilkyWay(); drawConstellations();
+      drawMilkyWay(); drawBounds(); drawConstellations();
       this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot, axSpan });
       drawEcliptic(); drawMoon(); drawBodies();
       ctx.restore();
@@ -4587,6 +4824,8 @@ class Component extends DCLogic {
       catOpacityLabel: Math.round(s.catOpacity * 100) + '%',
       onCatOpacity: e => this.setState({ catOpacity: Number(e.target.value) / 100 }),
       starsPct: String(Math.round(s.stars * 100)),
+      boundsPct: String(Math.round(s.bounds * 100)),
+      boundsLabel: Math.round(s.bounds * 100) + '%',
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
       maskPct: String(Math.round(s.maskStrength * 100)),
@@ -4749,6 +4988,7 @@ class Component extends DCLogic {
       toggleFullDark: () => this.setState({ showFullDark: !this.state.showFullDark }),
       toggleEcliptic: () => this.setState({ showEcliptic: !this.state.showEcliptic }),
       onStars: e => this.setState({ stars: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
+      onBounds: e => this.setState({ bounds: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onMilky: e => this.setState({ milkyway: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onContrast: e => this.setState({ contrast: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onMaskStrength: e => this.setState({ maskStrength: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
