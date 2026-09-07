@@ -2394,14 +2394,19 @@ class Component extends DCLogic {
   // multiplicative - halving the span should feel like one step at every
   // scale, not a bigger step near the bottom.
   STAR_DIM = 0.34;        // across the whole sky
-  STAR_BRIGHT = 1;        // at the deepest zoom
+  STAR_BRIGHT = 1;        // full, and reached well before the deepest zoom
+  // Twenty degrees is where a view stops being a survey and starts being a
+  // field, so that is where the stars come fully up. Running the ramp all the
+  // way to the zoom floor spent most of its range on views nobody spends time
+  // in and left the useful middle dim: at 20 degrees it had reached 59%.
+  STAR_FULL = 20;
   starOpacity(span) {
     const set = this.state.starOpacity;
     if (set != null) return set;          // the user has said, so it is said
     const a = this._axis;
     const d = span != null ? span : (a ? a.dTop - a.dBot : 180);
-    const t = Math.log(Math.max(this.MIN_DEC, Math.min(180, d)) / this.MIN_DEC)
-            / Math.log(180 / this.MIN_DEC);
+    const t = Math.log(Math.max(this.STAR_FULL, Math.min(180, d)) / this.STAR_FULL)
+            / Math.log(180 / this.STAR_FULL);
     return this.STAR_BRIGHT + (this.STAR_DIM - this.STAR_BRIGHT) * t;
   }
 
