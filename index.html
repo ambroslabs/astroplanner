@@ -4373,7 +4373,18 @@ class Component extends DCLogic {
         // much usable time counts as good sky. Read off a table rather than
         // raised per cell: one exponent for every thousandth of the range
         // instead of seventy thousand of them, which is a third of this loop.
-        const tf = t * 8192, ti = tf | 0, tfr = tf - ti;
+        // Clamped, because the top of the range is a real value and not a
+        // spare slot: sky that is usable for the whole dark window gives t
+        // exactly 1, which indexed one past the end of the table, read
+        // undefined, and turned the interpolation into NaN. Written into a
+        // clamped byte array NaN becomes zero, so the best sky on the chart
+        // was drawn with no ground under it and no veil over it - and since
+        // whether a cell landed exactly on 1 or a rounding error below it
+        // varied from column to column, the result was a comb of vertical
+        // bars through the middle of the Milky Way.
+        let tf = t * 8192;
+        if (!(tf > 0)) tf = 0; else if (tf > 8192) tf = 8192;
+        const ti = tf < 8192 ? tf | 0 : 8191, tfr = tf - ti;
         const shaped = POW[ti] + (POW[ti + 1] - POW[ti]) * tfr;
         // A veil that thins as usable time rises: opaque over sky that is out
         // of reach, clear over the best of it. maskFalloff sets how much usable
