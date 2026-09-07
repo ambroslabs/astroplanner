@@ -1697,9 +1697,77 @@ class Component extends DCLogic {
         if (a[1] === b[1]) h.push([a[1], a[0], a[0] + dra]);
       }
       p.h = h;
-      p.ncp = Math.abs(wind) > 43200 && p.pts.reduce((s, v) => s + v[1], 0) > 0;
+      p.pole = Math.abs(wind) > 43200 ? (p.pts.reduce((s, v) => s + v[1], 0) > 0 ? 1 : -1) : 0;
+      p.ncp = p.pole > 0;
+      p.box = this.polyBox(p);
+      p.anchor = this.polyAnchor(p);
     }
     return { polys, segs };
+  }
+  // Where a region sits in J2000, for framing the chart on it. Taken from the
+  // vertices rather than the curves between them: a precessed edge bulges off
+  // its chord by two hundredths of a degree at worst, which is less than the
+  // margin this adds anyway.
+  polyBox(p) {
+    if (p.pole) {
+      // A polygon that encircles a pole covers every hour of right ascension,
+      // and reaches the pole itself, which is past its northernmost vertex.
+      let d = p.pole > 0 ? 90 : -90;
+      for (const v of p.pts) { const q = this.precess(v[0], v[1])[1];
+        if (p.pole > 0 ? q < d : q > d) d = q; }
+      return p.pole > 0 ? { raStart: 0, raLen: 24, decMin: d, decMax: 90 }
+                        : { raStart: 0, raLen: 24, decMin: -90, decMax: d };
+    }
+    let decMin = 90, decMax = -90, prev = null, cur = 0, lo = 0, hi = 0, ra0 = 0;
+    for (const v of p.pts) {
+      const [ra, dec] = this.precess(v[0], v[1]);
+      if (dec < decMin) decMin = dec;
+      if (dec > decMax) decMax = dec;
+      // Unwrapped along the ring rather than taken modulo 24, so a region
+      // sitting across 0h reads as one span and not as the whole sky.
+      if (prev === null) ra0 = ra; else cur += ((ra - prev + 12) % 24 + 24) % 24 - 12;
+      if (cur < lo) lo = cur;
+      if (cur > hi) hi = cur;
+      prev = ra;
+    }
+    return { raStart: ((ra0 + lo) % 24 + 24) % 24, raLen: Math.min(24, hi - lo),
+             decMin, decMax };
+  }
+  // The region plus a little room, so its own boundary is inside the view
+  // rather than along the edge of it.
+  boxFrame(b) {
+    const mD = Math.max(0.5, (b.decMax - b.decMin) * 0.08);
+    const mR = Math.max(0.03, b.raLen * 0.08);
+    const raLen = Math.min(24, b.raLen + 2 * mR);
+    return { raStart: ((b.raStart - mR) % 24 + 24) % 24, raLen,
+             decMin: Math.max(-90, b.decMin - mD), decMax: Math.min(90, b.decMax + mD) };
+  }
+  // The figures spell the names out and CONST_NAMES abbreviates them, so
+  // linking one to the other means matching on the name. Boötes is the only
+  // one where that needs the diaeresis taken off first.
+  constAbbr() {
+    if (this._conAbbr) return this._conAbbr;
+    const m = {};
+    for (const ab of Object.keys(this.CONST_NAMES)) {
+      m[this.CONST_NAMES[ab].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()] = ab;
+    }
+    return (this._conAbbr = m);
+  }
+  // What a figure covers, for the case where the regions have not been
+  // fetched. The stars of a figure sit well inside the region that holds it,
+  // so this frames a little tighter than the boundary would.
+  figureBox(con) {
+    let decMin = 90, decMax = -90, prev = null, cur = 0, lo = 0, hi = 0, ra0 = 0;
+    for (const [ra, dec] of con.s) {
+      if (dec < decMin) decMin = dec;
+      if (dec > decMax) decMax = dec;
+      if (prev === null) ra0 = ra; else cur += ((ra - prev + 12) % 24 + 24) % 24 - 12;
+      if (cur < lo) lo = cur;
+      if (cur > hi) hi = cur;
+      prev = ra;
+    }
+    return { raStart: ((ra0 + lo) % 24 + 24) % 24, raLen: Math.min(24, hi - lo),
+             decMin, decMax };
   }
   // A B1875 edge is straight; its J2000 image is a shallow curve. Split it
   // until the chord is within tolerance and return the J2000 points.
@@ -1736,16 +1804,72 @@ class Component extends DCLogic {
     t = c * x - s * y; y = s * x + c * y; x = t;
     const qr = ((Math.atan2(y, x) / D / 15) % 24 + 24) % 24 * 3600;
     const qd = Math.asin(Math.max(-1, Math.min(1, z))) / D * 60;
-    for (const p of b.polys) {
-      let n = 0;
-      for (const [ed, r0, r1] of p.h) {
-        if (ed <= qd) continue;
-        const lo = Math.min(r0, r1), hi = Math.max(r0, r1);
-        if (((qr - lo) % 86400 + 86400) % 86400 < hi - lo) n++;
-      }
-      if ((n % 2 === 1) !== p.ncp) return p.id;
-    }
+    for (const p of b.polys) if (this.inPoly(p, qr, qd)) return p.id;
     return null;
+  }
+  // The ray cast itself, on a point already carried back to B1875.
+  inPoly(p, raSec, decMin) {
+    let n = 0;
+    for (const [ed, r0, r1] of p.h) {
+      if (ed <= decMin) continue;
+      const lo = Math.min(r0, r1), hi = Math.max(r0, r1);
+      if (((raSec - lo) % 86400 + 86400) % 86400 < hi - lo) n++;
+    }
+    return (n % 2 === 1) !== p.ncp;
+  }
+  // Where to write a region's name: the point furthest inside it, found once
+  // and then left alone. A label that is recomputed from what happens to be on
+  // screen crawls around while the chart is panned, which reads as a fault
+  // even when every position it takes is a reasonable one. This one is a fixed
+  // place in the sky and it stays there.
+  //
+  // Found by rasterising the region and taking the cell furthest from the
+  // outside - two passes of a distance transform over a 24x24 grid, which is
+  // coarse but is asking a coarse question.
+  polyAnchor(p) {
+    const N = 24;
+    let d0 = 5400, d1 = -5400, r0 = 0, span = 86400;
+    for (const v of p.pts) { if (v[1] < d0) d0 = v[1]; if (v[1] > d1) d1 = v[1]; }
+    if (p.pole > 0) d1 = 5400; else if (p.pole < 0) d0 = -5400;
+    if (!p.pole) {
+      let prev = null, cur = 0, lo = 0, hi = 0, first = 0;
+      for (const v of p.pts) {
+        if (prev === null) first = v[0];
+        else cur += ((v[0] - prev + 43200) % 86400 + 86400) % 86400 - 43200;
+        if (cur < lo) lo = cur;
+        if (cur > hi) hi = cur;
+        prev = v[0];
+      }
+      r0 = first + lo; span = hi - lo;
+    }
+    const dst = new Int32Array(N * N);
+    for (let j = 0; j < N; j++) {
+      const dec = d0 + (j + 0.5) / N * (d1 - d0);
+      for (let i = 0; i < N; i++) {
+        const ra = ((r0 + (i + 0.5) / N * span) % 86400 + 86400) % 86400;
+        dst[j * N + i] = this.inPoly(p, ra, dec) ? 9999 : 0;
+      }
+    }
+    // Outside the grid counts as outside the region, so the rim starts at 1.
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const k = j * N + i;
+      if (!dst[k]) continue;
+      const u = j ? dst[k - N] : 0, l = i ? dst[k - 1] : 0;
+      dst[k] = Math.min(dst[k], Math.min(u, l) + 1);
+    }
+    for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) {
+      const k = j * N + i;
+      if (!dst[k]) continue;
+      const u = j < N - 1 ? dst[k + N] : 0, l = i < N - 1 ? dst[k + 1] : 0;
+      dst[k] = Math.min(dst[k], Math.min(u, l) + 1);
+    }
+    let best = -1, bi = 0, bj = 0;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      if (dst[j * N + i] > best) { best = dst[j * N + i]; bi = i; bj = j; }
+    }
+    if (best <= 0) return null;   // too thin to hold a cell at this resolution
+    return this.precess(((r0 + (bi + 0.5) / N * span) % 86400 + 86400) % 86400,
+                        d0 + (bj + 0.5) / N * (d1 - d0));
   }
 
   // ---------- framing ----------
@@ -2298,6 +2422,18 @@ class Component extends DCLogic {
         // it. Tested before marking a point, since landing on an object is the
         // more specific thing to have meant.
         if (!d.moved) {
+          // A constellation name is a place to go, and reading one off the
+          // chart and wanting to be there is the same wish twice.
+          const nameAt = pad => (this._conHits || []).find(c =>
+            d.x0 >= c.x - pad && d.x0 <= c.x + c.w + pad &&
+            d.y0 >= c.y - pad && d.y0 <= c.y + c.h + pad);
+          // On the letters themselves the name wins, even over an object,
+          // because the letters are painted on top and the object is under
+          // them: whatever is hidden by a label cannot be what was aimed at.
+          // This is not hypothetical - the names sit in the Milky Way, and a
+          // tap on SAGITTARIUS opened an anonymous star behind the G.
+          let named = nameAt(0);
+          if (named) { this.setFrame(named.frame); return; }
           const hits = this._objHits || [];
           let best = null, bestD = Infinity;
           for (const h of hits) {
@@ -2305,6 +2441,10 @@ class Component extends DCLogic {
             if (dd <= Math.max(9, h.r + 4) && dd < bestD) { bestD = dd; best = h; }
           }
           if (best) { this.toggleInfo(best.cat, best.id); return; }
+          // Room for a fingertip around the letters, claimed only once
+          // everything visible there has passed.
+          named = nameAt(7);
+          if (named) { this.setFrame(named.frame); return; }
         }
         const ps = this.state.probes;
         const hit = ps.findIndex(q =>
@@ -3848,50 +3988,86 @@ class Component extends DCLogic {
       // put the name on the sample nearest the middle of its own group.
       const key = axStart + '/' + axSpan + '/' + dTop + '/' + dBot + '/' + (X1 - X0) + '/' + (Y1 - Y0);
       if (this._bndKey !== key) {
-        const step = 46, groups = new Map();
-        for (let x = X0 + step / 2; x < X1; x += step) {
-          for (let y = Y0 + step / 2; y < Y1; y += step) {
-            const ra = ((axStart + (1 - (x - X0) / (X1 - X0)) * axSpan) % 24 + 24) % 24;
-            const id = this.constellationAt(ra, dTop - (y - Y0) / (Y1 - Y0) * (dTop - dBot));
-            if (!id) continue;
-            if (!groups.has(id)) groups.set(id, []);
-            groups.get(id).push([x, y]);
-          }
-        }
+        // Each region has one place its name belongs, fixed in the sky. While
+        // that place is on screen the name sits on it and pans with everything
+        // else; once it goes over the edge the name slides along that edge and
+        // waits there, the way a label on a map does. Both are continuous, and
+        // continuous is the whole requirement: an earlier version chose the
+        // best of a grid of sample points, which is defensible at every
+        // position and still wrong, because panning walked the choice from one
+        // sample to the next and the name jumped half an inch for no reason
+        // the reader could see.
+        //
+        // axStart is the right-hand edge and right ascension increases to the
+        // left. Measured as a signed offset rather than modulo 24, so an anchor
+        // just off the right stays off the right instead of wrapping round to
+        // the far left and being pinned to the wrong side. Measured from the
+        // middle of the view rather than from its edge, because the sign has to
+        // flip somewhere and the only harmless place for that is the point
+        // furthest from anything on screen.
+        const mid = axStart + axSpan / 2;
+        const xAt = ra => X0 + (1 - ((((ra - mid + 12) % 24 + 24) % 24 - 12) + axSpan / 2) / axSpan) * (X1 - X0);
+        // Circular overlap: the name appears when any part of its region does,
+        // and goes when the last of it does.
+        const shows = b => b.decMin <= dTop && b.decMax >= dBot &&
+          ((((b.raStart - axStart) % 24 + 24) % 24 < axSpan) ||
+           (((axStart - b.raStart) % 24 + 24) % 24 < b.raLen));
         const cand = [];
-        for (const [id, pts] of groups) {
-          let mx = 0, my = 0;
-          for (const p of pts) { mx += p[0]; my += p[1]; }
-          mx /= pts.length; my /= pts.length;
-          let best = pts[0], bd = Infinity;
-          for (const p of pts) {
-            const d = (p[0] - mx) * (p[0] - mx) + (p[1] - my) * (p[1] - my);
-            if (d < bd) { bd = d; best = p; }
-          }
-          cand.push({ id, x: best[0], y: best[1], n: pts.length });
+        for (const q of this._bounds.polys) {
+          if (!q.anchor || !shows(q.box)) continue;
+          cand.push({ id: q.id, x: xAt(q.anchor[0]), y: yOf(q.anchor[1]),
+                      n: q.box.raLen * (q.box.decMax - q.box.decMin) });
         }
         // Whole-sky puts 88 names on one chart and CORONA AUSTRALIS is not a
-        // short word, so the ones with the most of themselves on screen get
-        // first refusal and anything that would land on top of an earlier name
-        // goes unlabelled. Zoomed in there is room for everyone and nothing is
-        // dropped; zoomed out the big regions are the ones worth naming.
+        // short word, so the biggest regions get first refusal and anything
+        // that would land on top of an earlier name goes unlabelled. Ranked by
+        // the region's own size rather than by how much of it is showing, so
+        // that panning cannot reorder them and make a name blink out because
+        // its neighbour grew.  Zoomed in there is room for everyone.
         cand.sort((a, b) => b.n - a.n);
         ctx.font = '700 11px Inter, sans-serif';
         const out = [], taken = [];
         for (const c of cand) {
           const t = (this.CONST_NAMES[c.id] || c.id).toUpperCase();
           const w = ctx.measureText(t).width;
+          // Placed on a sample point, which near an edge leaves half the word
+          // outside the plot for the clip to cut off. Slide it back in; if the
+          // name is wider than what is left of the region on screen there is
+          // nowhere to put it, so it is dropped rather than jammed against
+          // the frame.
+          if (w + 8 > X1 - X0) continue;
+          c.x = Math.max(X0 + w / 2 + 4, Math.min(X1 - w / 2 - 4, c.x));
+          c.y = Math.max(Y0 + 13, Math.min(Y1 - 4, c.y));
           const box = { x: c.x - w / 2 - 3, y: c.y - 11, w: w + 6, h: 14 };
           if (taken.some(b => box.x < b.x + b.w && box.x + box.w > b.x &&
                               box.y < b.y + b.h && box.y + box.h > b.y)) continue;
           taken.push(box);
-          out.push({ t, x: c.x, y: c.y });
+          out.push({ t, x: c.x, y: c.y, box, id: c.id });
         }
         this._bndKey = key; this._bndLabels = out;
       }
+      ctx.restore();
+    };
+    // The names go on last, after the figures. Drawn with the lines they
+    // belong to, the Great Square of Pegasus was ruled straight through the
+    // word PEGASUS - a label is the one thing on the chart that has to stay
+    // readable, so nothing gets painted over it.
+    const drawBoundNames = () => {
+      if (!(this.state.bounds > 0) || !this._bounds || !this._bndLabels) return;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+      ctx.globalAlpha = this.state.bounds;
       ctx.font = '700 11px Inter, sans-serif'; ctx.textAlign = 'center';
       ctx.fillStyle = '#9AA3AE';
-      for (const l of this._bndLabels) ctx.fillText(l.t, l.x, l.y);
+      for (const l of this._bndLabels) {
+        ctx.fillText(l.t, l.x, l.y);
+        // Reading a name off the chart and wanting to go there is the same
+        // wish twice, so the name is the button. The region is what gets
+        // framed, not the label's neighbourhood.
+        const b = this._bounds.polys.find(q => q.id === l.id);
+        if (b) this._conHits.push({ x: l.box.x, y: l.box.y, w: l.box.w, h: l.box.h,
+                                    frame: this.boxFrame(b.box) });
+      }
       ctx.textAlign = 'left';
       ctx.restore();
     };
@@ -3939,6 +4115,13 @@ class Component extends DCLogic {
             conTaken.push(spot);
             ctx.fillStyle = 'rgba(203,214,232,0.55)';
             ctx.fillText(con.n, lx0, spot.y);
+            // Tappable on the same terms as a region name. With the boundaries
+            // loaded this frames the region, which is the better answer; with
+            // only the figures to go on it frames the figure and its margin.
+            const ab = this.constAbbr()[con.n];
+            const pl = ab && this._bounds && this._bounds.polys.find(q => q.id === ab);
+            this._conHits.push({ x: spot.x, y: spot.y - spot.h, w: spot.w, h: spot.h + 4,
+                                 frame: this.boxFrame(pl ? pl.box : this.figureBox(con)) });
           }
           ctx.textAlign = 'left';
         }
@@ -4144,7 +4327,8 @@ class Component extends DCLogic {
       // past the veil and stay bright. The Sun does exactly that when centred.
       ctx.save();
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
-      drawMilkyWay(); drawBounds(); drawConstellations();
+      this._conHits = [];
+      drawMilkyWay(); drawBounds(); drawConstellations(); drawBoundNames();
       this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot, axSpan });
       drawEcliptic(); drawMoon(); drawBodies();
       ctx.restore();
