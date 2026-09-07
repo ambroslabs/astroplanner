@@ -1697,6 +1697,14 @@ class Component extends DCLogic {
         if (a[1] === b[1]) h.push([a[1], a[0], a[0] + dra]);
       }
       p.h = h;
+      // The constant-right-ascension edges, which are what a horizontal line
+      // across the region crosses.
+      const v = [];
+      for (let i = 0; i < p.pts.length; i++) {
+        const a = p.pts[i], b = p.pts[(i + 1) % p.pts.length];
+        if (a[0] === b[0] && a[1] !== b[1]) v.push([a[0], Math.min(a[1], b[1]), Math.max(a[1], b[1])]);
+      }
+      p.v = v;
       p.pole = Math.abs(wind) > 43200 ? (p.pts.reduce((s, v) => s + v[1], 0) > 0 ? 1 : -1) : 0;
       p.ncp = p.pole > 0;
       p.box = this.polyBox(p);
@@ -1791,9 +1799,9 @@ class Component extends DCLogic {
   // Which constellation a J2000 position falls in. Cast a ray north and count
   // the constant-declination edges above it: an odd count means inside, except
   // for the polygon that wraps the pole, where it means the opposite.
-  constellationAt(ra, dec) {
-    const b = this._bounds;
-    if (!b) return null;
+  // J2000 (hours, degrees) back down to B1875 (seconds of time, arcminutes),
+  // the frame the boundaries are defined in.
+  toB1875(ra, dec) {
     const B = this.B1875, D = this.D2R, a0 = ra * 15 * D, d0 = dec * D;
     let x = Math.cos(d0) * Math.cos(a0), y = Math.cos(d0) * Math.sin(a0), z = Math.sin(d0), t;
     let c = Math.cos(B.z), s = Math.sin(B.z);
@@ -1802,9 +1810,14 @@ class Component extends DCLogic {
     t = c * x + s * z; z = -s * x + c * z; x = t;
     c = Math.cos(B.ze), s = Math.sin(B.ze);
     t = c * x - s * y; y = s * x + c * y; x = t;
-    const qr = ((Math.atan2(y, x) / D / 15) % 24 + 24) % 24 * 3600;
-    const qd = Math.asin(Math.max(-1, Math.min(1, z))) / D * 60;
-    for (const p of b.polys) if (this.inPoly(p, qr, qd)) return p.id;
+    return [((Math.atan2(y, x) / D / 15) % 24 + 24) % 24 * 3600,
+            Math.asin(Math.max(-1, Math.min(1, z))) / D * 60];
+  }
+  constellationAt(ra, dec) {
+    const b = this._bounds;
+    if (!b) return null;
+    const q = this.toB1875(ra, dec);
+    for (const p of b.polys) if (this.inPoly(p, q[0], q[1])) return p.id;
     return null;
   }
   // The ray cast itself, on a point already carried back to B1875.
@@ -1817,17 +1830,21 @@ class Component extends DCLogic {
     }
     return (n % 2 === 1) !== p.ncp;
   }
-  // Where to write a region's name: the point furthest inside it, found once
-  // and then left alone. A label that is recomputed from what happens to be on
-  // screen crawls around while the chart is panned, which reads as a fault
-  // even when every position it takes is a reasonable one. This one is a fixed
-  // place in the sky and it stays there.
+  // Where to write a region's name, found once and then left alone. A label
+  // that is recomputed from what happens to be on screen crawls around while
+  // the chart is panned, which reads as a fault even when every position it
+  // takes is a reasonable one. This one is a fixed place in the sky.
   //
-  // Found by rasterising the region and taking the cell furthest from the
-  // outside - two passes of a distance transform over a 24x24 grid, which is
-  // coarse but is asking a coarse question.
+  // What is being placed is a word, not a point, and a word is wide and short.
+  // Asking only for the spot furthest from the edges - which is what a plain
+  // distance transform answers - put PISCES across the Pegasus line and left
+  // SAGITTA with four of its seven letters in Delphinus. So the region is
+  // rasterised and the answer is the widest unbroken run of it, scored by how
+  // long the run is with a little credit for depth, which is the shape of the
+  // thing that has to fit. The half-width of that run comes back too, so the
+  // drawing can tell when a name is simply too big for the room it has.
   polyAnchor(p) {
-    const N = 24;
+    const N = 32;
     let d0 = 5400, d1 = -5400, r0 = 0, span = 86400;
     for (const v of p.pts) { if (v[1] < d0) d0 = v[1]; if (v[1] > d1) d1 = v[1]; }
     if (p.pole > 0) d1 = 5400; else if (p.pole < 0) d0 = -5400;
@@ -1842,34 +1859,53 @@ class Component extends DCLogic {
       }
       r0 = first + lo; span = hi - lo;
     }
-    const dst = new Int32Array(N * N);
+    const cell = new Uint8Array(N * N);
     for (let j = 0; j < N; j++) {
       const dec = d0 + (j + 0.5) / N * (d1 - d0);
       for (let i = 0; i < N; i++) {
         const ra = ((r0 + (i + 0.5) / N * span) % 86400 + 86400) % 86400;
-        dst[j * N + i] = this.inPoly(p, ra, dec) ? 9999 : 0;
+        cell[j * N + i] = this.inPoly(p, ra, dec) ? 1 : 0;
       }
     }
-    // Outside the grid counts as outside the region, so the rim starts at 1.
+    // How many rows of the region stand above and below each cell, so a run
+    // in a one-cell-thick sliver loses to one with the region around it.
+    const up = new Int16Array(N * N), dn = new Int16Array(N * N);
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const k = j * N + i;
-      if (!dst[k]) continue;
-      const u = j ? dst[k - N] : 0, l = i ? dst[k - 1] : 0;
-      dst[k] = Math.min(dst[k], Math.min(u, l) + 1);
+      up[k] = cell[k] ? (j ? up[k - N] + 1 : 1) : 0;
     }
-    for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) {
+    for (let j = N - 1; j >= 0; j--) for (let i = 0; i < N; i++) {
       const k = j * N + i;
-      if (!dst[k]) continue;
-      const u = j < N - 1 ? dst[k + N] : 0, l = i < N - 1 ? dst[k + 1] : 0;
-      dst[k] = Math.min(dst[k], Math.min(u, l) + 1);
+      dn[k] = cell[k] ? (j < N - 1 ? dn[k + N] + 1 : 1) : 0;
     }
-    let best = -1, bi = 0, bj = 0;
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-      if (dst[j * N + i] > best) { best = dst[j * N + i]; bi = i; bj = j; }
+    let best = -1, bi = 0, bj = 0, bw = 0;
+    for (let j = 0; j < N; j++) {
+      let i = 0;
+      while (i < N) {
+        if (!cell[j * N + i]) { i++; continue; }
+        let e = i;
+        while (e < N && cell[j * N + e]) e++;
+        const len = e - i, mid = (i + e - 1) >> 1;
+        // Depth is worth something but not much: a name wants length.
+        let deep = N;
+        for (let q = i; q < e; q++) {
+          const t = Math.min(up[j * N + q], dn[j * N + q]);
+          if (t < deep) deep = t;
+        }
+        const score = len + Math.min(deep, 4);
+        if (score > best) { best = score; bi = mid; bj = j; bw = len; }
+        i = e;
+      }
     }
-    if (best <= 0) return null;   // too thin to hold a cell at this resolution
-    return this.precess(((r0 + (bi + 0.5) / N * span) % 86400 + 86400) % 86400,
-                        d0 + (bj + 0.5) / N * (d1 - d0));
+    if (best < 0) return null;
+    const at = this.precess(((r0 + (bi + 0.5) / N * span) % 86400 + 86400) % 86400,
+                            d0 + (bj + 0.5) / N * (d1 - d0));
+    // Half the run, in hours of right ascension - which is what the horizontal
+    // axis measures, at every declination, this being a plain RA/Dec plot -
+    // and half the region's thickness there, in degrees.
+    at.push(bw / 2 * (span / N) / 3600);
+    at.push((up[bj * N + bi] + dn[bj * N + bi] - 1) / 2 * ((d1 - d0) / N) / 60);
+    return at;
   }
 
   // ---------- framing ----------
@@ -4016,6 +4052,7 @@ class Component extends DCLogic {
         for (const q of this._bounds.polys) {
           if (!q.anchor || !shows(q.box)) continue;
           cand.push({ id: q.id, x: xAt(q.anchor[0]), y: yOf(q.anchor[1]),
+                      ax: xAt(q.anchor[0]), ay: yOf(q.anchor[1]),
                       n: q.box.raLen * (q.box.decMax - q.box.decMin) });
         }
         // Whole-sky puts 88 names on one chart and CORONA AUSTRALIS is not a
@@ -4030,14 +4067,34 @@ class Component extends DCLogic {
         for (const c of cand) {
           const t = (this.CONST_NAMES[c.id] || c.id).toUpperCase();
           const w = ctx.measureText(t).width;
-          // Placed on a sample point, which near an edge leaves half the word
-          // outside the plot for the clip to cut off. Slide it back in; if the
-          // name is wider than what is left of the region on screen there is
-          // nowhere to put it, so it is dropped rather than jammed against
-          // the frame.
-          if (w + 8 > X1 - X0) continue;
-          c.x = Math.max(X0 + w / 2 + 4, Math.min(X1 - w / 2 - 4, c.x));
-          c.y = Math.max(Y0 + 13, Math.min(Y1 - 4, c.y));
+          // A name may be slid to keep it on screen, but never so far that it
+          // leaves the region it names: a label standing in the next
+          // constellation along is not a smaller problem than a missing one,
+          // it is a wrong answer.
+          //
+          // One rule, and only one, because every rule here has to be a
+          // continuous function of the pan. Anything that picks the best of
+          // several candidate positions is defensible at each of them and
+          // still wrong, since panning walks the choice from one to the next
+          // and the name jumps for no reason the reader can see. So: the
+          // anchor, slid the shortest distance that puts the word on screen.
+          const half = w / 2 + 4;
+          if (half * 2 > X1 - X0 || Y1 - Y0 < 34) continue;
+          c.x = Math.max(X0 + half, Math.min(X1 - half, c.ax));
+          c.y = Math.max(Y0 + 13, Math.min(Y1 - 4, c.ay));
+          // Then the position is asked the question the chart answers for any
+          // point - which constellation is this? - at both ends of the word and
+          // in the middle, and if any of the three says something else the name
+          // is not written. The word has width and the anchor does not: PISCES
+          // was crossing the Pegasus line and SAGITTA had four of its seven
+          // letters in Delphinus. And sliding to the edge can leave the region
+          // even when the anchor was well inside it, which is how ANDROMEDA
+          // ended up in Pegasus.
+          const raOf = px => { const o = (1 - (px - X0) / (X1 - X0)) * axSpan - axSpan / 2;
+                               return ((axStart + axSpan / 2 + o) % 24 + 24) % 24; };
+          const dy = dTop - (c.y - 4 - Y0) / (Y1 - Y0) * (dTop - dBot);
+          if (![c.x - w / 2, c.x, c.x + w / 2]
+                .every(q => this.constellationAt(raOf(q), dy) === c.id)) continue;
           const box = { x: c.x - w / 2 - 3, y: c.y - 11, w: w + 6, h: 14 };
           if (taken.some(b => box.x < b.x + b.w && box.x + box.w > b.x &&
                               box.y < b.y + b.h && box.y + box.h > b.y)) continue;
