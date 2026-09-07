@@ -4512,7 +4512,13 @@ class Component extends DCLogic {
       darkInfo,
       thrPct: String(s.thr),
       thrLabel: '>' + s.thr + '\u00B0',
-      hmRef: el => {
+      // Built once and kept. A ref callback with a new identity every render is
+      // a ref React detaches and reattaches every render, and this one ends by
+      // drawing - so every state change was costing two full draws, one from
+      // componentDidUpdate and one from the ref being handed back the same
+      // canvas it already had. The body closes over nothing but `this`, so
+      // there is nothing stale to capture.
+      hmRef: this._hmRef || (this._hmRef = el => {
         this.canvas = el;
         if (!el) return;
         this.attachChartInput(el);
@@ -4563,7 +4569,7 @@ class Component extends DCLogic {
           ro.observe(el);
         }
         this.drawHeatmap(el);
-      },
+      }),
       onLat: numHandler('lat', 'latText', -90, 90),
       onLon: numHandler('lon', 'lonText', -180, 180),
       onThr: e => { const v = Math.max(0, Math.min(85, Number(e.target.value)));
