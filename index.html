@@ -1780,11 +1780,21 @@ class Component extends DCLogic {
   // A B1875 edge is straight; its J2000 image is a shallow curve. Split it
   // until the chord is within tolerance and return the J2000 points.
   densify(a, b) {
+    // Right ascension is stored wrapped into 0..24h, so the twenty edges that
+    // cross 0h have endpoints at opposite ends of the range and a plain
+    // subtraction sends the interpolation the long way round the sky. That
+    // drew eleven boundaries as lines sweeping nearly all 24 hours - one of
+    // them straight across Pegasus at declination +10, where the real edge is
+    // a two-degree step near 0h. Both endpoints were right, which is why it
+    // survived a check that every boundary has a line on it: the wrong line
+    // passes through the right places on its way past everything else.
+    const dRa = ((b[0] - a[0] + 43200) % 86400 + 86400) % 86400 - 43200;
+    const raAt = t => (((a[0] + dRa * t) % 86400) + 86400) % 86400;
     const A = this.precess(a[0], a[1]), B = this.precess(b[0], b[1]);
     const out = [A];
     const rec = (t0, t1, p0, p1, depth) => {
       const tm = (t0 + t1) / 2;
-      const q = this.precess(a[0] + (b[0] - a[0]) * tm, a[1] + (b[1] - a[1]) * tm);
+      const q = this.precess(raAt(tm), a[1] + (b[1] - a[1]) * tm);
       const dx = ((p1[0] - p0[0] + 12) % 24 + 24) % 24 - 12;
       const mx = p0[0] + dx / 2, my = (p0[1] + p1[1]) / 2;
       const ex = ((q[0] - mx + 12) % 24 + 24) % 24 - 12;
@@ -4006,11 +4016,19 @@ class Component extends DCLogic {
       // boundary that reads as either is worse than none: the whole point of
       // the layer is that these lines mean something the grid does not.
       ctx.strokeStyle = '#9AA3AE'; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+      // Right ascension measured from the middle of the view rather than
+      // modulo the axis start. Taken modulo, a point a minute past the
+      // right-hand edge comes out at the far left, the jump reads as a wrap,
+      // and the line is broken - so every boundary crossing that edge lost the
+      // piece of itself that was on screen. Measured from the middle, the sign
+      // flips at the antipode, where there is nothing to draw.
+      const mid = axStart + axSpan / 2;
+      const xB = ra => X0 + (1 - ((((ra - mid + 12) % 24 + 24) % 24 - 12) + axSpan / 2) / axSpan) * (X1 - X0);
       ctx.beginPath();
       for (const seg of this._bounds.segs) {
         let px = null;
         for (const [ra, dec] of seg) {
-          const x = xOf(ra), y = yOf(dec);
+          const x = xB(ra), y = yOf(dec);
           if (px === null || Math.abs(x - px) > wrapPx / 2) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
           px = x;
