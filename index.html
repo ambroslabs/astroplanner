@@ -1716,7 +1716,7 @@ class Component extends DCLogic {
     const A = this.plotShape();
     if (!isFinite(A) || A <= 0) return c;
     const mid = c.raStart + c.raLen / 2;
-    const raLen = Math.min(24, Math.max(0.05,
+    const raLen = Math.min(24, Math.max(this.MIN_RA,
       (k || this.ratioK()) * (c.decMax - c.decMin) * A / 15));
     return { raStart: ((mid - raLen / 2) % 24 + 24) % 24, raLen,
              decMin: c.decMin, decMax: c.decMax };
@@ -1744,9 +1744,17 @@ class Component extends DCLogic {
   // Normalise a requested view: clamp the zoom range, keep declination inside
   // the poles by shifting rather than wrapping (a view straddling the pole
   // reads as nonsense), and collapse a full-sky request back to no frame.
+  // How far in the chart will go. Declination is the binding one, since it
+  // sets the scale and RA follows from it: half a degree across the plot is
+  // about the field of a long lens, which is the scale someone framing a
+  // target actually works at. Ten times deeper than it was, and named here
+  // rather than repeated at each of the four places that clamp a view -
+  // that is how the wheel and the pinch come to disagree about the limit.
+  MIN_RA = 0.05;      // hours
+  MIN_DEC = 0.5;      // degrees
   normalizeFrame(c) {
-    const raLen = Math.max(0.5, Math.min(24, c.raLen));
-    const dSpan = Math.max(5, Math.min(180, c.decMax - c.decMin));
+    const raLen = Math.max(this.MIN_RA, Math.min(24, c.raLen));
+    const dSpan = Math.max(this.MIN_DEC, Math.min(180, c.decMax - c.decMin));
     const mid = (c.decMax + c.decMin) / 2;
     let decMax = mid + dSpan / 2, decMin = mid - dSpan / 2;
     if (decMax > 90) { decMin -= decMax - 90; decMax = 90; }
@@ -1818,8 +1826,8 @@ class Component extends DCLogic {
       const w = (p.y - a.Y0) / (a.Y1 - a.Y0);
       const raC = v.raStart + u * v.raLen;
       const decC = v.decMax - w * (v.decMax - v.decMin);
-      const raLen = Math.max(0.5, Math.min(24, v.raLen * f));
-      const dSpan = Math.max(5, Math.min(180, (v.decMax - v.decMin) * f));
+      const raLen = Math.max(this.MIN_RA, Math.min(24, v.raLen * f));
+      const dSpan = Math.max(this.MIN_DEC, Math.min(180, (v.decMax - v.decMin) * f));
       // The chart owns shift-wheel while the pointer is over it, including at
       // the ends of the zoom range, where it is simply a no-op. Letting the
       // event through there meant a zoom that ran out jumped the page instead.
@@ -1884,8 +1892,8 @@ class Component extends DCLogic {
       const d = Math.hypot(a1.x - b1.x, a1.y - b1.y);
       if (!(d > 0)) return;
       const f = q.d0 / d;                       // fingers apart -> smaller span
-      const raLen = Math.max(0.5, Math.min(24, q.raLen0 * f));
-      const dSpan = Math.max(5, Math.min(180, q.decSpan0 * f));
+      const raLen = Math.max(this.MIN_RA, Math.min(24, q.raLen0 * f));
+      const dSpan = Math.max(this.MIN_DEC, Math.min(180, q.decSpan0 * f));
       // Placed so the sky it started on stays under the fingers, which is what
       // makes the pinch pan as well as zoom without any separate handling.
       const mx = (a1.x + b1.x) / 2, my = (a1.y + b1.y) / 2;
