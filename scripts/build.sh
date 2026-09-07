@@ -68,15 +68,17 @@ html = open(path, encoding='utf-8').read()
 assert html.count('</body>') == 1, 'expected exactly one </body>'
 open(path, 'w', encoding='utf-8').write(html.replace('</body>', badge + '</body>'))
 BADGE
-  # Point the beta copy at the root's catalogue directory. The file names
-  # carry a hash of their contents, so the two copies share one URL and one
-  # cached download wherever the data is the same, and get separate files
-  # automatically wherever it differs.
+  # Point the beta copy at its own catalogue directory. It used to read the
+  # root's, so that the content-hashed names let the two pages share one URL
+  # and one cached download wherever the data was identical. That is a small
+  # win and it costs correctness: a catalogue added on beta does not exist at
+  # the root until the branch reaches main, so the layer that the beta build
+  # exists to try out is the one layer that 404s. Beta reads its own copy.
   python3 - "$OUT/index.html" <<'BASE'
 import sys
 path = sys.argv[1]
 old = "CATALOG_BASE = 'assets/catalogs/';"
-new = "CATALOG_BASE = '/assets/catalogs/';"
+new = "CATALOG_BASE = '/beta/assets/catalogs/';"
 html = open(path, encoding='utf-8').read()
 assert html.count(old) == 1, 'expected exactly one CATALOG_BASE'
 open(path, 'w', encoding='utf-8').write(html.replace(old, new))
