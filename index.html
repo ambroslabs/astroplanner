@@ -3225,7 +3225,14 @@ class Component extends DCLogic {
         ctx.font = (ln.weight || 600) + ' ' + ln.size + "px Inter, sans-serif";
         w = Math.max(w, ctx.measureText(ln.t).width);
       }
-      const bw = Math.max(150, w + PAD * 2 + CLOSE), bh = lines.length * LH + PAD * 2 - 4;
+      // The night's shape, on the same terms as the click readouts. Not for the
+      // Sun: its altitude through astronomical darkness is a flat line along
+      // the floor by the definition of the window, which is a fact about the
+      // definition and not about the Sun.
+      const track = dark.L > 0 && !(e.cat === 'sky' && e.id === 'Sun');
+      const trackH = track ? this.TRACK_H + 8 : 0;
+      const bw = Math.max(150, w + PAD * 2 + CLOSE),
+            bh = lines.length * LH + PAD * 2 - 4 + trackH;
       let bx, by;
       if (isFinite(e.lx) && isFinite(e.ly)) { bx = px + e.lx; by = py + e.ly; }
       else { bx = px + 18; by = py - bh - 14; }
@@ -3252,6 +3259,10 @@ class Component extends DCLogic {
         ctx.fillStyle = ln.color;
         ctx.fillText(ln.t, bx + PAD, y);
         y += LH;
+      }
+      if (track) {
+        this.drawAltTrack(ctx, bx + PAD, by + bh - PAD - this.TRACK_H + 2,
+                          bw - PAD * 2, this.TRACK_H, o.ra, o.dec, dark);
       }
       // Close control, top right.
       const cx = bx + bw - CLOSE - 3, cy = by + 4;
@@ -3806,6 +3817,76 @@ class Component extends DCLogic {
     }).join('  \u00B7  ');
     return body + (tag ? ' ' + tag : '');
   }
+  // ---------- the night, as a shape ----------
+  // A number says six hours are usable; it does not say whether that is one
+  // long climb through the zenith or a scrape along the trees at either end of
+  // the night, and those are not the same night to shoot. So the readouts and
+  // the panels carry the altitude curve for the object across the dark window,
+  // with the part above the threshold picked out - which is the part the
+  // number was counting.
+  TRACK_H = 40;
+  altAt(ra, dec, lst) {
+    const lat = this.state.lat, H = (lst - ra) * 15;
+    return Math.asin(Math.max(-1, Math.min(1,
+      this.sd(dec) * this.sd(lat) + this.cd(dec) * this.cd(lat) * this.cd(H)))) / this.D2R;
+  }
+  drawAltTrack(ctx, x, y, w, h, ra, dec, dark) {
+    if (!(dark.L > 0) || w < 40) return false;
+    const thr = this.state.thr, N = 72;
+    // Horizon to zenith, always. A scale fitted to each object would use the
+    // box better and would mean that two of these side by side could not be
+    // compared, which is most of what they are for - and "it never gets high"
+    // is the answer, not wasted space. The floor of the box is the horizon,
+    // which is why nothing has to say so.
+    const yOfAlt = a => y + h - Math.max(0, Math.min(1, a / 90)) * h;
+    const xOfI = i => x + i / (N - 1) * w;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    const ty = yOfAlt(thr);
+    ctx.strokeStyle = 'rgba(217,169,96,0.38)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(x, ty); ctx.lineTo(x + w, ty); ctx.stroke(); ctx.setLineDash([]);
+    const alt = [];
+    for (let i = 0; i < N; i++) alt.push(this.altAt(ra, dec, dark.dusk + i / (N - 1) * dark.L));
+    // Filled between the threshold and the curve wherever the curve is above
+    // it. One run at a time, so an object that dips below and comes back reads
+    // as two - which is the same thing the times on the line above say.
+    ctx.fillStyle = 'rgba(217,169,96,0.22)';
+    let i = 0;
+    while (i < N) {
+      if (alt[i] < thr) { i++; continue; }
+      let j = i;
+      while (j + 1 < N && alt[j + 1] >= thr) j++;
+      ctx.beginPath();
+      ctx.moveTo(xOfI(i), ty);
+      for (let k = i; k <= j; k++) ctx.lineTo(xOfI(k), yOfAlt(alt[k]));
+      ctx.lineTo(xOfI(j), ty);
+      ctx.closePath(); ctx.fill();
+      i = j + 1;
+    }
+    ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(142,137,125,0.85)';
+    ctx.beginPath();
+    for (let k = 0; k < N; k++) (k ? ctx.lineTo : ctx.moveTo).call(ctx, xOfI(k), yOfAlt(alt[k]));
+    ctx.stroke();
+    ctx.strokeStyle = '#D9A960'; ctx.lineWidth = 1.9;
+    i = 0;
+    while (i < N) {
+      if (alt[i] < thr) { i++; continue; }
+      let j = i;
+      while (j + 1 < N && alt[j + 1] >= thr) j++;
+      if (j > i) {
+        ctx.beginPath();
+        for (let k = i; k <= j; k++) (k > i ? ctx.lineTo : ctx.moveTo).call(ctx, xOfI(k), yOfAlt(alt[k]));
+        ctx.stroke();
+      }
+      i = j + 1;
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(74,70,62,0.9)'; ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    return true;
+  }
+
   // RA and declination, short enough to sit on a chart label.
   fmtCoords(ra, dec) {
     return this.fmtLST(ra) + '  ' + (dec >= 0 ? '+' : '\u2212')
@@ -4594,7 +4675,13 @@ class Component extends DCLogic {
       // padding: a readout is two or three short lines, and "8.6h usable"
       // running under the cross would be the first thing anyone noticed.
       const PCLOSE = 15;
-      const bw = Math.max(w1 + PCLOSE + 6, w2, w3) + 22, bh = split ? 64 : 46;
+      // Room for the night's shape, plus a line under it for the two clock
+      // times. Only when there is a night: with the sun never far enough down
+      // there is no window to draw across, and the box says so in words.
+      const track = dark.L > 0;
+      const trackH = track ? this.TRACK_H + 8 : 0;
+      const bw = Math.max(w1 + PCLOSE + 6, w2, w3, track ? 150 : 0) + 22,
+            bh = (split ? 64 : 46) + trackH;
       // Cost, not a yes/no test: when the chart is crowded there may be no
       // free spot at all, and the least bad one still beats a fixed fallback.
       const cost = (x, y) => {
@@ -4676,6 +4763,10 @@ class Component extends DCLogic {
       if (split) {
         ctx.fillStyle = '#8E897D'; ctx.font = '600 12px Inter, sans-serif';
         ctx.fillText(split, bx + 11, by + 56);
+      }
+      if (track) {
+        this.drawAltTrack(ctx, bx + 11, by + (split ? 64 : 46), bw - 22, this.TRACK_H,
+                          pr.ra, pr.dec, dark);
       }
       // A point has always been taken off by clicking the point itself, which
       // is a 12px crosshair that a readout is often sitting on top of, and
