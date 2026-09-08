@@ -29,6 +29,7 @@
 #                            would be a confusing dead file.
 set -euo pipefail
 ROOT="${BUILD_SRC:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+export ROOT
 OUT="${BUILD_OUT:-$ROOT/dist}"
 
 rm -rf "$OUT"; mkdir -p "$OUT"
@@ -41,6 +42,43 @@ cp -r "$ROOT/assets" "$OUT/assets"
 cp "$ROOT/ATTRIBUTION.md" "$OUT/attribution.txt"
 cp "$ROOT/LICENSE" "$OUT/license.txt"
 cp -r "$ROOT/licenses" "$OUT/licenses"
+
+# The offline copy. The worker and the manifest only go out with the root
+# deployment: /beta reads its catalogues from /assets/, which a worker
+# registered under /beta/ cannot intercept, so it would install something that
+# looked offline-capable and had no data in it.
+if [[ "${BUILD_BETA:-0}" != "1" ]]; then
+  cp "$ROOT/manifest.webmanifest" "$OUT/manifest.webmanifest"
+  # The precache list is written from what is actually in dist/ rather than
+  # kept by hand: catalogue filenames carry a hash of their contents, so a
+  # hand-written list would go on asking for the file that was there last time.
+  python3 - "$OUT" <<'SW'
+import hashlib, os, sys
+out = sys.argv[1]
+files = ['/', '/manifest.webmanifest']
+for base, _, names in os.walk(os.path.join(out, 'assets')):
+    for n in sorted(names):
+        rel = os.path.relpath(os.path.join(base, n), out).replace(os.sep, '/')
+        # The social card is for other people's link previews, not for us.
+        if rel == 'assets/social-card.png':
+            continue
+        files.append('/' + rel)
+files.sort()
+sw = open(os.path.join(os.environ['ROOT'], 'sw.js'), encoding='utf-8').read()
+# The stamp is the digest of everything the worker will cache, so a deployment
+# that changes nothing keeps its cache and one that changes anything replaces it.
+h = hashlib.sha256()
+for f in files:
+    h.update(f.encode())
+    path = os.path.join(out, f.lstrip('/')) if f != '/' else os.path.join(out, 'index.html')
+    with open(path, 'rb') as fh:
+        h.update(hashlib.sha256(fh.read()).digest())
+sw = sw.replace('BUILD_STAMP', h.hexdigest()[:12])
+sw = sw.replace('/*BUILD_ASSETS*/', ',\n  '.join("'%s'" % f for f in files))
+open(os.path.join(out, 'sw.js'), 'w', encoding='utf-8').write(sw)
+print('build: service worker caches %d files' % len(files))
+SW
+fi
 
 if [[ -n "${CF_WEB_ANALYTICS_TOKEN:-}" ]]; then
   python3 - "$OUT/index.html" "$CF_WEB_ANALYTICS_TOKEN" <<'PY'
@@ -92,6 +130,11 @@ for old, new in [('href="/attribution.txt"', 'href="/beta/attribution.txt"'),
                  ('href="/license.txt"', 'href="/beta/license.txt"')]:
     assert html.count(old) == 1, 'expected exactly one ' + old
     html = html.replace(old, new)
+# The manifest belongs to the root deployment and its start_url is the root, so
+# offering to install from here would install the other site.
+tag = '<link rel="manifest" href="/manifest.webmanifest">\n'
+assert html.count(tag) == 1, 'expected exactly one manifest link'
+html = html.replace(tag, '')
 open(path, 'w', encoding='utf-8').write(html)
 ATTR
   echo "build: stamped as beta"

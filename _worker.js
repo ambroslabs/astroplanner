@@ -64,6 +64,18 @@ export default {
     // for a search engine to carry a second, deliberately unstable version of
     // every page.
     if (HASHED.test(url.pathname)) return catalogueResponse(response);
+    // The service worker file is the one thing that must never be held: it is
+    // what decides how long everything else is held for, so a stale copy of it
+    // is a deployment that can never land. Browsers revalidate it anyway, but
+    // not on every path and not in every version, and the cost of saying so is
+    // one header.
+    if (url.pathname === "/sw.js" || url.pathname === "/manifest.webmanifest") {
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", "no-cache");
+      return new Response(response.body, {
+        status: response.status, statusText: response.statusText, headers,
+      });
+    }
     if (url.pathname === "/beta" || url.pathname.startsWith("/beta/")) {
       // The body has to be re-wrapped: an ASSETS response's headers are frozen.
       const headers = new Headers(response.headers);
