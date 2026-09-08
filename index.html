@@ -967,7 +967,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -2580,15 +2580,24 @@ class Component extends DCLogic {
           // them: whatever is hidden by a label cannot be what was aimed at.
           // This is not hypothetical - the names sit in the Milky Way, and a
           // tap on SAGITTARIUS opened an anonymous star behind the G.
-          // Going there and marking it are the same wish, so one click does
-          // both - and the click after it, on the same name, only lets go.
-          // Not re-framing then: the reader is already looking at the thing,
-          // and moving the chart to where it already is would be a nudge for
-          // nothing.
+          // One click marks the region, two go to it. Marking has to answer
+          // immediately - a highlight that waits to find out whether a second
+          // click is coming feels broken - so the first click of a pair
+          // toggles as usual and the second undoes whatever that did before
+          // framing. Either way a double click ends with the region marked
+          // and on screen, whichever state it started in.
           const pick = c => {
-            if (c.id && c.id === this.state.conSel) { this.setState({ conSel: '' }); return; }
-            if (c.id) this.setState({ conSel: c.id });
-            this.setFrame(c.frame);
+            const now = Date.now();
+            const again = this._conTap && this._conTap.id === c.id
+                          && now - this._conTap.t < 450;
+            this._conTap = { id: c.id, t: now };
+            if (again) {
+              if (c.id) this.setState({ conSel: c.id });
+              this.setFrame(c.frame);
+              return;
+            }
+            if (!c.id) return;
+            this.setState({ conSel: c.id === this.state.conSel ? '' : c.id });
           };
           let named = nameAt(0);
           if (named) { pick(named); return; }
@@ -4365,8 +4374,11 @@ class Component extends DCLogic {
       }
       ctx.restore();
     };
-    // The chosen region, solid and heavy where the lattice is fine and dashed,
-    // and in the chart's brightest neutral rather than the accent colour -
+    // The chosen region, in the same dashes as the lattice but bright and
+    // heavy where that is fine and dim. Same dashes on purpose: the dash is
+    // what says "boundary" on this chart, and a solid line of the same shape
+    // reads as a different kind of thing rather than as the same thing picked
+    // out. In the chart's brightest neutral rather than the accent colour -
     // amber already means usable here, and a selection is not a claim about
     // the sky. Drawn whether or not the boundary layer is switched on: it was
     // asked for by name, and hiding it because a slider is at zero would be
@@ -4386,6 +4398,7 @@ class Component extends DCLogic {
       ctx.save();
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
       ctx.strokeStyle = '#E8E4D8'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round';
+      ctx.setLineDash([5, 4]);
       ctx.beginPath();
       for (const seg of segs) {
         let px = null;
