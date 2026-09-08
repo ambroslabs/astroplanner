@@ -847,20 +847,28 @@
         </div>
       </div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Shading</span>
+        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap;" title="Paint usable dark hours onto the sky. Off, the chart is a plain star map and the hours are still reported on any point you click.">
+            <input type="checkbox" checked="{{ shadeOn }}" sc-camel-on-change="{{ onShade }}" style="accent-color: #D9A960; width: 15px; height: 15px; margin: 0;">Usable hours
+          </label>
+        </div>
+      </div>
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px; opacity: {{ shadeDim }};">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Mask</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
           <input aria-label="Mask strength" type="range" min="0" max="100" step="5" value="{{ maskPct }}" sc-camel-on-input="{{ onMaskStrength }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ maskLabel }}</span>
         </div>
       </div>
-      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px; opacity: {{ shadeDim }};">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Falloff</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
           <input aria-label="Mask falloff" type="range" min="0" max="100" step="5" value="{{ falloffPct }}" sc-camel-on-input="{{ onMaskFalloff }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
           <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ falloffLabel }}</span>
         </div>
       </div>
-      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px; opacity: {{ shadeDim }};">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Contrast</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
           <input aria-label="Field contrast" type="range" min="0" max="100" step="5" value="{{ contrastPct }}" sc-camel-on-input="{{ onContrast }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
@@ -1212,6 +1220,12 @@ class Component extends DCLogic {
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
+    // Paint usable dark hours onto the sky, or leave the sky alone. Off, the
+    // chart is a plain star map - no veil, no lifted ground, no colour bar -
+    // and the hours are still computed and still reported on any point or
+    // object clicked. The shading is the loudest thing on the chart and it is
+    // not always what someone is looking at.
+    shade: true,
     stars: 1, milkyway: 0.25, contrast: 0.35,
     // The 88 regions. Quieter than the figures by default: they are a
     // reference grid, and the chart is not about them.
@@ -2163,6 +2177,18 @@ class Component extends DCLogic {
       }
       return null;
     };
+    // The same control on a point readout. 15px square again, and again a
+    // margin for a fingertip rather than a bigger drawing.
+    const probeCloseAt = (p, pad) => {
+      const list = this._probeBoxes || [], g = pad || 0;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const b2 = list[i];
+        if (b2.cx == null) continue;
+        if (p.x >= b2.cx - g && p.x <= b2.cx + b2.cw + g
+         && p.y >= b2.cy - g && p.y <= b2.cy + b2.ch + g) return b2;
+      }
+      return null;
+    };
     const view = () => this._view || (() => { const a = this._axis;
       return { raStart: a.axStart, raLen: a.axSpan, decMin: a.dBot, decMax: a.dTop }; })();
 
@@ -2339,6 +2365,15 @@ class Component extends DCLogic {
         e.preventDefault();
         return;
       }
+      // The cross on a readout, before the drag the rest of the box starts -
+      // otherwise pressing it would begin moving the readout and the release
+      // would land on a box that had gone.
+      const pcl = grab ? probeCloseAt(p, e.pointerType === 'touch' ? 11 : 2) : null;
+      if (pcl) {
+        this.setState({ probes: this.state.probes.filter((_, i) => i !== pcl.i) });
+        e.preventDefault();
+        return;
+      }
       const hit = grab ? boxAt(p, pad) : null;
       if (hit) {
         this._drag = { mode: 'label', idx: hit.i, ox: p.x - hit.x, oy: p.y - hit.y,
@@ -2376,7 +2411,7 @@ class Component extends DCLogic {
                                            && q.y >= b2.y && q.y <= b2.y + b2.h);
           const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q));
           // A button, not something to drag, so it says so.
-          const want = (inPlot(q) && closeAt(q)) ? 'pointer' : (over ? 'move' : '');
+          const want = (inPlot(q) && (closeAt(q) || probeCloseAt(q, 2))) ? 'pointer' : (over ? 'move' : '');
           if (el.style.cursor !== want) el.style.cursor = want;
         }
         return;
@@ -3795,7 +3830,10 @@ class Component extends DCLogic {
     // afford to be soft; it cannot afford to be the wrong shape. The crisp
     // draw follows the moment the dragging stops.
     const S = (this._fastDraw && canvas === this.canvas) ? 1 : 2;
-    const MARGIN = { l: 64, r: 92, t: 16, b: 74 };
+    // The 92 on the right is the colour bar's room and nothing else's, so with
+    // the shading off it is 92px of blank paper beside the map. What is left
+    // is for the last right-ascension number, which is centred on the edge.
+    const MARGIN = { l: 64, r: this.state.shade === false ? 26 : 92, t: 16, b: 74 };
     let W = 992, HH = 620;
     if (this.state.wide && canvas === this.canvas) {
       const r = canvas.getBoundingClientRect();
@@ -4337,7 +4375,10 @@ class Component extends DCLogic {
     };
 
     // The usable field, built once and painted twice: a ground under the sky
-    // and a veil over it.
+    // and a veil over it - or not built at all. This loop is seventy thousand
+    // cells and the most expensive thing in the draw, so switching the shading
+    // off is not a matter of painting it at zero opacity.
+    const shade = this.state.shade !== false;
     const cols = 384, rows = 181;
     // 0.3 lifts the veil as soon as any time is usable, 3.0 holds it until the sky is near its best
     const maskP = 0.3 + 2.7 * this.state.maskFalloff;
@@ -4361,7 +4402,7 @@ class Component extends DCLogic {
     // has caught three real mistakes in this work, and the finer table is
     // 8192 exponents against seventy thousand, which is still nothing.
     const POW = new Float32Array(8193);
-    for (let i = 0; i <= 8192; i++) POW[i] = Math.pow(i / 8192, maskP);
+    if (shade) for (let i = 0; i <= 8192; i++) POW[i] = Math.pow(i / 8192, maskP);
     // arcOverlap, unrolled into this loop. It was seventy thousand calls, each
     // re-deciding four things that cannot change inside a row - whether the
     // night is all dark, whether it is not dark at all, whether the object is
@@ -4371,7 +4412,7 @@ class Component extends DCLogic {
     // replaces the modulos. Rows that are constant are recognised as constant.
     const allDark = L >= 24, noDark = L <= 0;
     const dRa = axSpan / cols, ra0 = axStart + axSpan;
-    for (let r = 0; r < rows; r++) {
+    for (let r = 0; shade && r < rows; r++) {
       const dec = dTop - r * (dTop - dBot) / (rows - 1);
       const H = this.hoursAbove(lat, thr, dec) / 2;
       const twoH = 2 * H;
@@ -4423,10 +4464,9 @@ class Component extends DCLogic {
         limg.data[k + 3] = Math.round(255 * (lv < 0 ? 0 : lv > 1 ? 1 : lv));
       }
     }
-    octx.putImageData(img, 0, 0);
-    lctx.putImageData(limg, 0, 0);
+    if (shade) { octx.putImageData(img, 0, 0); lctx.putImageData(limg, 0, 0); }
     ctx.imageSmoothingEnabled = true;
-    {
+    if (shade) {
       ctx.save();
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
       ctx.drawImage(lift, X0, Y0, X1 - X0, Y1 - Y0);
@@ -4446,7 +4486,7 @@ class Component extends DCLogic {
       ctx.restore();
     }
 
-    ctx.drawImage(off, X0, Y0, X1 - X0, Y1 - Y0);
+    if (shade) ctx.drawImage(off, X0, Y0, X1 - X0, Y1 - Y0);
     ctx.globalAlpha = 1;
     // gridlines
     ctx.strokeStyle = 'rgba(246,245,242,0.12)'; ctx.lineWidth = 1;
@@ -4549,7 +4589,12 @@ class Component extends DCLogic {
       const w2 = ctx.measureText(small).width;
       ctx.font = '600 12px Inter, sans-serif';
       const w3 = split ? ctx.measureText(split).width : 0;
-      const bw = Math.max(w1, w2, w3) + 22, bh = split ? 64 : 46;
+      // The close control sits in the top right on the same 15px square the
+      // info panels use, so the widest line has to clear it as well as the
+      // padding: a readout is two or three short lines, and "8.6h usable"
+      // running under the cross would be the first thing anyone noticed.
+      const PCLOSE = 15;
+      const bw = Math.max(w1 + PCLOSE + 6, w2, w3) + 22, bh = split ? 64 : 46;
       // Cost, not a yes/no test: when the chart is crowded there may be no
       // free spot at all, and the least bad one still beats a fixed fallback.
       const cost = (x, y) => {
@@ -4604,7 +4649,9 @@ class Component extends DCLogic {
         by = Math.min(Math.max(py + pr.ly, Y0 + 4), Y1 - 4 - bh);
       }
       placed.push({ x: bx, y: by, w: bw, h: bh });
-      this._probeBoxes.push({ i: this.state.probes.indexOf(pr), x: bx, y: by, w: bw, h: bh, px, py });
+      const pcx = bx + bw - PCLOSE - 3, pcy = by + 4;
+      this._probeBoxes.push({ i: this.state.probes.indexOf(pr), x: bx, y: by, w: bw, h: bh, px, py,
+                              cx: pcx, cy: pcy, cw: PCLOSE, ch: PCLOSE });
       // Leader from the box edge nearest the point, stopping short of the
       // crosshair. Drawn before the box so the box caps it cleanly.
       {
@@ -4630,6 +4677,15 @@ class Component extends DCLogic {
         ctx.fillStyle = '#8E897D'; ctx.font = '600 12px Inter, sans-serif';
         ctx.fillText(split, bx + 11, by + 56);
       }
+      // A point has always been taken off by clicking the point itself, which
+      // is a 12px crosshair that a readout is often sitting on top of, and
+      // nothing on screen said so. The panels have carried a cross in the
+      // corner all along; the readouts now carry the same one.
+      ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(pcx + 4, pcy + 4); ctx.lineTo(pcx + PCLOSE - 4, pcy + PCLOSE - 4);
+      ctx.moveTo(pcx + PCLOSE - 4, pcy + 4); ctx.lineTo(pcx + 4, pcy + PCLOSE - 4);
+      ctx.stroke();
     }
     // Object panels last of all, so they sit above the readouts as well as the
     // field - they are the thing most recently asked for.
@@ -4669,6 +4725,9 @@ class Component extends DCLogic {
       ctx.save(); ctx.translate(X0 - 50, (Y0 + Y1) / 2); ctx.rotate(-Math.PI / 2);
       ctx.fillText('DECLINATION (\u00B0)', 0, 0); ctx.restore();
     }
+    // The colour bar is the legend for the shading, so it goes with it: a
+    // gradient explaining a thing that is not on the chart is furniture.
+    if (shade) {
     // colorbar - just outside the plot on the right, wherever that now is. It
     // used to sit at a fixed 928, which was the right edge back when the chart
     // was always 992 wide and is the middle of it once the window sets the size.
@@ -4776,6 +4835,7 @@ class Component extends DCLogic {
       ctx.fillStyle = overlay ? '#C9C4B7' : '#8E897D';
       this.axisText(ctx, 'USABLE DARK HOURS', 0, 0); ctx.restore();
     }
+    } else { this._barRect = null; }
     if (L <= 0) {
       ctx.fillStyle = 'rgba(10,10,10,0.6)'; ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
       ctx.fillStyle = '#F6F5F2'; ctx.font = '800 24px Archivo, sans-serif'; ctx.textAlign = 'center';
@@ -5125,6 +5185,8 @@ class Component extends DCLogic {
       boundsLabel: Math.round(s.bounds * 100) + '%',
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
+      shadeOn: s.shade,
+      shadeDim: s.shade ? '1' : '0.4',
       maskPct: String(Math.round(s.maskStrength * 100)),
       maskLabel: Math.round(s.maskStrength * 100) + '%',
       falloffPct: String(Math.round(s.maskFalloff * 100)),
@@ -5288,6 +5350,7 @@ class Component extends DCLogic {
       onBounds: e => this.setState({ bounds: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onMilky: e => this.setState({ milkyway: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onContrast: e => this.setState({ contrast: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
+      onShade: e => this.setState({ shade: !!e.target.checked }),
       onMaskStrength: e => this.setState({ maskStrength: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onMaskFalloff: e => this.setState({ maskFalloff: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       toggleSun: () => this.setState({ showSun: !this.state.showSun }),
