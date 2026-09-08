@@ -1752,7 +1752,8 @@ class Component extends DCLogic {
       p.pole = Math.abs(wind) > 43200 ? (p.pts.reduce((s, v) => s + v[1], 0) > 0 ? 1 : -1) : 0;
       p.ncp = p.pole > 0;
       p.box = this.polyBox(p);
-      p.anchor = this.polyAnchor(p);
+      const a = this.polyAnchor(p);
+      p.anchor = a && a.fig; p.roomAnchor = a && a.room;
     }
     return { polys, segs };
   }
@@ -1804,6 +1805,26 @@ class Component extends DCLogic {
       m[this.CONST_NAMES[ab].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()] = ab;
     }
     return (this._conAbbr = m);
+  }
+  // The figure that belongs to an abbreviation, and where its stars sit. The
+  // region's name should land near the shape people recognise, not at the
+  // middle of an administrative area that may be nowhere near it.
+  figureFor(ab) {
+    if (!this._figByAb) {
+      const m = {}, names = this.constAbbr();
+      for (const con of this.CONSTELLATIONS) { const a = names[con.n]; if (a) m[a] = con; }
+      this._figByAb = m;
+    }
+    return this._figByAb[ab];
+  }
+  figureCentre(con) {
+    let prev = null, cur = 0, sum = 0, ra0 = 0, dsum = 0;
+    for (const [ra, dec] of con.s) {
+      if (prev === null) ra0 = ra; else cur += ((ra - prev + 12) % 24 + 24) % 24 - 12;
+      sum += cur; dsum += dec; prev = ra;
+    }
+    const n = con.s.length;
+    return [((ra0 + sum / n) % 24 + 24) % 24, dsum / n];
   }
   // What a figure covers, for the case where the regions have not been
   // fetched. The stars of a figure sit well inside the region that holds it,
@@ -1946,34 +1967,85 @@ class Component extends DCLogic {
       const k = j * N + i;
       dn[k] = cell[k] ? (j < N - 1 ? dn[k + N] + 1 : 1) : 0;
     }
-    let best = -1, bi = 0, bj = 0, bw = 0;
+    // Where the figure is, in the same grid. A region's name belongs near the
+    // shape people recognise: the deepest point of the boundary is often
+    // nowhere near it - Ursa Major's is out past the bear's hind legs, well
+    // away from the Plough - and a name in the right region but the wrong end
+    // of it takes as long to find as no name at all.
+    let fx = null, fy = null;
+    const fig = this.figureFor(p.id);
+    if (fig) {
+      const c = this.figureCentre(fig), b = this.toB1875(c[0], c[1]);
+      fy = (b[1] - d0) / (d1 - d0) * N - 0.5;
+      fx = (((b[0] - r0) % 86400 + 86400) % 86400) / span * N - 0.5;
+    }
+    // Every horizontal run of the region, with how long it is and how much of
+    // the region stands above and below it.
+    const runs = [];
+    let bestFit = 0;
     for (let j = 0; j < N; j++) {
       let i = 0;
       while (i < N) {
         if (!cell[j * N + i]) { i++; continue; }
         let e = i;
         while (e < N && cell[j * N + e]) e++;
-        const len = e - i, mid = (i + e - 1) >> 1;
-        // Depth is worth something but not much: a name wants length.
         let deep = N;
         for (let q = i; q < e; q++) {
           const t = Math.min(up[j * N + q], dn[j * N + q]);
           if (t < deep) deep = t;
         }
-        const score = len + Math.min(deep, 4);
-        if (score > best) { best = score; bi = mid; bj = j; bw = len; }
+        // Depth is worth something but not much: a name wants length.
+        const fit = (e - i) + Math.min(deep, 4);
+        if (fit > bestFit) bestFit = fit;
+        runs.push({ i, e, j, fit });
         i = e;
       }
     }
-    if (best < 0) return null;
-    const at = this.precess(((r0 + (bi + 0.5) / N * span) % 86400 + 86400) % 86400,
-                            d0 + (bj + 0.5) / N * (d1 - d0));
-    // Half the run, in hours of right ascension - which is what the horizontal
-    // axis measures, at every declination, this being a plain RA/Dec plot -
-    // and half the region's thickness there, in degrees.
-    at.push(bw / 2 * (span / N) / 3600);
-    at.push((up[bj * N + bi] + dn[bj * N + bi] - 1) / 2 * ((d1 - d0) / N) / 60);
-    return at;
+    if (!runs.length) return null;
+    // -Infinity, not -1: the score below is a negated distance, so anything
+    // further than one cell from the figure is already less than -1 and would
+    // never be accepted. Nine regions came out with no anchor at all, and the
+    // ones that survived were exactly those that had landed on the figure
+    // anyway - which made the measurement of the change look far better than
+    // it was.
+    // Two answers, because there is no single one. Near the figure is where a
+    // name belongs and where anyone will look for it; the roomiest part of the
+    // region is where a long word still fits when the chart is zoomed out.
+    // Which of those matters depends on how much sky is on screen, which is
+    // not known here, so both are worked out and the drawing chooses.
+    const pickRun = byFig => {
+      let best = -Infinity, bi = 0, bj = 0, bw = 0;
+      for (const r of runs) {
+        const len = r.e - r.i;
+        // Runs much worse than the best are not considered when chasing the
+        // figure, so this can never put a name somewhere hopeless.
+        if (byFig && r.fit < bestFit * 0.55) continue;
+        // Along the run, as near the figure as it allows, but kept off the
+        // ends so the word has somewhere to sit.
+        const m = 0.15 * (len - 1);
+        const at = byFig ? Math.max(r.i + m, Math.min(r.e - 1 - m, fx))
+                         : (r.i + r.e - 1) / 2;
+        // -Infinity to start, not -1: the figure score is a negated distance,
+        // so anything more than one cell away is already below -1. Nine
+        // regions came out with no anchor at all before this, and the ones
+        // that survived were exactly those already sitting on their figure -
+        // which made the change look far better than it was.
+        const score = byFig ? -Math.hypot(at - fx, r.j - fy) : r.fit;
+        if (score > best) { best = score; bi = at; bj = r.j; bw = len; }
+      }
+      if (best === -Infinity) return null;
+      const out = this.precess(((r0 + (bi + 0.5) / N * span) % 86400 + 86400) % 86400,
+                               d0 + (bj + 0.5) / N * (d1 - d0));
+      // Half the run, in hours of right ascension - which is what the
+      // horizontal axis measures, at every declination, this being a plain
+      // RA/Dec plot - and half the region's thickness there, in degrees.
+      out.push(bw / 2 * (span / N) / 3600);
+      const bc = Math.max(0, Math.min(N - 1, Math.round(bi)));
+      out.push((up[bj * N + bc] + dn[bj * N + bc] - 1) / 2 * ((d1 - d0) / N) / 60);
+      return out;
+    };
+    const room = pickRun(false);
+    return { fig: fx === null ? room : pickRun(true), room };
   }
 
   // ---------- framing ----------
@@ -4322,6 +4394,8 @@ class Component extends DCLogic {
           if (!q.anchor || !shows(q.box)) continue;
           cand.push({ id: q.id, x: xAt(q.anchor[0]), y: yOf(q.anchor[1]),
                       ax: xAt(q.anchor[0]), ay: yOf(q.anchor[1]),
+                      rx: q.roomAnchor ? xAt(q.roomAnchor[0]) : null,
+                      ry: q.roomAnchor ? yOf(q.roomAnchor[1]) : null,
                       n: q.box.raLen * (q.box.decMax - q.box.decMin) });
         }
         // Whole-sky puts 88 names on one chart and CORONA AUSTRALIS is not a
@@ -4349,8 +4423,25 @@ class Component extends DCLogic {
           // anchor, slid the shortest distance that puts the word on screen.
           const half = w / 2 + 4;
           if (half * 2 > X1 - X0 || Y1 - Y0 < 34) continue;
-          c.x = Math.max(X0 + half, Math.min(X1 - half, c.ax));
-          c.y = Math.max(Y0 + 13, Math.min(Y1 - 4, c.ay));
+          const raOf = px => { const o = (1 - (px - X0) / (X1 - X0)) * axSpan - axSpan / 2;
+                               return ((axStart + axSpan / 2 + o) % 24 + 24) % 24; };
+          const holds = (px, py) => {
+            const d = dTop - (py - 4 - Y0) / (Y1 - Y0) * (dTop - dBot);
+            return [px - w / 2, px, px + w / 2]
+              .every(q => this.constellationAt(raOf(q), d) === c.id);
+          };
+          // By the figure if the word fits there, and in the roomiest part of
+          // the region if it does not. Tested before the slide that keeps a
+          // name on screen, so the choice turns on the zoom - the word against
+          // the width of the region - and not on where the chart happens to be
+          // panned. A name that changed anchor while panning would be the
+          // jumping this whole placement exists to avoid.
+          let ax = c.ax, ay = c.ay;
+          if (c.rx !== null && (c.rx !== c.ax || c.ry !== c.ay) && !holds(ax, ay)) {
+            ax = c.rx; ay = c.ry;
+          }
+          c.x = Math.max(X0 + half, Math.min(X1 - half, ax));
+          c.y = Math.max(Y0 + 13, Math.min(Y1 - 4, ay));
           // Then the position is asked the question the chart answers for any
           // point - which constellation is this? - at both ends of the word and
           // in the middle, and if any of the three says something else the name
@@ -4359,11 +4450,7 @@ class Component extends DCLogic {
           // letters in Delphinus. And sliding to the edge can leave the region
           // even when the anchor was well inside it, which is how ANDROMEDA
           // ended up in Pegasus.
-          const raOf = px => { const o = (1 - (px - X0) / (X1 - X0)) * axSpan - axSpan / 2;
-                               return ((axStart + axSpan / 2 + o) % 24 + 24) % 24; };
-          const dy = dTop - (c.y - 4 - Y0) / (Y1 - Y0) * (dTop - dBot);
-          if (![c.x - w / 2, c.x, c.x + w / 2]
-                .every(q => this.constellationAt(raOf(q), dy) === c.id)) continue;
+          if (!holds(c.x, c.y)) continue;
           const box = { x: c.x - w / 2 - 3, y: c.y - 11, w: w + 6, h: 14 };
           if (taken.some(b => box.x < b.x + b.w && box.x + box.w > b.x &&
                               box.y < b.y + b.h && box.y + box.h > b.y)) continue;
