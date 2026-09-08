@@ -2198,7 +2198,14 @@ class Component extends DCLogic {
     // the whole window with nothing behind it to scroll, so there the bare
     // wheel is free to do the obvious thing.
     el.addEventListener('wheel', e => {
-      if (!e.shiftKey && !this.state.wide) return;
+      // A trackpad pinch arrives as a wheel event with ctrlKey set - that is
+      // how every browser reports it - and it is unambiguously a request to
+      // zoom, so unlike a plain scroll it is taken in either layout and needs
+      // no modifier. Taking it also stops the browser zooming the whole page,
+      // which is what it would otherwise do over the one thing on the page
+      // that zooms by itself.
+      const pinch = e.ctrlKey;
+      if (!pinch && !e.shiftKey && !this.state.wide) return;
       const p = pos(e);
       if (!inPlot(p)) return;
       const a = this._axis, v = view();
@@ -2207,7 +2214,23 @@ class Component extends DCLogic {
       // actually moved; the sign convention is the same on both.
       const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
       if (!d) return;
-      const f = d < 0 ? 1 / 1.2 : 1.2;
+      // Zoom by how far the scroll went, not by how many events it arrived in.
+      // A mouse wheel sends one event of about 100 per notch and a flat step
+      // per event was right for it; a trackpad reports the finger continuously,
+      // a couple of units at a time, so the same flat step compounded twenty
+      // percent per event and a gentle two-finger drag crossed the whole zoom
+      // range. Delta arrives in pixels, lines or pages depending on the
+      // platform, so it is put in pixels first, and one notch still moves what
+      // it always did.
+      const px = d * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+      // Two rates, because the two gestures do not report at the same scale: a
+      // pinch spends only a few units on the same amount of finger travel that
+      // a two-finger scroll spends a hundred on. One notch of a mouse wheel is
+      // 100 and still zooms what it always did.
+      const per = pinch ? 20 : 100;
+      // A single event is not allowed to do more than about two notches, which
+      // is the one thing proportional scaling on its own cannot promise.
+      const f = Math.pow(1.2, Math.max(-2, Math.min(2, px / per)));
       const u = 1 - (p.x - a.X0) / (a.X1 - a.X0);   // fraction from the right edge
       const w = (p.y - a.Y0) / (a.Y1 - a.Y0);
       const raC = v.raStart + u * v.raLen;
@@ -3824,7 +3847,12 @@ class Component extends DCLogic {
   // the panels carry the altitude curve for the object across the dark window,
   // with the part above the threshold picked out - which is the part the
   // number was counting.
-  TRACK_H = 40;
+  TRACK_H = 46;
+  // The box runs from a little under the horizon to the zenith. Under, because
+  // a target that sets during the night should be seen to set rather than to
+  // stop at the floor, and only a little because nothing below the ground is
+  // worth the room.
+  TRACK_FLOOR = -25;
   altAt(ra, dec, lst) {
     const lat = this.state.lat, H = (lst - ra) * 15;
     return Math.asin(Math.max(-1, Math.min(1,
@@ -3832,19 +3860,60 @@ class Component extends DCLogic {
   }
   drawAltTrack(ctx, x, y, w, h, ra, dec, dark) {
     if (!(dark.L > 0) || w < 40) return false;
-    const thr = this.state.thr, N = 72;
-    // Horizon to zenith, always. A scale fitted to each object would use the
-    // box better and would mean that two of these side by side could not be
-    // compared, which is most of what they are for - and "it never gets high"
-    // is the answer, not wasted space. The floor of the box is the horizon,
-    // which is why nothing has to say so.
-    const yOfAlt = a => y + h - Math.max(0, Math.min(1, a / 90)) * h;
+    const thr = this.state.thr, N = 72, lo = this.TRACK_FLOOR;
+    // Horizon to zenith, always, and not a scale fitted to each object. A
+    // fitted scale uses the box better and means two of these side by side
+    // cannot be compared, which is most of what they are for - and "it never
+    // gets high" is the answer, not wasted space.
+    const yOfAlt = a => y + h - (Math.max(lo, Math.min(90, a)) - lo) / (90 - lo) * h;
     const xOfI = i => x + i / (N - 1) * w;
     ctx.save();
     ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    const ty = yOfAlt(thr);
-    ctx.strokeStyle = 'rgba(217,169,96,0.38)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(x, ty); ctx.lineTo(x + w, ty); ctx.stroke(); ctx.setLineDash([]);
+    // Three tiers, and the usable one is the one left alone: ground at the
+    // bottom, too-low above it, and above the threshold nothing but the panel's
+    // own dark. Grey and not black, because the panel is already nearly black
+    // and a darker wash on it is no wash at all.
+    const y0 = yOfAlt(0), yT = yOfAlt(Math.max(thr, 0));
+    ctx.fillStyle = 'rgba(142,137,125,0.16)';
+    ctx.fillRect(x, y0, w, y + h - y0);
+    if (yT < y0 - 0.5) {
+      ctx.fillStyle = 'rgba(142,137,125,0.07)';
+      ctx.fillRect(x, yT, w, y0 - yT);
+    }
+    // The horizon solid, the threshold dashed: one is a fact about the sky and
+    // the other is a number the reader chose, and they should not look alike.
+    ctx.strokeStyle = 'rgba(142,137,125,0.55)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, y0 + 0.5); ctx.lineTo(x + w, y0 + 0.5); ctx.stroke();
+    if (thr > 0) {
+      ctx.strokeStyle = 'rgba(217,169,96,0.45)'; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x, yT + 0.5); ctx.lineTo(x + w, yT + 0.5); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // Markers, drawn under the curve so the curve stays the thing being read.
+    // The two lines already say where the horizon and the threshold are; these
+    // say what they are, which is what turns the box from a shape into a
+    // reading. Nothing is allowed to make the box bigger, so they sit inside it.
+    ctx.font = '600 9px Inter, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(142,137,125,0.6)';
+    ctx.fillText('0\u00B0', x + 3, y0 - 2);
+    if (thr > 0 && y0 - yT > 11) ctx.fillText(thr + '\u00B0', x + 3, yT - 2);
+    // Whole hours of the clock along the bottom. The axis is linear in sidereal
+    // time and the clock is linear in it too, so the only thing needed is how
+    // far past the hour the night begins - which the first reading already
+    // says, in the same words the box above it uses.
+    {
+      const t0 = this.clock(dark.dusk, dark).t, mm = Number(t0.slice(-2));
+      const mins = dark.L / this.SIDEREAL * 60;
+      if (isFinite(mm) && mins > 90) {
+        ctx.strokeStyle = 'rgba(142,137,125,0.45)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let m = (60 - mm) % 60; m < mins; m += 60) {
+          const tx = Math.round(x + m / mins * w) + 0.5;
+          ctx.moveTo(tx, y + h); ctx.lineTo(tx, y + h - 3);
+        }
+        ctx.stroke();
+      }
+    }
     const alt = [];
     for (let i = 0; i < N; i++) alt.push(this.altAt(ra, dec, dark.dusk + i / (N - 1) * dark.L));
     // Filled between the threshold and the curve wherever the curve is above
@@ -3857,9 +3926,9 @@ class Component extends DCLogic {
       let j = i;
       while (j + 1 < N && alt[j + 1] >= thr) j++;
       ctx.beginPath();
-      ctx.moveTo(xOfI(i), ty);
+      ctx.moveTo(xOfI(i), yT);
       for (let k = i; k <= j; k++) ctx.lineTo(xOfI(k), yOfAlt(alt[k]));
-      ctx.lineTo(xOfI(j), ty);
+      ctx.lineTo(xOfI(j), yT);
       ctx.closePath(); ctx.fill();
       i = j + 1;
     }
