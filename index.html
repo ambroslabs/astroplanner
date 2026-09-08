@@ -1238,6 +1238,10 @@ class Component extends DCLogic {
     // fills the standard chart. Fitting to the usable sky picks it; full sky
     // puts it back; and it is here so it can simply be typed.
     ratio: 2.5884,
+    // The constellation whose border is drawn heavy, by abbreviation, or ''
+    // for none. A string and not null because a saved value is only restored
+    // when its type matches the default's, and typeof null is 'object'.
+    conSel: '',
     frame: null, autoFrame: true,
     // start of the span the time slider covers; '' means centre it on the date
     winStart: '',
@@ -1845,6 +1849,20 @@ class Component extends DCLogic {
     rec(0, 1, A, B, 0);
     out.push(B);
     return out;
+  }
+  // One region's own outline, for drawing it heavy. The segments the lattice
+  // draws have had their duplicates removed and no longer belong to anybody,
+  // so a single region has to be walked again - eighteen edges, once, and kept
+  // until a different one is asked for.
+  selOutline(id) {
+    if (this._selId === id && this._selSegs) return this._selSegs;
+    const p = this._bounds && this._bounds.polys.find(q => q.id === id);
+    // Only a real answer is remembered. Caching the miss meant that a
+    // selection made before the file arrived stayed invisible after it did.
+    if (!p) return null;
+    this._selId = id;
+    this._selSegs = p.pts.map((_, i) => this.densify(p.pts[i], p.pts[(i + 1) % p.pts.length]));
+    return this._selSegs;
   }
   // Which constellation a J2000 position falls in. Cast a ray north and count
   // the constant-declination edges above it: an odd count means inside, except
@@ -2562,8 +2580,18 @@ class Component extends DCLogic {
           // them: whatever is hidden by a label cannot be what was aimed at.
           // This is not hypothetical - the names sit in the Milky Way, and a
           // tap on SAGITTARIUS opened an anonymous star behind the G.
+          // Going there and marking it are the same wish, so one click does
+          // both - and the click after it, on the same name, only lets go.
+          // Not re-framing then: the reader is already looking at the thing,
+          // and moving the chart to where it already is would be a nudge for
+          // nothing.
+          const pick = c => {
+            if (c.id && c.id === this.state.conSel) { this.setState({ conSel: '' }); return; }
+            if (c.id) this.setState({ conSel: c.id });
+            this.setFrame(c.frame);
+          };
           let named = nameAt(0);
-          if (named) { this.setFrame(named.frame); return; }
+          if (named) { pick(named); return; }
           const hits = this._objHits || [];
           let best = null, bestD = Infinity;
           for (const h of hits) {
@@ -2574,7 +2602,7 @@ class Component extends DCLogic {
           // Room for a fingertip around the letters, claimed only once
           // everything visible there has passed.
           named = nameAt(7);
-          if (named) { this.setFrame(named.frame); return; }
+          if (named) { pick(named); return; }
         }
         const ps = this.state.probes;
         const hit = ps.findIndex(q =>
@@ -4337,6 +4365,40 @@ class Component extends DCLogic {
       }
       ctx.restore();
     };
+    // The chosen region, solid and heavy where the lattice is fine and dashed,
+    // and in the chart's brightest neutral rather than the accent colour -
+    // amber already means usable here, and a selection is not a claim about
+    // the sky. Drawn whether or not the boundary layer is switched on: it was
+    // asked for by name, and hiding it because a slider is at zero would be
+    // answering a different question.
+    const drawConSel = () => {
+      const id = this.state.conSel;
+      if (!id) return;
+      // The boundary file is fetched by the layer that draws the lattice, and
+      // with that layer switched off nothing had asked for it - so a selection
+      // made with the boundaries hidden had nothing to draw. It asks for
+      // itself now.
+      if (!this._bounds) { if (!this._boundsFail) this.loadBounds(); return; }
+      const segs = this.selOutline(id);
+      if (!segs) return;
+      const mid = axStart + axSpan / 2;
+      const xB = ra => X0 + (1 - ((((ra - mid + 12) % 24 + 24) % 24 - 12) + axSpan / 2) / axSpan) * (X1 - X0);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+      ctx.strokeStyle = '#E8E4D8'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (const seg of segs) {
+        let px = null;
+        for (const [ra, dec] of seg) {
+          const x = xB(ra), y = yOf(dec);
+          if (px === null || Math.abs(x - px) > wrapPx / 2) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          px = x;
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    };
     // The names go on last, after the figures. Drawn with the lines they
     // belong to, the Great Square of Pegasus was ruled straight through the
     // word PEGASUS - a label is the one thing on the chart that has to stay
@@ -4347,15 +4409,15 @@ class Component extends DCLogic {
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
       ctx.globalAlpha = this.state.bounds;
       ctx.font = '700 11px Inter, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillStyle = '#9AA3AE';
       for (const l of this._bndLabels) {
+        ctx.fillStyle = l.id === this.state.conSel ? '#E8E4D8' : '#9AA3AE';
         ctx.fillText(l.t, l.x, l.y);
         // Reading a name off the chart and wanting to go there is the same
         // wish twice, so the name is the button. The region is what gets
         // framed, not the label's neighbourhood.
         const b = this._bounds.polys.find(q => q.id === l.id);
         if (b) this._conHits.push({ x: l.box.x, y: l.box.y, w: l.box.w, h: l.box.h,
-                                    frame: this.boxFrame(b.box) });
+                                    id: l.id, frame: this.boxFrame(b.box) });
       }
       ctx.textAlign = 'left';
       ctx.restore();
@@ -4402,7 +4464,9 @@ class Component extends DCLogic {
           }
           if (spot) {
             conTaken.push(spot);
-            ctx.fillStyle = 'rgba(203,214,232,0.55)';
+            const abSel = this.constAbbr()[con.n];
+            ctx.fillStyle = abSel && abSel === this.state.conSel
+              ? '#E8E4D8' : 'rgba(203,214,232,0.55)';
             ctx.fillText(con.n, lx0, spot.y);
             // Tappable on the same terms as a region name. With the boundaries
             // loaded this frames the region, which is the better answer; with
@@ -4410,6 +4474,7 @@ class Component extends DCLogic {
             const ab = this.constAbbr()[con.n];
             const pl = ab && this._bounds && this._bounds.polys.find(q => q.id === ab);
             this._conHits.push({ x: spot.x, y: spot.y - spot.h, w: spot.w, h: spot.h + 4,
+                                 id: pl ? ab : '',
                                  frame: this.boxFrame(pl ? pl.box : this.figureBox(con)) });
           }
           ctx.textAlign = 'left';
@@ -4630,7 +4695,7 @@ class Component extends DCLogic {
       ctx.save();
       ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
       this._conHits = [];
-      drawMilkyWay(); drawBounds(); drawConstellations(); drawBoundNames();
+      drawMilkyWay(); drawBounds(); drawConstellations(); drawConSel(); drawBoundNames();
       this.drawCatalogs(ctx, { xOf, yOf, X0, X1, Y0, Y1, dTop, dBot, axSpan });
       drawEcliptic(); drawMoon(); drawBodies();
       ctx.restore();
