@@ -732,7 +732,7 @@
     <div class="topbar" style="width: 100%; max-width: 1160px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
       <button sc-camel-on-click="{{ toggleControls }}" aria-pressed="{{ ctrlPressed }}" style="display: {{ ctrlShow }}; background: #161616; color: {{ ctrlFg }}; border: 1px solid {{ ctrlBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ ctrlTip }}"><span style="font-size: 15px; line-height: 13px;">&#9776;</span>Controls</button>
       <button sc-camel-on-click="{{ toggleWide }}" aria-pressed="{{ widePressed }}" style="background: #161616; color: {{ wideFg }}; border: 1px solid {{ wideBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ wideTip }}"><span style="font-size: 15px; line-height: 13px;">&#8703;</span>Wide</button>
-      <button sc-camel-on-click="{{ toggleFullscreen }}" ref="{{ fsRef }}" aria-pressed="{{ fsPressed }}" style="background: #161616; color: {{ fsFg }}; border: 1px solid {{ fsBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ fsTip }}"><span style="font-size: 15px; line-height: 13px;">&#9974;</span>{{ fsLabel }}</button>
+      <button sc-camel-on-click="{{ toggleFullscreen }}" ref="{{ fsRef }}" aria-pressed="{{ fsPressed }}" style="background: #161616; color: {{ fsFg }}; border: 1px solid {{ fsBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: {{ fsShow }}; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ fsTip }}"><span style="font-size: 15px; line-height: 13px;">&#9974;</span>{{ fsLabel }}</button>
       <button sc-camel-on-click="{{ toggleNight }}" aria-pressed="{{ nightPressed }}" style="background: #161616; color: {{ nightFg }}; border: 1px solid {{ nightBorder }}; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 9px;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="{{ nightTip }}"><span style="font-size: 15px; line-height: 13px;">&#9681;</span>{{ nightLabel }}</button>
     </div>
   <div class="panel bar" style="width: 100%; max-width: 1160px; background: #161616; border: 1px solid #2E2C27; border-radius: 4px; padding: 18px 36px; box-sizing: border-box; display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;">
@@ -1618,6 +1618,24 @@ class Component extends DCLogic {
       s: [[19.891,24.08],[19.478,24.66],[20.018,27.75],[20.263,27.81]],
       l: [[0,1],[1,2],[1,3]] },
   ];
+
+  // Installed as an app there is no browser chrome to escape from - the window
+  // is already the whole screen - so the button that fills the screen has
+  // nothing left to do, and only takes room from the three that do something.
+  //
+  // Read once and remembered, which matters: the reader can put the browser
+  // into full screen with this very button, and that also satisfies
+  // display-mode: fullscreen. Asked again afterwards the answer would flip,
+  // the button would vanish under the hand that pressed it, and there would be
+  // no visible way back out.
+  appMode() {
+    if (this._appMode == null) {
+      this._appMode = (typeof matchMedia === 'function'
+                       && matchMedia('(display-mode: standalone)').matches)
+                      || navigator.standalone === true;
+    }
+    return this._appMode;
+  }
 
   // ---------- constellation boundaries ----------
   // The figures above are the shapes people recognise. These are the regions:
@@ -4930,6 +4948,7 @@ class Component extends DCLogic {
       ctrlBorder: s.ctrlOpen ? '#8C6A3F' : '#2E2C27',
       ctrlTip: s.ctrlOpen ? 'Hide the controls panel' : 'Show the controls panel',
       toggleControls: () => this.setState({ ctrlOpen: !s.ctrlOpen }),
+      fsShow: this.appMode() ? 'none' : 'flex',
       fsLabel: 'Full screen',
       fsPressed: s.fs ? 'true' : 'false',
       fsFg: s.fs ? '#D9A960' : '#C9C4B7',
