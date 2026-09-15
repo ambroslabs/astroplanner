@@ -948,7 +948,7 @@
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Height px<input type="number" min="1" max="40000" step="1" sc-camel-value="{{ camHText }}" sc-camel-on-change="{{ onCamH }}" sc-camel-on-input="{{ onCamH }}" style="width: 74px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Pixel µm<input type="number" min="0.1" max="50" step="0.01" sc-camel-value="{{ camPixText }}" sc-camel-on-change="{{ onCamPix }}" sc-camel-on-input="{{ onCamPix }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Focal mm<input type="number" min="1" max="30000" step="1" sc-camel-value="{{ camFLText }}" sc-camel-on-change="{{ onCamFL }}" sc-camel-on-input="{{ onCamFL }}" style="width: 70px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
-          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Rotation °<input type="number" min="-360" max="360" step="1" sc-camel-value="{{ camRotText }}" sc-camel-on-change="{{ onCamRot }}" sc-camel-on-input="{{ onCamRot }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Rotation PA °<input type="number" min="-360" max="360" step="1" sc-camel-value="{{ camRotText }}" sc-camel-on-change="{{ onCamRot }}" sc-camel-on-input="{{ onCamRot }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
           <span style="font-size: 13px; font-weight: 700; color: #60B274; white-space: nowrap; padding-bottom: 8px; font-variant-numeric: tabular-nums;">{{ camCentre }}</span>
           <span style="font-size: 13px; font-weight: 600; color: #4E8A5E; white-space: nowrap; padding-bottom: 8px;">{{ camReadout }}</span>
         </div>
@@ -4088,11 +4088,22 @@ class Component extends DCLogic {
     if (sec === 60) { sec = 0; m++; }
     if (m === 60) { m = 0; h = (h + 1) % 24; }
     const ad = Math.abs(s.camDec);
-    let dd = Math.floor(ad), dm = Math.round((ad - dd) * 60);
+    let dd = Math.floor(ad), dm = Math.floor((ad - dd) * 60);
+    let ds = Math.round((((ad - dd) * 60) - dm) * 60);
+    if (ds === 60) { ds = 0; dm++; }
     if (dm === 60) { dm = 0; dd++; }
     const p2 = v => String(v).padStart(2, '0');
+    // The angle rides along with the coordinates rather than with the field of
+    // view, because it is part of where the camera is aimed and not part of
+    // what the camera is. Called PA, which is what it is and what a plate
+    // solve will hand back, and which cannot be misread as another
+    // declination the way a bare "18\u00B0" beside "-05\u00B0 23'" would be.
     return p2(h) + 'h ' + p2(m) + 'm ' + p2(sec) + 's   '
-         + (s.camDec < 0 ? '\u2212' : '+') + p2(dd) + '\u00B0 ' + p2(dm) + '\u2032';
+         + (s.camDec < 0 ? '\u2212' : '+') + p2(dd) + '\u00B0 ' + p2(dm) + '\u2032 ' + p2(ds) + '\u2033'
+         // Rounded first and wrapped after: the other way round, 359.6 rounds
+         // up to 360 after the wrap has already passed and the frame claims an
+         // angle that does not exist.
+         + '   PA ' + ((Math.round(s.camRot) % 360) + 360) % 360 + '\u00B0';
   }
   // A point on the sensor to a point on the sky. The sensor is a flat plane
   // touching the sphere where it points, which is what a lens actually does,
