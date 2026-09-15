@@ -890,6 +890,13 @@
         </div>
       </div>
       <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Label size</span>
+        <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+          <input aria-label="Label size" type="range" min="50" max="150" step="5" value="{{ labelPct }}" sc-camel-on-input="{{ onLabelScale }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
+          <span style="font-size: 13px; font-weight: 600; color: #C9C4B7; width: 38px; font-variant-numeric: tabular-nums;">{{ labelLabel }}</span>
+        </div>
+      </div>
+      <div class="heat-col" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Boundaries</span>
         <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
           <input aria-label="Constellation boundary opacity" type="range" min="0" max="100" step="5" value="{{ boundsPct }}" sc-camel-on-input="{{ onBounds }}" style="width: 84px; accent-color: #D9A960; background: transparent; cursor: pointer;">
@@ -1258,6 +1265,11 @@ class Component extends DCLogic {
     // for none. A string and not null because a saved value is only restored
     // when its type matches the default's, and typeof null is 'object'.
     conSel: '',
+    // How big the labels on the sky are drawn, as a multiple. Not a font size:
+    // a label, its background, its padding and its leader all scale together,
+    // so turning this down makes the same label smaller rather than a
+    // differently-laid-out one.
+    labelScale: 1,
     // The camera, and where it is aimed. Four numbers describe a sensor - how
     // many pixels across and down, how big a pixel is, and what focal length
     // it is behind - and everything else about the frame follows from them.
@@ -3338,6 +3350,7 @@ class Component extends DCLogic {
       // thing at every zoom rather than a bright name over a faint dot.
       const cop = c.def.stars ? starOp : op;
       ctx.globalAlpha = cop;
+      this.labelZoom(ctx, c.ax, c.ay, () => {
       const ex = Math.max(bx, Math.min(c.ax, bx + bw)), ey = Math.max(by, Math.min(c.ay, by + bh));
       const vx = c.ax - ex, vy = c.ay - ey, len = Math.hypot(vx, vy);
       // Always drawn, however short. The old rule skipped the line whenever the
@@ -3351,13 +3364,17 @@ class Component extends DCLogic {
         ctx.lineTo(c.ax - vx / len * stop, c.ay - vy / len * stop); ctx.stroke();
         ctx.globalAlpha = cop;
       }
-      this._catBoxes.push({ x: bx, y: by, w: bw, h: bh });
       ctx.fillStyle = 'rgba(10,10,10,0.7)';
       ctx.fillRect(bx, by, bw, bh);
       for (let i = 0; i < lines.length; i++) {
         ctx.fillStyle = lines[i].color;
         ctx.fillText(lines[i].text, spot[0], by + i * LH + LH / 2);
       }
+      });
+      // Recorded at full size on purpose. These boxes are what the next label
+      // and the point readouts steer around, and keeping the avoidance at one
+      // size means turning the slider does not rearrange the whole chart.
+      this._catBoxes.push({ x: bx, y: by, w: bw, h: bh });
     }
   }
 
@@ -3482,6 +3499,10 @@ class Component extends DCLogic {
       else { bx = px + 18; by = py - bh - 14; }
       bx = Math.min(Math.max(bx, X0 + 4), X1 - 4 - bw);
       by = Math.min(Math.max(by, Y0 + 4), Y1 - 4 - bh);
+      // Declared out here because the box recorded below needs them and the
+      // drawing happens inside a closure.
+      let cx = 0, cy = 0;
+      this.labelZoom(ctx, px, py, () => {
       // Leader back to the object, the same way the click readouts do it.
       const ax = Math.max(bx, Math.min(px, bx + bw)), ay = Math.max(by, Math.min(py, by + bh));
       const vx = px - ax, vy = py - ay, len = Math.hypot(vx, vy);
@@ -3509,14 +3530,15 @@ class Component extends DCLogic {
                           bw - PAD * 2, this.TRACK_H, o.ra, o.dec, dark);
       }
       // Close control, top right.
-      const cx = bx + bw - CLOSE - 3, cy = by + 4;
+      cx = bx + bw - CLOSE - 3; cy = by + 4;
       ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.moveTo(cx + 4, cy + 4); ctx.lineTo(cx + CLOSE - 4, cy + CLOSE - 4);
       ctx.moveTo(cx + CLOSE - 4, cy + 4); ctx.lineTo(cx + 4, cy + CLOSE - 4);
       ctx.stroke();
-      this._infoBoxes.push({ i, x: bx, y: by, w: bw, h: bh, px, py,
-                             cx, cy, cw: CLOSE, ch: CLOSE });
+      });
+      this._infoBoxes.push(this.labelBox(
+        { i, x: bx, y: by, w: bw, h: bh, px, py, cx, cy, cw: CLOSE, ch: CLOSE }, px, py));
     }
     ctx.restore();
   }
@@ -4061,6 +4083,36 @@ class Component extends DCLogic {
     }).join('  \u00B7  ');
     return body + (tag ? ' ' + tag : '');
   }
+  // Draw something at a scale about a point, leaving everything inside it in
+  // the coordinates it was written for. This is what lets the label slider
+  // scale a label instead of reformatting it: the text, its background, its
+  // padding and its leader all shrink together, because none of them know it
+  // is happening. The anchor is whatever the label is attached to, so a
+  // shrinking label stays on its own object rather than sliding towards the
+  // middle of the chart.
+  labelZoom(ctx, ax, ay, draw) {
+    const k = this.state.labelScale;
+    if (!(k > 0) || Math.abs(k - 1) < 1e-4) { draw(); return; }
+    ctx.save();
+    ctx.translate(ax, ay); ctx.scale(k, k); ctx.translate(-ax, -ay);
+    draw();
+    ctx.restore();
+  }
+  // The same map applied to a rectangle, for the boxes that are also hit
+  // targets: what is drawn and what can be grabbed have to be the same thing.
+  labelBox(r, ax, ay) {
+    const k = this.state.labelScale;
+    if (!(k > 0) || Math.abs(k - 1) < 1e-4) return r;
+    const o = Object.assign({}, r);
+    o.x = ax + (r.x - ax) * k; o.y = ay + (r.y - ay) * k;
+    o.w = r.w * k; o.h = r.h * k;
+    if (r.cx != null) {
+      o.cx = ax + (r.cx - ax) * k; o.cy = ay + (r.cy - ay) * k;
+      o.cw = r.cw * k; o.ch = r.ch * k;
+    }
+    return o;
+  }
+
   // ---------- the camera's frame ----------
   // What the sensor covers, in degrees, and how finely it samples it. The
   // arctangent and not the small-angle rule: a full-frame sensor at 200mm is
@@ -4714,13 +4766,14 @@ class Component extends DCLogic {
       ctx.font = '700 11px Inter, sans-serif'; ctx.textAlign = 'center';
       for (const l of this._bndLabels) {
         ctx.fillStyle = l.id === this.state.conSel ? '#E8E4D8' : '#9AA3AE';
-        ctx.fillText(l.t, l.x, l.y);
+        this.labelZoom(ctx, l.x, l.y, () => ctx.fillText(l.t, l.x, l.y));
         // Reading a name off the chart and wanting to go there is the same
         // wish twice, so the name is the button. The region is what gets
         // framed, not the label's neighbourhood.
         const b = this._bounds.polys.find(q => q.id === l.id);
-        if (b) this._conHits.push({ x: l.box.x, y: l.box.y, w: l.box.w, h: l.box.h,
-                                    id: l.id, frame: this.boxFrame(b.box) });
+        if (b) this._conHits.push(this.labelBox(
+          { x: l.box.x, y: l.box.y, w: l.box.w, h: l.box.h,
+            id: l.id, frame: this.boxFrame(b.box) }, l.x, l.y));
       }
       ctx.textAlign = 'left';
       ctx.restore();
@@ -4770,15 +4823,16 @@ class Component extends DCLogic {
             const abSel = this.constAbbr()[con.n];
             ctx.fillStyle = abSel && abSel === this.state.conSel
               ? '#E8E4D8' : 'rgba(203,214,232,0.55)';
-            ctx.fillText(con.n, lx0, spot.y);
+            this.labelZoom(ctx, lx0, spot.y, () => ctx.fillText(con.n, lx0, spot.y));
             // Tappable on the same terms as a region name. With the boundaries
             // loaded this frames the region, which is the better answer; with
             // only the figures to go on it frames the figure and its margin.
             const ab = this.constAbbr()[con.n];
             const pl = ab && this._bounds && this._bounds.polys.find(q => q.id === ab);
-            this._conHits.push({ x: spot.x, y: spot.y - spot.h, w: spot.w, h: spot.h + 4,
-                                 id: pl ? ab : '',
-                                 frame: this.boxFrame(pl ? pl.box : this.figureBox(con)) });
+            this._conHits.push(this.labelBox(
+              { x: spot.x, y: spot.y - spot.h, w: spot.w, h: spot.h + 4,
+                id: pl ? ab : '',
+                frame: this.boxFrame(pl ? pl.box : this.figureBox(con)) }, lx0, spot.y));
           }
           ctx.textAlign = 'left';
         }
@@ -5174,8 +5228,10 @@ class Component extends DCLogic {
       }
       placed.push({ x: bx, y: by, w: bw, h: bh });
       const pcx = bx + bw - PCLOSE - 3, pcy = by + 4;
-      this._probeBoxes.push({ i: this.state.probes.indexOf(pr), x: bx, y: by, w: bw, h: bh, px, py,
-                              cx: pcx, cy: pcy, cw: PCLOSE, ch: PCLOSE });
+      this._probeBoxes.push(this.labelBox(
+        { i: this.state.probes.indexOf(pr), x: bx, y: by, w: bw, h: bh, px, py,
+          cx: pcx, cy: pcy, cw: PCLOSE, ch: PCLOSE }, px, py));
+      this.labelZoom(ctx, px, py, () => {
       // Leader from the box edge nearest the point, stopping short of the
       // crosshair. Drawn before the box so the box caps it cleanly.
       {
@@ -5214,6 +5270,7 @@ class Component extends DCLogic {
       ctx.moveTo(pcx + 4, pcy + 4); ctx.lineTo(pcx + PCLOSE - 4, pcy + PCLOSE - 4);
       ctx.moveTo(pcx + PCLOSE - 4, pcy + 4); ctx.lineTo(pcx + 4, pcy + PCLOSE - 4);
       ctx.stroke();
+      });
     }
     // The camera's frame. Green: the chart already spends amber on usable
     // time, blue-white on the figures and neutral grey on the boundaries, and
@@ -5267,11 +5324,13 @@ class Component extends DCLogic {
         ctx.textAlign = 'left';
         ctx.fillStyle = '#60B274';
         const deg = v => v >= 1 ? v.toFixed(2) + '\u00B0' : (v * 60).toFixed(0) + '\u2032';
-        ctx.font = '700 13px Inter, sans-serif';
-        this.axisText(ctx, this.fmtCamCentre(), cx + 12, cy - 9);
-        ctx.font = '600 12px Inter, sans-serif';
-        this.axisText(ctx, deg(fov.w) + ' \u00D7 ' + deg(fov.h)
-                      + '  \u00B7  ' + fov.scale.toFixed(2) + '\u2033/px', cx + 12, cy + 8);
+        this.labelZoom(ctx, cx, cy, () => {
+          ctx.font = '700 13px Inter, sans-serif';
+          this.axisText(ctx, this.fmtCamCentre(), cx + 12, cy - 9);
+          ctx.font = '600 12px Inter, sans-serif';
+          this.axisText(ctx, deg(fov.w) + ' \u00D7 ' + deg(fov.h)
+                        + '  \u00B7  ' + fov.scale.toFixed(2) + '\u2033/px', cx + 12, cy + 8);
+        });
         ctx.restore();
         this._camHit = { poly: pts, cx, cy, hx, hy };
       }
@@ -5771,6 +5830,8 @@ class Component extends DCLogic {
       catOpacityLabel: Math.round(s.catOpacity * 100) + '%',
       onCatOpacity: e => this.setState({ catOpacity: Number(e.target.value) / 100 }),
       starsPct: String(Math.round(s.stars * 100)),
+      labelPct: String(Math.round(s.labelScale * 100)),
+      labelLabel: Math.round(s.labelScale * 100) + '%',
       boundsPct: String(Math.round(s.bounds * 100)),
       boundsLabel: Math.round(s.bounds * 100) + '%',
       starsLabel: Math.round(s.stars * 100) + '%',
@@ -5948,6 +6009,7 @@ class Component extends DCLogic {
       toggleEcliptic: () => this.setState({ showEcliptic: !this.state.showEcliptic }),
       onStars: e => this.setState({ stars: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onBounds: e => this.setState({ bounds: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
+      onLabelScale: e => this.setState({ labelScale: Math.max(0.5, Math.min(1.5, Number(e.target.value) / 100)) }),
       onMilky: e => this.setState({ milkyway: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onContrast: e => this.setState({ contrast: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onShade: e => this.setState({ shade: !!e.target.checked }),
