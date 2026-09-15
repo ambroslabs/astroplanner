@@ -958,6 +958,9 @@
           <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Draw the sensor's field of view on the chart. Drag its edge to aim it, drag the handle at the top to rotate it.">
             <input type="checkbox" checked="{{ camOn }}" sc-camel-on-change="{{ onCamOn }}" style="accent-color: #60B274; width: 15px; height: 15px; margin: 0;">Show
           </label>
+          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Print where the frame is pointing and what it covers beside it on the chart. The cross on the label puts it away, and this brings it back.">
+            <input type="checkbox" checked="{{ camLbl }}" sc-camel-on-change="{{ onCamLbl }}" style="accent-color: #60B274; width: 15px; height: 15px; margin: 0;">Label
+          </label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">RA h:m:s<input type="text" inputmode="text" spellcheck="false" placeholder="05:35:17" sc-camel-value="{{ camRaText }}" sc-camel-on-change="{{ onCamRaText }}" sc-camel-on-input="{{ onCamRaText }}" style="width: 92px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Dec d:m:s<input type="text" inputmode="text" spellcheck="false" placeholder="-05:23:28" sc-camel-value="{{ camDecText }}" sc-camel-on-change="{{ onCamDecText }}" sc-camel-on-input="{{ onCamDecText }}" style="width: 100px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Width px<input type="number" min="1" max="40000" step="1" sc-camel-value="{{ camWText }}" sc-camel-on-change="{{ onCamW }}" sc-camel-on-input="{{ onCamW }}" style="width: 74px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
@@ -998,7 +1001,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag the camera frame</b> by its edge to aim it, by the handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag the camera frame</b> by its edge to aim it, by the handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">drag the frame's label</b> to move it, or its &#215; to put it away &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -1299,6 +1302,14 @@ class Component extends DCLogic {
     // the middle of the view rather than at right ascension zero, which for
     // most of the night is off the side of the chart.
     camPlaced: false,
+    // The frame's own label - where it is pointing and what it covers. It is a
+    // label like any other on this chart, which means it can be moved, and it
+    // can be sent away: on a small frame at high zoom the numbers cover the
+    // thing being framed, which is the one moment they are least wanted.
+    // The offset is pixels from the frame's centre, and camMoved is what
+    // separates "put here" from "not moved yet" - 0,0 is a place a reader
+    // could legitimately drag it to.
+    camLbl: true, camLx: 0, camLy: 0, camMoved: false,
     frame: null, autoFrame: true,
     // start of the span the time slider covers; '' means centre it on the date
     winStart: '',
@@ -2448,6 +2459,19 @@ class Component extends DCLogic {
       const c = this._camHit;
       return c && Math.hypot(q.x - c.hx, q.y - c.hy) <= 10 + (pad || 0) ? c : null;
     };
+    // The frame's own label, and the cross that sends it away. Painted after
+    // the frame and its handle, so it is offered a press before either of
+    // them: whatever is hidden under a label cannot be what was aimed at.
+    const camLblAt = (q, pad) => {
+      const b = this._camLblBox, g = pad || 0;
+      return b && q.x >= b.x - g && q.x <= b.x + b.w + g
+               && q.y >= b.y - g && q.y <= b.y + b.h + g ? b : null;
+    };
+    const camLblCloseAt = (q, pad) => {
+      const b = this._camLblBox, g = pad || 0;
+      return b && b.cx != null && q.x >= b.cx - g && q.x <= b.cx + b.cw + g
+               && q.y >= b.cy - g && q.y <= b.cy + b.ch + g ? b : null;
+    };
 
     // Two fingers on the map. Only in wide mode: that is the one place the
     // canvas owns the gesture (touch-action: none), and taking the pinch
@@ -2537,7 +2561,10 @@ class Component extends DCLogic {
       const grab = e.pointerType !== 'touch' || this.state.wide;
       const pad = e.pointerType === 'touch' ? 7 : 0;
       // Panels sit above everything, so they get first refusal on a press.
-      const panel = !grab ? null : (() => {
+      // Found whether or not this press is allowed to pick things up, because
+      // the controls below that a finger may always use still have to know
+      // when there is a panel over them.
+      const onPanel = (() => {
         const list = this._infoBoxes || [];
         for (let i = list.length - 1; i >= 0; i--) {
           const b2 = list[i];
@@ -2545,6 +2572,7 @@ class Component extends DCLogic {
         }
         return null;
       })();
+      const panel = grab ? onPanel : null;
       if (panel) {
         this._drag = { mode: 'panel', idx: panel.i, moved: false,
                        ox: p.x - panel.x, oy: p.y - panel.y,
@@ -2556,10 +2584,30 @@ class Component extends DCLogic {
       }
       // The rotation handle before the frame, and the frame before the points
       // and the pan: it is the largest thing on the chart that can be picked
-      // up, and it is only ever grabbed on purpose.
+      // up, and it is only ever grabbed on purpose. The handle's knob is
+      // painted over the frame's label, so it is asked before it too.
       const rot = grab ? camRotAt(p, pad) : null;
       if (rot) {
         this._drag = { mode: 'camrot', moved: false,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
+      // Sending the frame's label away is a button, so it answers a finger
+      // wherever it is, the same as a panel's cross and for the same reason -
+      // a control that does nothing on a phone reads as a broken one.
+      const camX = onPanel ? null : camLblCloseAt(p, e.pointerType === 'touch' ? 11 : 2);
+      if (camX) {
+        this.setState({ camLbl: false });
+        e.preventDefault();
+        return;
+      }
+      const camLbl = grab ? camLblAt(p, pad) : null;
+      if (camLbl) {
+        this._drag = { mode: 'camlbl', moved: false,
+                       ox: p.x - camLbl.x, oy: p.y - camLbl.y,
                        x0: p.x, y0: p.y, x1: p.x, y1: p.y,
                        touch: e.pointerType === 'touch' };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -2637,9 +2685,12 @@ class Component extends DCLogic {
           const overPanel = panels.some(b2 => q.x >= b2.x && q.x <= b2.x + b2.w
                                            && q.y >= b2.y && q.y <= b2.y + b2.h);
           const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q)
-                                     || camEdgeAt(q) || camRotAt(q));
+                                     || camLblAt(q) || camEdgeAt(q) || camRotAt(q));
           // A button, not something to drag, so it says so.
-          const want = (inPlot(q) && (closeAt(q) || probeCloseAt(q, 2))) ? 'pointer' : (over ? 'move' : '');
+          const want = (inPlot(q) && !camRotAt(q)
+                        && (closeAt(q) || probeCloseAt(q, 2)
+                            || (!overPanel && camLblCloseAt(q, 2))))
+            ? 'pointer' : (over ? 'move' : '');
           if (el.style.cursor !== want) el.style.cursor = want;
         }
         return;
@@ -2664,6 +2715,20 @@ class Component extends DCLogic {
         d.x1 = p.x; d.y1 = p.y;
         const at = skyAt(p);
         this.setCamCentre((at.ra + d.dra), Math.max(-89.9, Math.min(89.9, at.dec + d.ddec)));
+        return;
+      }
+      if (d.mode === 'camlbl') {
+        d.x1 = p.x; d.y1 = p.y;
+        const b2 = this._camLblBox;
+        if (!b2) return;
+        // The offset is kept in the coordinates the label is written in, which
+        // is what the size slider scales afterwards: divided by the scale, a
+        // shrunk label travels exactly as far as the pointer does, and without
+        // it a half-size label moves half as fast as the hand holding it.
+        const k = (this.state.popScale > 0 ? this.state.popScale : 1);
+        this.setState({ camMoved: true,
+                        camLx: (p.x - d.ox - b2.px) / k,
+                        camLy: (p.y - d.oy - b2.py) / k });
         return;
       }
       if (d.mode === 'camrot') {
@@ -2742,6 +2807,16 @@ class Component extends DCLogic {
       if (d.mode === 'panel') { this.drawHeatmap(el); return; }
       // Letting go of the frame is not a click on the sky behind it.
       if (d.mode === 'cam' || d.mode === 'camrot') { this.drawHeatmap(el); return; }
+      if (d.mode === 'camlbl') {
+        // Dropped back over the frame's centre it goes back to being placed
+        // automatically - otherwise a drag would be one-way, with nothing to
+        // undo it short of switching the frame off and on again.
+        const b2 = this._camLblBox;
+        if (d.moved && b2 && Math.hypot(b2.x + b2.w / 2 - b2.px, b2.y + b2.h / 2 - b2.py) < 26)
+          this.setState({ camMoved: false, camLx: 0, camLy: 0 });
+        this.drawHeatmap(el);
+        return;
+      }
       if (d.mode === 'point') {
         // Only a press that never became a drag reads as a click, which is how
         // a point has always been taken back off.
@@ -5337,6 +5412,7 @@ class Component extends DCLogic {
     // time, blue-white on the figures and neutral grey on the boundaries, and
     // this is a fourth kind of thing that has to be found at a glance.
     this._camHit = null;
+    this._camLblBox = null;
     if (this.state.camOn) {
       const fov = this.camFov();
       if (fov) {
@@ -5378,20 +5454,121 @@ class Component extends DCLogic {
         const hx = cx + ux * reach, hy = cy + uy * reach;
         ctx.beginPath(); ctx.moveTo(cx + ux * 9, cy + uy * 9); ctx.lineTo(hx, hy);
         ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+        // Where the frame points and what it covers, beside the frame rather
+        // than only in the controls - this is the number being judged. A box
+        // and not bare text, because it is a label like the point readouts:
+        // something that can be picked up and moved, and that carries the same
+        // cross to send it away with. On a frame a few arcminutes across at
+        // full zoom the numbers cover the thing being framed, which is the one
+        // moment they are least wanted.
+        const deg = v => v >= 1 ? v.toFixed(2) + '\u00B0' : (v * 60).toFixed(0) + '\u2032';
+        if (this.state.camLbl) {
+          const l1 = this.fmtCamCentre();
+          const l2 = deg(fov.w) + ' \u00D7 ' + deg(fov.h)
+                   + '  \u00B7  ' + fov.scale.toFixed(2) + '\u2033/px';
+          ctx.font = '700 13px Inter, sans-serif';
+          const w1 = ctx.measureText(l1).width;
+          ctx.font = '600 12px Inter, sans-serif';
+          const w2 = ctx.measureText(l2).width;
+          // The cross sits in the top right on the same 15px square the panels
+          // and the readouts use, so the coordinate line has to clear it too.
+          const CCLOSE = 15;
+          const bw = Math.max(w1 + CCLOSE + 6, w2) + 20, bh = 40;
+          // Beside the frame and not on it. A label has to be pressable to be
+          // draggable, and a pressable box over the frame's own edge is an
+          // edge that can no longer be grabbed - which is exactly what
+          // happened the first time these numbers became a box: a slab of the
+          // top edge stopped answering, with nothing to say why. So the box
+          // goes outside the frame's own rectangle on the screen, starting at
+          // the corner nearest the numbers' old home, and only falls back to
+          // the middle when there is no outside left to use.
+          let fx0 = Infinity, fy0 = Infinity, fx1 = -Infinity, fy1 = -Infinity;
+          for (const [qx, qy] of pts) {
+            if (qx < fx0) fx0 = qx;
+            if (qx > fx1) fx1 = qx;
+            if (qy < fy0) fy0 = qy;
+            if (qy > fy1) fy1 = qy;
+          }
+          fx0 = Math.max(fx0, X0); fx1 = Math.min(fx1, X1);
+          fy0 = Math.max(fy0, Y0); fy1 = Math.min(fy1, Y1);
+          const fits = (x, y) => x >= X0 + 4 && x + bw <= X1 - 4
+                              && y >= Y0 + 4 && y + bh <= Y1 - 4;
+          // The rotation knob is drawn over the label, so this is about
+          // reading rather than reaching: numbers under a knob are harder to
+          // read, and there is usually another corner going spare.
+          const clearOfKnob = (x, y) => !(hx > x - 10 && hx < x + bw + 10
+                                       && hy > y - 10 && hy < y + bh + 10);
+          const spots = [[fx1 + 10, fy0], [fx0 - bw - 10, fy0],
+                         [fx1 + 10, fy1 - bh], [fx0 - bw - 10, fy1 - bh],
+                         [fx0, fy0 - bh - 10], [fx0, fy1 + 10],
+                         // Zoomed inside the frame there is no outside: its
+                         // edges are off the screen, so nothing can be stolen
+                         // from them, and the numbers go beside the centre.
+                         [cx + 14, cy - bh - 12], [cx + 14, cy + 12],
+                         [cx - bw - 14, cy - bh - 12], [cx - bw - 14, cy + 12]];
+          let bx = null, by = null;
+          for (const [sx, sy] of spots)
+            if (fits(sx, sy) && clearOfKnob(sx, sy)) { bx = sx; by = sy; break; }
+          if (bx === null)
+            for (const [sx, sy] of spots) if (fits(sx, sy)) { bx = sx; by = sy; break; }
+          // Nothing fits beside the frame as written - a phone's chart is
+          // barely wider than the label itself - so the horizontal placement
+          // is given up and only what matters is kept: a band clear of the
+          // frame above or below it, slid sideways until it is on the chart. A
+          // label over open sky is a label in the way; a label over the
+          // frame's own edge is a control that stops answering.
+          if (bx === null) {
+            const slide = x => Math.max(X0 + 4, Math.min(X1 - 4 - bw, x));
+            if (fy0 - bh - 10 >= Y0 + 4) { bx = slide(fx0); by = fy0 - bh - 10; }
+            else if (fy1 + 10 + bh <= Y1 - 4) { bx = slide(fx0); by = fy1 + 10; }
+          }
+          if (bx === null) { bx = cx + 14; by = cy - bh - 12; }
+          // Moved, and it stays where it was put - held as pixels from the
+          // frame's own centre, so it keeps its place beside the frame while
+          // the sky pans and zooms underneath.
+          if (this.state.camMoved) { bx = cx + this.state.camLx; by = cy + this.state.camLy; }
+          bx = this.labelClamp(bx, bw, cx, X0 + 4, X1 - 4, this.state.popScale);
+          by = this.labelClamp(by, bh, cy, Y0 + 4, Y1 - 4, this.state.popScale);
+          const ccx = bx + bw - CCLOSE - 3, ccy = by + 4;
+          this._camLblBox = this.labelBox(
+            { x: bx, y: by, w: bw, h: bh, px: cx, py: cy,
+              cx: ccx, cy: ccy, cw: CCLOSE, ch: CCLOSE }, cx, cy, this.state.popScale);
+          this.labelZoom(ctx, cx, cy, this.state.popScale, () => {
+            // A leader once the reader has put the label somewhere of their
+            // own choosing, stopping short of the crosshair, on the readouts'
+            // own rule. Where it was placed automatically it is already
+            // against the frame it belongs to and a line across the frame
+            // would only be something else drawn over the picture.
+            const lx = Math.max(bx, Math.min(cx, bx + bw));
+            const ly = Math.max(by, Math.min(cy, by + bh));
+            const vx = cx - lx, vy = cy - ly, len = Math.hypot(vx, vy);
+            if (this.state.camMoved && len > 15) {
+              ctx.strokeStyle = 'rgba(96,178,116,0.55)'; ctx.lineWidth = 1;
+              ctx.beginPath(); ctx.moveTo(lx, ly);
+              ctx.lineTo(cx - vx / len * 11, cy - vy / len * 11); ctx.stroke();
+            }
+            ctx.fillStyle = 'rgba(10,10,10,0.90)'; ctx.strokeStyle = '#3A5B45'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#60B274'; ctx.font = '700 13px Inter, sans-serif';
+            ctx.fillText(l1, bx + 10, by + 17);
+            ctx.fillStyle = '#4E8A5E'; ctx.font = '600 12px Inter, sans-serif';
+            ctx.fillText(l2, bx + 10, by + 33);
+            ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(ccx + 4, ccy + 4); ctx.lineTo(ccx + CCLOSE - 4, ccy + CCLOSE - 4);
+            ctx.moveTo(ccx + CCLOSE - 4, ccy + 4); ctx.lineTo(ccx + 4, ccy + CCLOSE - 4);
+            ctx.stroke();
+          });
+        }
+        // The knob of the rotation handle goes on last, over the label rather
+        // than under it. A press is offered to whatever is painted on top, so
+        // a knob hidden behind a label the reader had dragged over it was a
+        // control that could not be turned and did not say why. Five pixels of
+        // dot in front of the numbers costs less than that.
+        ctx.strokeStyle = '#60B274'; ctx.lineWidth = 1.5;
         ctx.fillStyle = '#0A0A0A';
         ctx.beginPath(); ctx.arc(hx, hy, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        // How much sky it covers and how finely, beside the frame rather than
-        // only in the controls - this is the number being judged.
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#60B274';
-        const deg = v => v >= 1 ? v.toFixed(2) + '\u00B0' : (v * 60).toFixed(0) + '\u2032';
-        this.labelZoom(ctx, cx, cy, this.state.popScale, () => {
-          ctx.font = '700 13px Inter, sans-serif';
-          this.axisText(ctx, this.fmtCamCentre(), cx + 12, cy - 9);
-          ctx.font = '600 12px Inter, sans-serif';
-          this.axisText(ctx, deg(fov.w) + ' \u00D7 ' + deg(fov.h)
-                        + '  \u00B7  ' + fov.scale.toFixed(2) + '\u2033/px', cx + 12, cy + 8);
-        });
         ctx.restore();
         this._camHit = { poly: pts, cx, cy, hx, hy };
       }
@@ -5899,7 +6076,7 @@ class Component extends DCLogic {
       boundsLabel: Math.round(s.bounds * 100) + '%',
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
-      camOn: s.camOn,
+      camOn: s.camOn, camLbl: s.camLbl,
       camWText: s.camWText, camHText: s.camHText, camPixText: s.camPixText,
       camFLText: s.camFLText, camRotText: s.camRotText,
       camRaText: s.camRaText, camDecText: s.camDecText,
@@ -6089,6 +6266,7 @@ class Component extends DCLogic {
         }
         this.setState({ camOn: on });
       },
+      onCamLbl: e => this.setState({ camLbl: !!e.target.checked }),
       // Typed in any of the shapes people write coordinates in, and read back
       // out in one. The parsed value and the raw text are both kept, so a
       // half-finished entry is not rewritten under the cursor.
