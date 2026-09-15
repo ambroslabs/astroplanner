@@ -958,12 +958,13 @@
           <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Draw the sensor's field of view on the chart. Drag its edge to aim it, drag the handle at the top to rotate it.">
             <input type="checkbox" checked="{{ camOn }}" sc-camel-on-change="{{ onCamOn }}" style="accent-color: #60B274; width: 15px; height: 15px; margin: 0;">Show
           </label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">RA h:m:s<input type="text" inputmode="text" spellcheck="false" placeholder="05:35:17" sc-camel-value="{{ camRaText }}" sc-camel-on-change="{{ onCamRaText }}" sc-camel-on-input="{{ onCamRaText }}" style="width: 92px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Dec d:m:s<input type="text" inputmode="text" spellcheck="false" placeholder="-05:23:28" sc-camel-value="{{ camDecText }}" sc-camel-on-change="{{ onCamDecText }}" sc-camel-on-input="{{ onCamDecText }}" style="width: 100px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Width px<input type="number" min="1" max="40000" step="1" sc-camel-value="{{ camWText }}" sc-camel-on-change="{{ onCamW }}" sc-camel-on-input="{{ onCamW }}" style="width: 74px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Height px<input type="number" min="1" max="40000" step="1" sc-camel-value="{{ camHText }}" sc-camel-on-change="{{ onCamH }}" sc-camel-on-input="{{ onCamH }}" style="width: 74px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Pixel µm<input type="number" min="0.1" max="50" step="0.01" sc-camel-value="{{ camPixText }}" sc-camel-on-change="{{ onCamPix }}" sc-camel-on-input="{{ onCamPix }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Focal mm<input type="number" min="1" max="30000" step="1" sc-camel-value="{{ camFLText }}" sc-camel-on-change="{{ onCamFL }}" sc-camel-on-input="{{ onCamFL }}" style="width: 70px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Rotation PA °<input type="number" min="-360" max="360" step="1" sc-camel-value="{{ camRotText }}" sc-camel-on-change="{{ onCamRot }}" sc-camel-on-input="{{ onCamRot }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
-          <span style="font-size: 13px; font-weight: 700; color: #60B274; white-space: nowrap; padding-bottom: 8px; font-variant-numeric: tabular-nums;">{{ camCentre }}</span>
           <span style="font-size: 13px; font-weight: 600; color: #4E8A5E; white-space: nowrap; padding-bottom: 8px;">{{ camReadout }}</span>
         </div>
       </div>
@@ -1293,6 +1294,7 @@ class Component extends DCLogic {
     // Where it points, and the position angle of the sensor's up - measured
     // from north towards east, as a position angle always is.
     camRa: 0, camDec: 0, camRot: 0, camRotText: '0',
+    camRaText: '00:00:00', camDecText: '+00:00:00',
     // Whether the frame has been put somewhere. Switching it on drops it in
     // the middle of the view rather than at right ascension zero, which for
     // most of the night is off the side of the chart.
@@ -2661,9 +2663,7 @@ class Component extends DCLogic {
       if (d.mode === 'cam') {
         d.x1 = p.x; d.y1 = p.y;
         const at = skyAt(p);
-        this.setState({ camRa: ((at.ra + d.dra) % 24 + 24) % 24,
-                        camDec: Math.max(-89.9, Math.min(89.9, at.dec + d.ddec)),
-                        camPlaced: true });
+        this.setCamCentre((at.ra + d.dra), Math.max(-89.9, Math.min(89.9, at.dec + d.ddec)));
         return;
       }
       if (d.mode === 'camrot') {
@@ -4147,30 +4147,66 @@ class Component extends DCLogic {
              // microns over focal length in millimetres.
              scale: 206.265 * s.camPix / s.camFL };
   }
+  // Hours or degrees broken into sixtieths, carrying properly. One place, so
+  // the label on the chart and the fields in the controls cannot drift apart.
+  sex(v, wrap) {
+    const neg = v < 0, a = Math.abs(v);
+    let w = Math.floor(a), m = Math.floor((a - w) * 60);
+    let sc = Math.round((((a - w) * 60) - m) * 60);
+    if (sc === 60) { sc = 0; m++; }
+    if (m === 60) { m = 0; w++; }
+    if (wrap && w >= wrap) w -= wrap;
+    const p2 = x => String(x).padStart(2, '0');
+    return { neg, w: p2(w), m: p2(m), s: p2(sc) };
+  }
+  // Sexagesimal in, a number out. Colons, spaces or letters between the
+  // fields, a decimal on any of them, a sign in front - and a bare number
+  // taken as the whole value, which is the only reading that works for both
+  // "5.588" meaning hours and "-5.39" meaning degrees.
+  parseSex(t) {
+    const raw = String(t == null ? '' : t).trim();
+    if (!raw) return NaN;
+    const neg = /^[-\u2212]/.test(raw);
+    const parts = raw.replace(/^[+\-\u2212]/, '').split(/[^0-9.]+/).filter(x => x.length);
+    if (!parts.length) return NaN;
+    let v = 0, step = 1;
+    for (let i = 0; i < parts.length && i < 3; i++) {
+      const n = parseFloat(parts[i]);
+      if (!isFinite(n)) return NaN;
+      v += n * step;
+      step /= 60;
+    }
+    return neg ? -v : v;
+  }
+  // What the two fields show. ASCII minus and colons, so that what is read out
+  // can be typed straight back in.
+  // The one way to move the frame. Two numbers and the two fields that show
+  // them have to change together, and a path that set the numbers and forgot
+  // the fields would leave the controls quietly claiming a position the frame
+  // is not at - which is worse than not showing it at all. So there is one
+  // door rather than an invariant to remember.
+  setCamCentre(ra, dec, more) {
+    const r = ((ra % 24) + 24) % 24, d = Math.max(-90, Math.min(90, dec));
+    this.setState(Object.assign({ camRa: r, camDec: d, camPlaced: true,
+                                  camRaText: this.camRaStr(r),
+                                  camDecText: this.camDecStr(d) }, more || {}));
+  }
+  camRaStr(h) { const q = this.sex(((h % 24) + 24) % 24, 24); return q.w + ':' + q.m + ':' + q.s; }
+  camDecStr(d) { const q = this.sex(d); return (q.neg ? '-' : '+') + q.w + ':' + q.m + ':' + q.s; }
   // Where the frame points, written the way a mount wants it: right ascension
   // in hours, minutes and seconds, declination in degrees and arcminutes. The
   // chart's own readouts give declination to a tenth of a degree, which is six
   // arcminutes - fine for reading a chart and too coarse to point with.
   fmtCamCentre() {
     const s = this.state;
-    const rh = ((s.camRa % 24) + 24) % 24;
-    let h = Math.floor(rh), m = Math.floor((rh - h) * 60);
-    let sec = Math.round((((rh - h) * 60) - m) * 60);
-    if (sec === 60) { sec = 0; m++; }
-    if (m === 60) { m = 0; h = (h + 1) % 24; }
-    const ad = Math.abs(s.camDec);
-    let dd = Math.floor(ad), dm = Math.floor((ad - dd) * 60);
-    let ds = Math.round((((ad - dd) * 60) - dm) * 60);
-    if (ds === 60) { ds = 0; dm++; }
-    if (dm === 60) { dm = 0; dd++; }
-    const p2 = v => String(v).padStart(2, '0');
+    const r = this.sex(((s.camRa % 24) + 24) % 24, 24), d = this.sex(s.camDec);
     // The angle rides along with the coordinates rather than with the field of
     // view, because it is part of where the camera is aimed and not part of
     // what the camera is. Called PA, which is what it is and what a plate
     // solve will hand back, and which cannot be misread as another
     // declination the way a bare "18\u00B0" beside "-05\u00B0 23'" would be.
-    return p2(h) + 'h ' + p2(m) + 'm ' + p2(sec) + 's   '
-         + (s.camDec < 0 ? '\u2212' : '+') + p2(dd) + '\u00B0 ' + p2(dm) + '\u2032 ' + p2(ds) + '\u2033'
+    return r.w + 'h ' + r.m + 'm ' + r.s + 's   '
+         + (d.neg ? '\u2212' : '+') + d.w + '\u00B0 ' + d.m + '\u2032 ' + d.s + '\u2033'
          // Rounded first and wrapped after: the other way round, 359.6 rounds
          // up to 360 after the wrap has already passed and the frame claims an
          // angle that does not exist.
@@ -5866,7 +5902,7 @@ class Component extends DCLogic {
       camOn: s.camOn,
       camWText: s.camWText, camHText: s.camHText, camPixText: s.camPixText,
       camFLText: s.camFLText, camRotText: s.camRotText,
-      camCentre: this.fmtCamCentre(),
+      camRaText: s.camRaText, camDecText: s.camDecText,
       camReadout: (() => {
         const f = this.camFov();
         if (!f) return 'enter a sensor and a focal length';
@@ -6046,15 +6082,24 @@ class Component extends DCLogic {
       // chart, and a feature whose first act is to be invisible reads as
       // broken rather than as unplaced.
       onCamOn: e => {
-        const on = !!e.target.checked, st = { camOn: on };
-        if (on && !this.state.camPlaced) {
-          const a = this._axis;
-          if (a) {
-            st.camRa = ((a.axStart + a.axSpan / 2) % 24 + 24) % 24;
-            st.camDec = (a.dTop + a.dBot) / 2;
-            st.camPlaced = true;
-          }
+        const on = !!e.target.checked, a = this._axis;
+        if (on && !this.state.camPlaced && a) {
+          this.setCamCentre(a.axStart + a.axSpan / 2, (a.dTop + a.dBot) / 2, { camOn: true });
+          return;
         }
+        this.setState({ camOn: on });
+      },
+      // Typed in any of the shapes people write coordinates in, and read back
+      // out in one. The parsed value and the raw text are both kept, so a
+      // half-finished entry is not rewritten under the cursor.
+      onCamRaText: e => {
+        const raw = e.target.value, v = this.parseSex(raw), st = { camRaText: raw };
+        if (isFinite(v)) st.camRa = ((v % 24) + 24) % 24;
+        this.setState(st);
+      },
+      onCamDecText: e => {
+        const raw = e.target.value, v = this.parseSex(raw), st = { camDecText: raw };
+        if (isFinite(v)) st.camDec = Math.max(-90, Math.min(90, v));
         this.setState(st);
       },
       onCamW: numHandler('camW', 'camWText', 1, 40000),
