@@ -937,6 +937,21 @@
           <span style="font-size: 12px; color: #8E897D; max-width: 340px;">{{ searchMsg }}</span>
         </div>
       </div>
+      <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
+      <div class="wide-row" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Camera frame</span>
+        <div style="display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap;">
+          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Draw the sensor's field of view on the chart. Drag its edge to aim it, drag the handle at the top to rotate it.">
+            <input type="checkbox" checked="{{ camOn }}" sc-camel-on-change="{{ onCamOn }}" style="accent-color: #60B274; width: 15px; height: 15px; margin: 0;">Show
+          </label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Width px<input type="number" min="1" max="40000" step="1" sc-camel-value="{{ camWText }}" sc-camel-on-change="{{ onCamW }}" sc-camel-on-input="{{ onCamW }}" style="width: 74px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Height px<input type="number" min="1" max="40000" step="1" sc-camel-value="{{ camHText }}" sc-camel-on-change="{{ onCamH }}" sc-camel-on-input="{{ onCamH }}" style="width: 74px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Pixel µm<input type="number" min="0.1" max="50" step="0.01" sc-camel-value="{{ camPixText }}" sc-camel-on-change="{{ onCamPix }}" sc-camel-on-input="{{ onCamPix }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Focal mm<input type="number" min="1" max="30000" step="1" sc-camel-value="{{ camFLText }}" sc-camel-on-change="{{ onCamFL }}" sc-camel-on-input="{{ onCamFL }}" style="width: 70px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Rotation °<input type="number" min="-360" max="360" step="1" sc-camel-value="{{ camRotText }}" sc-camel-on-change="{{ onCamRot }}" sc-camel-on-input="{{ onCamRot }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px;"></label>
+          <span style="font-size: 13px; font-weight: 600; color: #60B274; white-space: nowrap; padding-bottom: 8px;">{{ camReadout }}</span>
+        </div>
+      </div>
       <!-- forces Field, RA axis and Frame onto a row of their own -->
       <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="wide-row" style="display: flex; flex-direction: column; gap: 6px;">
@@ -967,7 +982,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag the camera frame</b> by its edge to aim it, by the handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -1242,6 +1257,24 @@ class Component extends DCLogic {
     // for none. A string and not null because a saved value is only restored
     // when its type matches the default's, and typeof null is 'object'.
     conSel: '',
+    // The camera, and where it is aimed. Four numbers describe a sensor - how
+    // many pixels across and down, how big a pixel is, and what focal length
+    // it is behind - and everything else about the frame follows from them.
+    // The defaults are an APS-C astronomical camera on a short refractor,
+    // which is a common enough rig to be recognisable and gives a frame a
+    // couple of degrees wide.
+    camOn: false,
+    camW: 6248, camH: 4176, camPix: 3.76, camFL: 540,
+    // Kept as typed as well as parsed, so a half-finished number is not
+    // rewritten under the cursor - the same arrangement latitude uses.
+    camWText: '6248', camHText: '4176', camPixText: '3.76', camFLText: '540',
+    // Where it points, and the position angle of the sensor's up - measured
+    // from north towards east, as a position angle always is.
+    camRa: 0, camDec: 0, camRot: 0, camRotText: '0',
+    // Whether the frame has been put somewhere. Switching it on drops it in
+    // the middle of the view rather than at right ascension zero, which for
+    // most of the night is off the side of the chart.
+    camPlaced: false,
     frame: null, autoFrame: true,
     // start of the span the time slider covers; '' means centre it on the date
     winStart: '',
@@ -2361,6 +2394,37 @@ class Component extends DCLogic {
       return null;
     };
 
+    const wrapPxOf = () => { const a = this._axis; return a ? (a.X1 - a.X0) * 24 / a.axSpan : 1e9; };
+    // Where a pointer is, on the sky.
+    const skyAt = q => { const a = this._axis;
+      return { ra: ((a.axStart + (1 - (q.x - a.X0) / (a.X1 - a.X0)) * a.axSpan) % 24 + 24) % 24,
+               dec: a.dTop - (q.y - a.Y0) / (a.Y1 - a.Y0) * (a.dTop - a.dBot) }; };
+    // The camera frame is grabbed by its edge or its centre, never by its
+    // interior. Zoomed inside a frame it fills the screen, and taking the
+    // whole interior would leave no way to pan at all - while a small frame is
+    // almost all edge, so "drag the box" still means what it looks like.
+    const camEdgeAt = (q, pad) => {
+      const c = this._camHit;
+      if (!c) return null;
+      const g = 9 + (pad || 0);
+      if (Math.hypot(q.x - c.cx, q.y - c.cy) <= g + 3) return c;
+      const wrap = wrapPxOf();
+      for (let i = 0; i + 1 < c.poly.length; i++) {
+        const [ax, ay] = c.poly[i], [bx, by] = c.poly[i + 1];
+        const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy;
+        // An edge that jumps the width of the chart is a wrap, not a line.
+        if (!L2 || Math.abs(vx) > wrap / 2) continue;
+        let t = ((q.x - ax) * vx + (q.y - ay) * vy) / L2;
+        t = Math.max(0, Math.min(1, t));
+        if (Math.hypot(q.x - (ax + t * vx), q.y - (ay + t * vy)) <= g) return c;
+      }
+      return null;
+    };
+    const camRotAt = (q, pad) => {
+      const c = this._camHit;
+      return c && Math.hypot(q.x - c.hx, q.y - c.hy) <= 10 + (pad || 0) ? c : null;
+    };
+
     // Two fingers on the map. Only in wide mode: that is the one place the
     // canvas owns the gesture (touch-action: none), and taking the pinch
     // anywhere else would be taking the page's own zoom away from it.
@@ -2466,6 +2530,32 @@ class Component extends DCLogic {
         e.preventDefault();
         return;
       }
+      // The rotation handle before the frame, and the frame before the points
+      // and the pan: it is the largest thing on the chart that can be picked
+      // up, and it is only ever grabbed on purpose.
+      const rot = grab ? camRotAt(p, pad) : null;
+      if (rot) {
+        this._drag = { mode: 'camrot', moved: false,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
+      const cam = grab ? camEdgeAt(p, pad) : null;
+      if (cam) {
+        const at = skyAt(p);
+        this._drag = { mode: 'cam', moved: false,
+                       // The gap between the grab and the centre, held in sky
+                       // terms, so the frame does not jump to the pointer and
+                       // then drift as the projection stretches.
+                       dra: this.state.camRa - at.ra, ddec: this.state.camDec - at.dec,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
       const onPoint = grab ? pointAt(p, pad) : null;
       if (onPoint && !boxAt(p, pad)) {
         // Where the readout sits right now, so it can be held there while the
@@ -2522,7 +2612,8 @@ class Component extends DCLogic {
           const panels = this._infoBoxes || [];
           const overPanel = panels.some(b2 => q.x >= b2.x && q.x <= b2.x + b2.w
                                            && q.y >= b2.y && q.y <= b2.y + b2.h);
-          const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q));
+          const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q)
+                                     || camEdgeAt(q) || camRotAt(q));
           // A button, not something to drag, so it says so.
           const want = (inPlot(q) && (closeAt(q) || probeCloseAt(q, 2))) ? 'pointer' : (over ? 'move' : '');
           if (el.style.cursor !== want) el.style.cursor = want;
@@ -2543,6 +2634,24 @@ class Component extends DCLogic {
         if (!it) return;
         list[d.idx] = Object.assign({}, it, { lx: p.x - d.ox - b2.px, ly: p.y - d.oy - b2.py });
         this.setState({ info: list });
+        return;
+      }
+      if (d.mode === 'cam') {
+        d.x1 = p.x; d.y1 = p.y;
+        const at = skyAt(p);
+        this.setState({ camRa: ((at.ra + d.dra) % 24 + 24) % 24,
+                        camDec: Math.max(-89.9, Math.min(89.9, at.dec + d.ddec)),
+                        camPlaced: true });
+        return;
+      }
+      if (d.mode === 'camrot') {
+        d.x1 = p.x; d.y1 = p.y;
+        // Worked out on the sphere and not from the pixels: the chart's two
+        // axes are not at the same scale, so the angle the pointer makes on
+        // screen is not the angle the sensor would be at.
+        const at = skyAt(p);
+        const pa = Math.round(this.camPaTo(at.ra, at.dec));
+        this.setState({ camRot: pa, camRotText: String(pa) });
         return;
       }
       if (d.mode === 'point') {
@@ -2609,6 +2718,8 @@ class Component extends DCLogic {
       if (d.noTap) { this.drawHeatmap(el); return; }
       const a = this._axis;
       if (d.mode === 'panel') { this.drawHeatmap(el); return; }
+      // Letting go of the frame is not a click on the sky behind it.
+      if (d.mode === 'cam' || d.mode === 'camrot') { this.drawHeatmap(el); return; }
       if (d.mode === 'point') {
         // Only a press that never became a drag reads as a click, which is how
         // a point has always been taken back off.
@@ -3949,6 +4060,68 @@ class Component extends DCLogic {
     }).join('  \u00B7  ');
     return body + (tag ? ' ' + tag : '');
   }
+  // ---------- the camera's frame ----------
+  // What the sensor covers, in degrees, and how finely it samples it. The
+  // arctangent and not the small-angle rule: a full-frame sensor at 200mm is
+  // 10.3 degrees across and the linear approximation says 10.4, which is the
+  // kind of error that puts a target just outside a frame it was just inside.
+  camFov() {
+    const s = this.state;
+    const wmm = s.camW * s.camPix / 1000, hmm = s.camH * s.camPix / 1000;
+    if (!(s.camFL > 0) || !(wmm > 0) || !(hmm > 0)) return null;
+    return { w: 2 * Math.atan(wmm / (2 * s.camFL)) / this.D2R,
+             h: 2 * Math.atan(hmm / (2 * s.camFL)) / this.D2R,
+             // Arcseconds per pixel: 206265 arcseconds in a radian, pixel in
+             // microns over focal length in millimetres.
+             scale: 206.265 * s.camPix / s.camFL };
+  }
+  // A point on the sensor to a point on the sky. The sensor is a flat plane
+  // touching the sphere where it points, which is what a lens actually does,
+  // so this is the gnomonic projection run backwards - and it is why the frame
+  // comes out bent on a chart whose axes are right ascension and declination.
+  // u and v are fractions of half the frame, -1 to 1, across and up.
+  camPoint(u, v, fov) {
+    const D = this.D2R, s = this.state;
+    const a = Math.tan(fov.w / 2 * D), b = Math.tan(fov.h / 2 * D);
+    const th = s.camRot * D, cu = u * a, cv = v * b;
+    // Position angle runs from north towards east, so the sensor's up leans
+    // east as the angle grows.
+    const xi = cu * Math.cos(th) + cv * Math.sin(th);
+    const eta = -cu * Math.sin(th) + cv * Math.cos(th);
+    const ra0 = s.camRa * 15 * D, dec0 = s.camDec * D;
+    const den = Math.cos(dec0) - eta * Math.sin(dec0);
+    const ra = ra0 + Math.atan2(xi, den);
+    const dec = Math.atan2(Math.sin(dec0) + eta * Math.cos(dec0),
+                           Math.hypot(xi, den));
+    return [((ra / D / 15) % 24 + 24) % 24, dec / D];
+  }
+  // The outline, walked rather than cornered: four straight lines would be a
+  // lie about a shape the projection bends, and the bending is the whole
+  // reason for drawing it rather than quoting two numbers.
+  camOutline(fov) {
+    const N = 14, out = [];
+    const edge = (u0, v0, u1, v1) => {
+      for (let i = 0; i < N; i++) {
+        const t = i / N;
+        out.push(this.camPoint(u0 + (u1 - u0) * t, v0 + (v1 - v0) * t, fov));
+      }
+    };
+    edge(-1, 1, 1, 1); edge(1, 1, 1, -1); edge(1, -1, -1, -1); edge(-1, -1, -1, 1);
+    out.push(out[0]);
+    return out;
+  }
+  // The position angle of a direction on the sky, seen from the frame's
+  // centre. Used to turn a drag into a rotation: the chart's axes are not
+  // square with each other, so the angle has to be worked out on the sphere
+  // and not from the pixels the pointer moved through.
+  camPaTo(ra, dec) {
+    const D = this.D2R, s = this.state;
+    const d0 = s.camDec * D, d1 = dec * D, dra = (ra - s.camRa) * 15 * D;
+    const y = Math.sin(dra) * Math.cos(d1);
+    const x = Math.cos(d0) * Math.sin(d1) - Math.sin(d0) * Math.cos(d1) * Math.cos(dra);
+    return ((Math.atan2(y, x) / D) % 360 + 360) % 360;
+  }
+
   // ---------- the night, as a shape ----------
   // A number says six hours are usable; it does not say whether that is one
   // long climb through the zenith or a scrape along the trees at either end of
@@ -5012,6 +5185,65 @@ class Component extends DCLogic {
       ctx.moveTo(pcx + PCLOSE - 4, pcy + 4); ctx.lineTo(pcx + 4, pcy + PCLOSE - 4);
       ctx.stroke();
     }
+    // The camera's frame. Green: the chart already spends amber on usable
+    // time, blue-white on the figures and neutral grey on the boundaries, and
+    // this is a fourth kind of thing that has to be found at a glance.
+    this._camHit = null;
+    if (this.state.camOn) {
+      const fov = this.camFov();
+      if (fov) {
+        const mid = axStart + axSpan / 2;
+        const xC = ra => X0 + (1 - ((((ra - mid + 12) % 24 + 24) % 24 - 12) + axSpan / 2) / axSpan) * (X1 - X0);
+        const pts = this.camOutline(fov).map(([ra, dec]) => [xC(ra), yOf(dec)]);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+        ctx.strokeStyle = '#60B274'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        let px = null;
+        for (const [x, y] of pts) {
+          if (px === null || Math.abs(x - px) > wrapPx / 2) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          px = x;
+        }
+        ctx.stroke();
+        // The centre, and a handle at the top of the frame to turn it by. The
+        // handle is put at the sensor's own up, so it leans with the frame and
+        // says which way up the picture will come out.
+        const cx = xC(this.state.camRa), cy = yOf(this.state.camDec);
+        ctx.strokeStyle = '#60B274'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, cy); ctx.lineTo(cx - 2, cy);
+        ctx.moveTo(cx + 2, cy); ctx.lineTo(cx + 7, cy);
+        ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy - 2);
+        ctx.moveTo(cx, cy + 2); ctx.lineTo(cx, cy + 7);
+        ctx.stroke();
+        // Outside the frame, along the sensor's own up, and at a distance set
+        // in pixels rather than in sky. On the edge it stole the grab meant
+        // for the edge, and on a frame only twenty pixels wide it sat on the
+        // centre handle as well - so a wide field had a rotation control it
+        // could not avoid and a narrow one had three controls in one place.
+        const top = this.camPoint(0, 1, fov);
+        let ux = xC(top[0]) - cx, uy = yOf(top[1]) - cy;
+        const ul = Math.hypot(ux, uy) || 1;
+        ux /= ul; uy /= ul;
+        const reach = Math.max(ul, 22) + 14;
+        const hx = cx + ux * reach, hy = cy + uy * reach;
+        ctx.beginPath(); ctx.moveTo(cx + ux * 9, cy + uy * 9); ctx.lineTo(hx, hy);
+        ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = '#0A0A0A';
+        ctx.beginPath(); ctx.arc(hx, hy, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // How much sky it covers and how finely, beside the frame rather than
+        // only in the controls - this is the number being judged.
+        ctx.font = '700 12px Inter, sans-serif'; ctx.textAlign = 'left';
+        ctx.fillStyle = '#60B274';
+        const deg = v => v >= 1 ? v.toFixed(2) + '\u00B0' : (v * 60).toFixed(0) + '\u2032';
+        this.axisText(ctx, deg(fov.w) + ' \u00D7 ' + deg(fov.h)
+                      + '  \u00B7  ' + fov.scale.toFixed(2) + '\u2033/px', cx + 12, cy - 10);
+        ctx.restore();
+        this._camHit = { poly: pts, cx, cy, hx, hy };
+      }
+    }
+
     // Object panels last of all, so they sit above the readouts as well as the
     // field - they are the thing most recently asked for.
     this.drawInfoPanels(ctx, { xOf, yOf, X0, X1, Y0, Y1 }, dark);
@@ -5510,6 +5742,15 @@ class Component extends DCLogic {
       boundsLabel: Math.round(s.bounds * 100) + '%',
       starsLabel: Math.round(s.stars * 100) + '%',
       showSun: s.showSun,
+      camOn: s.camOn,
+      camWText: s.camWText, camHText: s.camHText, camPixText: s.camPixText,
+      camFLText: s.camFLText, camRotText: s.camRotText,
+      camReadout: (() => {
+        const f = this.camFov();
+        if (!f) return 'enter a sensor and a focal length';
+        const deg = v => v >= 1 ? v.toFixed(2) + '\u00B0' : (v * 60).toFixed(0) + '\u2032';
+        return deg(f.w) + ' \u00D7 ' + deg(f.h) + '  \u00B7  ' + f.scale.toFixed(2) + '\u2033/px';
+      })(),
       shadeOn: s.shade,
       shadeDim: s.shade ? '1' : '0.4',
       maskPct: String(Math.round(s.maskStrength * 100)),
@@ -5676,6 +5917,31 @@ class Component extends DCLogic {
       onMilky: e => this.setState({ milkyway: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onContrast: e => this.setState({ contrast: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onShade: e => this.setState({ shade: !!e.target.checked }),
+      // Switching the frame on drops it in the middle of the view. At right
+      // ascension zero it would spend most of the night off the side of the
+      // chart, and a feature whose first act is to be invisible reads as
+      // broken rather than as unplaced.
+      onCamOn: e => {
+        const on = !!e.target.checked, st = { camOn: on };
+        if (on && !this.state.camPlaced) {
+          const a = this._axis;
+          if (a) {
+            st.camRa = ((a.axStart + a.axSpan / 2) % 24 + 24) % 24;
+            st.camDec = (a.dTop + a.dBot) / 2;
+            st.camPlaced = true;
+          }
+        }
+        this.setState(st);
+      },
+      onCamW: numHandler('camW', 'camWText', 1, 40000),
+      onCamH: numHandler('camH', 'camHText', 1, 40000),
+      onCamPix: numHandler('camPix', 'camPixText', 0.1, 50),
+      onCamFL: numHandler('camFL', 'camFLText', 1, 30000),
+      onCamRot: e => {
+        const raw = e.target.value, v = parseFloat(raw), st = { camRotText: raw };
+        if (isFinite(v)) st.camRot = ((v % 360) + 360) % 360;
+        this.setState(st);
+      },
       onMaskStrength: e => this.setState({ maskStrength: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       onMaskFalloff: e => this.setState({ maskFalloff: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }),
       toggleSun: () => this.setState({ showSun: !this.state.showSun }),
