@@ -958,7 +958,7 @@
           <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Draw the sensor's field of view on the chart. Drag its edge to aim it, drag the handle at the top to rotate it.">
             <input type="checkbox" checked="{{ camOn }}" sc-camel-on-change="{{ onCamOn }}" style="accent-color: #60B274; width: 15px; height: 15px; margin: 0;">Show
           </label>
-          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Print where the frame is pointing and what it covers beside it on the chart. The cross on the label puts it away, and this brings it back.">
+          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Print where the frame is pointing and what it covers beside it on the chart. The cross on the label puts it away; this, or a click on the frame's centre, brings it back.">
             <input type="checkbox" checked="{{ camLbl }}" sc-camel-on-change="{{ onCamLbl }}" style="accent-color: #60B274; width: 15px; height: 15px; margin: 0;">Label
           </label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">RA h:m:s<input type="text" inputmode="text" spellcheck="false" placeholder="05:35:17" sc-camel-value="{{ camRaText }}" sc-camel-on-change="{{ onCamRaText }}" sc-camel-on-input="{{ onCamRaText }}" style="width: 92px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
@@ -1007,7 +1007,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag the camera frame</b> by its edge to aim it, by the handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">drag the frame's label</b> to move it, or its &#215; to put it away &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag the camera frame</b> by its edge to aim it, by the handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">drag the frame's label</b> to move it, or its &#215; to put it away, and click the frame's centre to bring it back &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -2624,6 +2624,10 @@ class Component extends DCLogic {
       if (cam) {
         const at = skyAt(p);
         this._drag = { mode: 'cam', moved: false,
+                       // Pressed on the crosshair rather than the edge: let go
+                       // without dragging and it is a click on the centre,
+                       // which is how the frame's label is brought back.
+                       centre: Math.hypot(p.x - cam.cx, p.y - cam.cy) <= 12 + pad,
                        // The gap between the grab and the centre, held in sky
                        // terms, so the frame does not jump to the pointer and
                        // then drift as the projection stretches.
@@ -2812,6 +2816,13 @@ class Component extends DCLogic {
       const a = this._axis;
       if (d.mode === 'panel') { this.drawHeatmap(el); return; }
       // Letting go of the frame is not a click on the sky behind it.
+      // The centre clicked rather than dragged asks what the frame is: it
+      // brings the label up. A few pixels of slack, the tap rule's own,
+      // because a click that jitters is still a click.
+      if (d.mode === 'cam' && d.centre && Math.hypot(d.x1 - d.x0, d.y1 - d.y0) < 6) {
+        if (!this.state.camLbl) this.setState({ camLbl: true }); else this.drawHeatmap(el);
+        return;
+      }
       if (d.mode === 'cam' || d.mode === 'camrot') { this.drawHeatmap(el); return; }
       if (d.mode === 'camlbl') {
         // Dropped back over the frame's centre it goes back to being placed
@@ -2856,6 +2867,14 @@ class Component extends DCLogic {
         // it. Tested before marking a point, since landing on an object is the
         // more specific thing to have meant.
         if (!d.moved) {
+          // The frame's centre, for a finger in the ordinary layout, where a
+          // press never picks the frame up and so arrives here as a tap. It
+          // brings the frame's label up rather than marking a point under it.
+          const ch = this._camHit;
+          if (ch && Math.hypot(d.x0 - ch.cx, d.y0 - ch.cy) <= 12 + (d.touch ? 7 : 0)) {
+            if (!this.state.camLbl) this.setState({ camLbl: true }); else this.drawHeatmap(el);
+            return;
+          }
           // A constellation name is a place to go, and reading one off the
           // chart and wanting to be there is the same wish twice.
           const nameAt = pad => (this._conHits || []).find(c =>
