@@ -990,8 +990,14 @@
           </label>
         </div>
       </div>
+      <!-- The four actions get a line of their own. They wrap one at a time,
+           so sharing a line with the frame controls left whichever ones did
+           not fit - Reset chart and Export - stranded at the left of the next
+           line, apart from the buttons they belong with. -->
+      <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="push" style="flex: 1;"></div>
       <button sc-camel-on-click="{{ clearPoints }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; margin-left: auto;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Remove every marked point">Clear points</button>
+      <button sc-camel-on-click="{{ closeLabels }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Close every open object label, including ones for objects off the chart">Close labels</button>
       <button sc-camel-on-click="{{ resetChart }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer;" style-hover="border-color: #8C6A3F; color: #F6F5F2;" title="Put the chart settings back to their defaults">Reset chart</button>
       <button class="export-btn" sc-camel-on-click="{{ openHeatExport }}" style="background: #D9A960; color: #0A0A0A; border: none; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; cursor: pointer;" style-hover="background: #E8C288;" title="Choose a name, size and format, then save this map">Export…</button>
     </div>
@@ -3564,6 +3570,12 @@ class Component extends DCLogic {
       if (!found) continue;
       const { o, def } = found;
       const px = xOf(o.ra), py = yOf(o.dec);
+      // Only while the object is on the chart, the rule the marked points
+      // already follow. Panned or zoomed away from it, a panel would be pinned
+      // to the nearest edge with its leader pointing at nothing, describing
+      // something that is not there. It stays open: come back to the object
+      // and its panel is back where it was.
+      if (px < X0 || px > X1 || py < Y0 || py > Y1) continue;
       const lines = this.infoLines(o, def, dark);
       let w = 0;
       for (const ln of lines) {
@@ -6203,6 +6215,7 @@ class Component extends DCLogic {
       nextDay: () => this.shiftDay(1),
       resetChart: () => this.resetChart(),
       clearPoints: () => this.setState({ probes: [] }),
+      closeLabels: () => this.setState({ info: [] }),
       siteName: s.siteName || '',
       isSavedSite: String(s.obsSel).indexOf('user:') === 0,
       onSiteName: e => this.setState({ siteName: e.target.value }),
