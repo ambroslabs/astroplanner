@@ -985,6 +985,26 @@
           <span style="font-size: 13px; font-weight: 600; color: #4E8A5E; white-space: nowrap; padding-bottom: 8px;">{{ camReadout }}</span>
         </div>
       </div>
+      <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
+      <div class="wide-row" style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Mosaic</span>
+        <div style="display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap;">
+          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Draw an area to cover with a mosaic. Drag its edge or centre to move it, its round handle to turn it, a square corner to resize it.">
+            <input type="checkbox" checked="{{ mosOn }}" sc-camel-on-change="{{ onMosOn }}" style="accent-color: #A77BFF; width: 15px; height: 15px; margin: 0;">Show
+          </label>
+          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Print the area's centre, size and how many panels it needs beside it on the chart. The cross on the label puts it away; this, or a click on the area's centre, brings it back.">
+            <input type="checkbox" checked="{{ mosLbl }}" sc-camel-on-change="{{ onMosLbl }}" style="accent-color: #A77BFF; width: 15px; height: 15px; margin: 0;">Label
+          </label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">RA h:m:s<input type="text" inputmode="text" spellcheck="false" placeholder="05:35:17" sc-camel-value="{{ mosRaText }}" sc-camel-on-change="{{ onMosRaText }}" sc-camel-on-input="{{ onMosRaText }}" style="width: 92px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Dec d:m:s<input type="text" inputmode="text" spellcheck="false" placeholder="-05:23:28" sc-camel-value="{{ mosDecText }}" sc-camel-on-change="{{ onMosDecText }}" sc-camel-on-input="{{ onMosDecText }}" style="width: 100px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;">Rotation PA °<input type="number" min="-360" max="360" step="1" sc-camel-value="{{ mosRotText }}" sc-camel-on-change="{{ onMosRot }}" sc-camel-on-input="{{ onMosRot }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;" title="Across the area, along its own axis">Width °<input type="number" min="0.05" max="100" step="0.1" sc-camel-value="{{ mosWText }}" sc-camel-on-change="{{ onMosW }}" sc-camel-on-input="{{ onMosW }}" style="width: 70px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;" title="Up the area, along its own axis">Height °<input type="number" min="0.05" max="100" step="0.1" sc-camel-value="{{ mosHText }}" sc-camel-on-change="{{ onMosH }}" sc-camel-on-input="{{ onMosH }}" style="width: 70px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;" title="How much of each panel is shared with its neighbour, 0 to 100">Overlap %<input type="number" min="0" max="100" step="1" sc-camel-value="{{ mosOverlapText }}" sc-camel-on-change="{{ onMosOverlap }}" sc-camel-on-input="{{ onMosOverlap }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <button sc-camel-on-click="{{ mosSplit }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 11px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #A77BFF; color: #F6F5F2;" title="Replace the camera frames with the panels that cover this area at this overlap, numbered row by row from the top left">Split into frames</button>
+          <span style="font-size: 13px; font-weight: 600; color: {{ mosStatusColor }}; padding-bottom: 8px; max-width: 460px;">{{ mosStatus }}</span>
+        </div>
+      </div>
       <!-- forces Field, RA axis and Frame onto a row of their own -->
       <div class="row-break" style="flex: 0 0 100%; height: 0; margin: 0;"></div>
       <div class="wide-row" style="display: flex; flex-direction: column; gap: 6px;">
@@ -1021,7 +1041,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag a camera frame</b> by its edge or centre to aim it and select it, by the selected frame's handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">drag a frame's label</b> to move it, or its &#215; to put it away, and click the frame's centre to bring it back &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag a camera frame</b> by its edge or centre to aim it and select it, by the selected frame's handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">drag a frame's label</b> to move it, or its &#215; to put it away, and click the frame's centre to bring it back &#183; <b style="color: #8E897D; font-weight: 700;">drag the mosaic area</b> like a frame, by a square corner to resize it, then split it into frames &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -1271,11 +1291,13 @@ class Component extends DCLogic {
     }
     return this._catRank;
   }
-  // How many camera frames there may be: enough for a large mosaic, and a
-  // bound on what a hand-edited save can ask the chart to draw. Up here with
-  // the defaults because the saved state is read while the fields are still
-  // being set up, and a field declared further down does not exist yet.
-  CAM_MAX = 60;
+  // How many camera frames there may be, and so the largest mosaic that can
+  // be split out: past this the chart is a field of green and the plan is
+  // better made with a shorter lens. Also a bound on what a hand-edited save
+  // can ask the chart to draw. Up here with the defaults because the saved
+  // state is read while the fields are still being set up, and a field
+  // declared further down does not exist yet.
+  CAM_MAX = 500;
   CHART_DEFAULTS = {
     thr: 40, thrText: '40', showMoon: true, showSun: true, showPlanets: true, showUsable: true, showSplit: true, showFullDark: true,
     showEcliptic: true, maskStrength: 0.75, maskFalloff: 0.25,
@@ -1336,6 +1358,19 @@ class Component extends DCLogic {
     // What those fields show, kept as typed as well as parsed so a
     // half-finished entry is not rewritten under the cursor.
     camRaText: '', camDecText: '', camRotText: '',
+    // The mosaic area: a box on the sky, drawn and handled like a frame -
+    // moved by its edge or centre, turned by its handle - and resized by its
+    // corners, which a frame cannot be, since a frame's size is the camera's.
+    // Split, it becomes as many frames as it takes to cover it with the
+    // overlap asked for. Width and height are degrees across the box along
+    // its own axes; placed says whether it has been put anywhere yet.
+    mosOn: false, mosPlaced: false,
+    mosRa: 0, mosDec: 0, mosRot: 0, mosW: 5, mosH: 3.5, mosLbl: true,
+    // Percent of a panel shared with its neighbour. Fifteen is a common
+    // choice: enough for the stacking software to find the seam.
+    mosOverlap: 15,
+    mosRaText: '', mosDecText: '', mosRotText: '0', mosWText: '5', mosHText: '3.5',
+    mosOverlapText: '15',
     frame: null, autoFrame: true,
     // start of the span the time slider covers; '' means centre it on the date
     winStart: '',
@@ -2505,6 +2540,38 @@ class Component extends DCLogic {
       return (this._camLblBoxes || []).find(b => q.x >= b.cx - g && q.x <= b.cx + b.cw + g
                                               && q.y >= b.cy - g && q.y <= b.cy + b.ch + g) || null;
     };
+    // The mosaic area: its knob, its corners, its label's cross, and its edge
+    // or centre - the same grammar as a frame, plus the corners.
+    const mosRotAt = (q, pad) => { const m = this._mosHit;
+      return m && Math.hypot(q.x - m.hx, q.y - m.hy) <= 10 + (pad || 0) ? m : null; };
+    // A corner only wins when the press is nearer to it than to the centre:
+    // on an area a few dozen pixels across, a fingertip's reach around each
+    // corner would otherwise swallow the whole box, and there would be no
+    // way left to move it.
+    const mosCornerAt = (q, pad) => { const m = this._mosHit;
+      if (!m) return -1;
+      const dc = Math.hypot(q.x - m.cx, q.y - m.cy);
+      return m.corners.findIndex(([x, y]) => { const d = Math.hypot(q.x - x, q.y - y);
+        return d <= 9 + (pad || 0) && d < dc; }); };
+    const mosLblCloseAt = (q, pad) => { const b = this._mosLblBox, g = pad || 0;
+      return b && q.x >= b.cx - g && q.x <= b.cx + b.cw + g && q.y >= b.cy - g && q.y <= b.cy + b.ch + g ? b : null; };
+    const mosLblAt = (q, pad) => { const b = this._mosLblBox, g = pad || 0;
+      return b && q.x >= b.x - g && q.x <= b.x + b.w + g && q.y >= b.y - g && q.y <= b.y + b.h + g ? b : null; };
+    const mosEdgeAt = (q, pad) => {
+      const m = this._mosHit;
+      if (!m) return null;
+      const g = 9 + (pad || 0), wrap = wrapPxOf();
+      if (Math.hypot(q.x - m.cx, q.y - m.cy) <= g + 3) return m;
+      for (let i = 0; i + 1 < m.poly.length; i++) {
+        const [ax, ay] = m.poly[i], [bx, by] = m.poly[i + 1];
+        const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy;
+        if (!L2 || Math.abs(vx) > wrap / 2) continue;
+        let t = ((q.x - ax) * vx + (q.y - ay) * vy) / L2;
+        t = Math.max(0, Math.min(1, t));
+        if (Math.hypot(q.x - (ax + t * vx), q.y - (ay + t * vy)) <= g) return m;
+      }
+      return null;
+    };
 
     // Two fingers on the map. Only in wide mode: that is the one place the
     // canvas owns the gesture (touch-action: none), and taking the pinch
@@ -2628,6 +2695,32 @@ class Component extends DCLogic {
         e.preventDefault();
         return;
       }
+      // The mosaic's knob and corners are painted over the frames, so they
+      // are asked next.
+      const mrot = grab ? mosRotAt(p, pad) : null;
+      const mcor = grab && !mrot ? mosCornerAt(p, pad) : -1;
+      if (mrot || mcor >= 0) {
+        this._drag = { mode: mrot ? 'mosrot' : 'mosrsz', moved: false,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
+      // The mosaic label's cross, a button, answering a finger anywhere; and
+      // its body, which is not draggable but is not the sky either, so a
+      // press on it does nothing rather than marking a point under it.
+      if (!onPanel && mosLblCloseAt(p, e.pointerType === 'touch' ? 11 : 2)) {
+        this.setState({ mosLbl: false });
+        e.preventDefault();
+        return;
+      }
+      if (grab && mosLblAt(p, pad) && !camLblAt(p, pad)) {
+        this._drag = { mode: 'moslbl', moved: false, x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
+        e.preventDefault();
+        return;
+      }
       // Sending the frame's label away is a button, so it answers a finger
       // wherever it is, the same as a panel's cross and for the same reason -
       // a control that does nothing on a phone reads as a broken one.
@@ -2663,6 +2756,18 @@ class Component extends DCLogic {
                        // terms, so the frame does not jump to the pointer and
                        // then drift as the projection stretches.
                        dra: f.ra - at.ra, ddec: f.dec - at.dec,
+                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                       touch: e.pointerType === 'touch' };
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
+      const mos = grab ? mosEdgeAt(p, pad) : null;
+      if (mos) {
+        const at = skyAt(p);
+        this._drag = { mode: 'mos', moved: false,
+                       centre: Math.hypot(p.x - mos.cx, p.y - mos.cy) <= 12 + pad,
+                       dra: this.state.mosRa - at.ra, ddec: this.state.mosDec - at.dec,
                        x0: p.x, y0: p.y, x1: p.x, y1: p.y,
                        touch: e.pointerType === 'touch' };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -2726,11 +2831,12 @@ class Component extends DCLogic {
           const overPanel = panels.some(b2 => q.x >= b2.x && q.x <= b2.x + b2.w
                                            && q.y >= b2.y && q.y <= b2.y + b2.h);
           const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q)
-                                     || camLblAt(q) || camEdgeAt(q) || camRotAt(q));
+                                     || camLblAt(q) || camEdgeAt(q) || camRotAt(q)
+                                     || mosRotAt(q) || mosCornerAt(q) >= 0 || mosEdgeAt(q));
           // A button, not something to drag, so it says so.
           const want = (inPlot(q) && !camRotAt(q)
                         && (closeAt(q) || probeCloseAt(q, 2)
-                            || (!overPanel && camLblCloseAt(q, 2))))
+                            || (!overPanel && (camLblCloseAt(q, 2) || mosLblCloseAt(q, 2)))))
             ? 'pointer' : (over ? 'move' : '');
           if (el.style.cursor !== want) el.style.cursor = want;
         }
@@ -2758,6 +2864,31 @@ class Component extends DCLogic {
         this.setCamCentre((at.ra + d.dra), Math.max(-89.9, Math.min(89.9, at.dec + d.ddec)), d.idx);
         return;
       }
+      if (d.mode === 'mos') {
+        d.x1 = p.x; d.y1 = p.y;
+        const at = skyAt(p);
+        this.setMosCentre(at.ra + d.dra, Math.max(-89.9, Math.min(89.9, at.dec + d.ddec)));
+        return;
+      }
+      if (d.mode === 'mosrot') {
+        d.x1 = p.x; d.y1 = p.y;
+        const at = skyAt(p), pa = Math.round(this.camPaTo(this.mosObj(), at.ra, at.dec));
+        this.setMos({ mosRot: pa, mosRotText: String(pa) });
+        return;
+      }
+      if (d.mode === 'mosrsz') {
+        d.x1 = p.x; d.y1 = p.y;
+        // The corner follows the pointer and the centre stays put, so the
+        // area grows or shrinks about its middle along its own two axes -
+        // measured on the sphere, since the chart's axes are not square.
+        const at = skyAt(p), t = this.skyToTan(this.mosObj(), at.ra, at.dec);
+        if (!t) return;
+        const side = v => Math.max(this.MOS_MIN, Math.min(this.MOS_MAX_DEG, 2 * Math.atan(Math.abs(v)) / this.D2R));
+        const w = +side(t[0]).toFixed(3), h = +side(t[1]).toFixed(3);
+        this.setMos({ mosW: w, mosH: h, mosWText: String(+w.toFixed(2)), mosHText: String(+h.toFixed(2)) });
+        return;
+      }
+      if (d.mode === 'moslbl') return;
       if (d.mode === 'camlbl') {
         d.x1 = p.x; d.y1 = p.y;
         const b2 = (this._camLblBoxes || []).find(q => q.i === d.idx);
@@ -2855,6 +2986,13 @@ class Component extends DCLogic {
         return;
       }
       if (d.mode === 'cam' || d.mode === 'camrot') { this.drawHeatmap(el); return; }
+      if (d.mode === 'mos' && d.centre && Math.hypot(d.x1 - d.x0, d.y1 - d.y0) < 6) {
+        if (!this.state.mosLbl) this.setState({ mosLbl: true }); else this.drawHeatmap(el);
+        return;
+      }
+      if (d.mode === 'mos' || d.mode === 'mosrot' || d.mode === 'mosrsz' || d.mode === 'moslbl') {
+        this.drawHeatmap(el); return;
+      }
       if (d.mode === 'camlbl') {
         // Dropped back over the frame's centre it goes back to being placed
         // automatically - otherwise a drag would be one-way, with nothing to
@@ -2908,6 +3046,11 @@ class Component extends DCLogic {
             const st = Object.assign({ camSel: ch.i }, this.camTexts(f));
             if (f && !f.lbl) { const list = this.state.cams.slice(); list[ch.i] = Object.assign({}, f, { lbl: true }); st.cams = list; }
             this.setState(st);
+            return;
+          }
+          const mh = this._mosHit;
+          if (mh && Math.hypot(d.x0 - mh.cx, d.y0 - mh.cy) <= 12 + (d.touch ? 7 : 0)) {
+            if (!this.state.mosLbl) this.setState({ mosLbl: true }); else this.drawHeatmap(el);
             return;
           }
           // A constellation name is a place to go, and reading one off the
@@ -3056,7 +3199,7 @@ class Component extends DCLogic {
     return out;
   }
   initialState() {
-    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0, exOpen: false, exWhich: '', exName: '', exSize: '', sugg: [], suggIx: -1, fs: false }, this.loadSaved());
+    return Object.assign({}, this.allDefaults(), { date: this.todayStr(), geoMsg: '', mosMsg: '', siteName: '', playing: false, query: '', searchMsg: '', catTick: 0, exOpen: false, exWhich: '', exName: '', exSize: '', sugg: [], suggIx: -1, fs: false }, this.loadSaved());
   }
   persist() {
     // Pan and zoom change state continuously, so coalesce the writes.
@@ -3075,7 +3218,7 @@ class Component extends DCLogic {
     // The watched settings have not changed, so the signature would suppress
     // the re-fit and leave Auto ticked over an unframed chart.
     this._frameSig = null;
-    this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr(), probes: [] }));
+    this.setState(Object.assign({}, this.CHART_DEFAULTS, { date: this.todayStr(), probes: [], mosMsg: '' }));
   }
   resetSite() { this.setState(Object.assign({}, this.SITE_DEFAULTS, { geoMsg: '' })); }
 
@@ -4418,6 +4561,100 @@ class Component extends DCLogic {
   clearCams() {
     this.setState(Object.assign({ cams: [], camSel: 0, camOn: false }, this.camTexts(null)));
   }
+
+  // ---------- the mosaic area ----------
+  mosObj() { const s = this.state; return { ra: s.mosRa, dec: s.mosDec, rot: s.mosRot }; }
+  mosSize() {
+    const c = (v, d) => (isFinite(v) ? Math.max(this.MOS_MIN, Math.min(this.MOS_MAX_DEG, v)) : d);
+    return { w: c(this.state.mosW, 5), h: c(this.state.mosH, 3.5) };
+  }
+  // Smallest and largest a side may be, in degrees. The small end is well
+  // under any real frame; the large end is where a flat tangent plane stops
+  // being a sensible way to lay panels out on a round sky.
+  MOS_MIN = 0.05;
+  MOS_COLOR = '#A77BFF';
+  MOS_MAX_DEG = 100;
+  mosTexts() {
+    const s = this.state, z = this.mosSize();
+    return { mosRaText: this.camRaStr(s.mosRa), mosDecText: this.camDecStr(s.mosDec),
+             mosRotText: String(((Math.round(s.mosRot) % 360) + 360) % 360),
+             mosWText: String(+z.w.toFixed(2)), mosHText: String(+z.h.toFixed(2)) };
+  }
+  // Every change to the mosaic clears the last split's message, so the
+  // status shows the plan for the box as it now is rather than a result
+  // about the box as it was.
+  setMos(st) { this.setState(Object.assign({ mosMsg: '' }, st)); }
+  setMosCentre(ra, dec) {
+    const r = ((ra % 24) + 24) % 24, d = Math.max(-90, Math.min(90, dec));
+    this.setMos({ mosRa: r, mosDec: d, mosPlaced: true,
+                  mosRaText: this.camRaStr(r), mosDecText: this.camDecStr(d) });
+  }
+  // Switched on for the first time, the area goes in the middle of the view,
+  // a few frames across and turned the way the selected frame is, so it is
+  // already the right sort of size for the camera it will be split for.
+  placeMos() {
+    const a = this._axis, fov = this.camFov(), sel = this.camSelF();
+    const ra = a ? a.axStart + a.axSpan / 2 : 0, dec = a ? (a.dTop + a.dBot) / 2 : 0;
+    const w = fov ? +(fov.w * 2.6).toFixed(2) : 5, h = fov ? +(fov.h * 2.6).toFixed(2) : 3.5;
+    const rot = sel ? Math.round(sel.rot) : 0;
+    this.setMos({ mosOn: true, mosPlaced: true, mosRa: ((ra % 24) + 24) % 24, mosDec: dec,
+                  mosRot: rot, mosW: w, mosH: h, mosLbl: true,
+                  mosRaText: this.camRaStr(ra), mosDecText: this.camDecStr(dec),
+                  mosRotText: String(rot), mosWText: String(w), mosHText: String(h) });
+  }
+  // How the area divides into panels: how many across and down, and how far
+  // apart their centres are on the tangent plane. The count is the smallest
+  // that covers the area with at least the overlap asked for; panels are
+  // spaced by a frame less its overlap, and the grid is centred on the area,
+  // so any spare coverage is shared between the two sides rather than all
+  // left hanging off one. Away from the centre the tangent plane magnifies,
+  // so the outer panels only ever overlap more than asked, never less - the
+  // area is always covered.
+  mosPlan() {
+    const fov = this.camFov();
+    if (!fov) return { err: 'Enter a sensor and a focal length first.', short: 'no camera set' };
+    const D = this.D2R, z = this.mosSize();
+    const ov = Math.max(0, Math.min(100, isFinite(this.state.mosOverlap) ? this.state.mosOverlap : 15)) / 100;
+    const W = 2 * Math.tan(z.w / 2 * D), H = 2 * Math.tan(z.h / 2 * D);
+    const fx = 2 * Math.tan(fov.w / 2 * D), fy = 2 * Math.tan(fov.h / 2 * D);
+    const sx = fx * (1 - ov), sy = fy * (1 - ov);
+    const count = (T, f, st) => T <= f * (1 + 1e-9) ? 1 : (st <= 1e-12 ? Infinity : Math.ceil((T - f) / st - 1e-9) + 1);
+    const nx = count(W, fx, sx), ny = count(H, fy, sy), pct = Math.round(ov * 100);
+    if (!isFinite(nx) || !isFinite(ny))
+      return { err: 'Impossible: at 100% overlap each panel sits exactly on the last, so no number of them covers an area bigger than one frame.',
+               short: 'impossible at 100% overlap' };
+    const n = nx * ny;
+    if (n > this.CAM_MAX)
+      return { err: 'Too many panels: this needs ' + nx + ' \u00D7 ' + ny + ' = ' + n + ', and the limit is ' + this.CAM_MAX
+                    + '. Make the area smaller, lower the overlap, or use a shorter focal length.',
+               short: nx + ' \u00D7 ' + ny + ' = ' + n + ' panels, over ' + this.CAM_MAX, nx, ny, n };
+    return { nx, ny, n, sx, sy, pct, text: nx + ' \u00D7 ' + ny + ' = ' + n + (n === 1 ? ' panel' : ' panels') + ' at ' + pct + '% overlap' };
+  }
+  // Replace the frames with the mosaic's panels. Row by row from the area's
+  // top left as it appears on the chart - east is to the left on a sky chart
+  // - which is also the order they are numbered and would be shot in. Each
+  // panel is turned to match the area's own up where it sits rather than
+  // copying the area's angle: north swings across a wide area, most of all
+  // near the pole, and copied angles would fan the panels out of their grid.
+  // Their labels start put away - a dozen sets of coordinates would bury the
+  // chart - and each comes back with a click on its centre as usual.
+  mosSplit() {
+    const plan = this.mosPlan();
+    if (plan.err) { this.setState({ mosMsg: plan.err }); return; }
+    const c = this.mosObj(), list = [];
+    for (let j = 0; j < plan.ny; j++) {
+      for (let i = 0; i < plan.nx; i++) {
+        const cu = ((plan.nx - 1) / 2 - i) * plan.sx, cv = ((plan.ny - 1) / 2 - j) * plan.sy;
+        const [ra, dec] = this.tanToSky(c, cu, cv);
+        const up = this.tanToSky(c, cu, cv + 1e-5);
+        list.push(this.camClean({ ra, dec, rot: this.camPaTo({ ra, dec }, up[0], up[1]), lbl: false }));
+      }
+    }
+    const prev = (this.state.cams || []).length;
+    this.setState(Object.assign({ cams: list, camSel: 0, camOn: true,
+      mosMsg: 'Split into ' + plan.text + (prev ? ', replacing ' + prev + (prev === 1 ? ' frame.' : ' frames.') : '.') },
+      this.camTexts(list[0])));
+  }
   // Great-circle separation in degrees, for "is there a frame here already".
   sepDeg(ra1, d1, ra2, d2) {
     const D = this.D2R;
@@ -4452,8 +4689,13 @@ class Component extends DCLogic {
   // u and v are fractions of half the frame, -1 to 1, across and up.
   camPoint(f, u, v, fov) {
     const D = this.D2R;
-    const a = Math.tan(fov.w / 2 * D), b = Math.tan(fov.h / 2 * D);
-    const th = f.rot * D, cu = u * a, cv = v * b;
+    return this.tanToSky(f, u * Math.tan(fov.w / 2 * D), v * Math.tan(fov.h / 2 * D));
+  }
+  // The same, from a point on the tangent plane itself, in the box's own axes
+  // (cu across, cv up, in units of the plane's distance from the sphere's
+  // centre). The mosaic lays its panels out on this plane.
+  tanToSky(f, cu, cv) {
+    const D = this.D2R, th = f.rot * D;
     // Position angle runs from north towards east, so the sensor's up leans
     // east as the angle grows.
     const xi = cu * Math.cos(th) + cv * Math.sin(th);
@@ -4464,6 +4706,18 @@ class Component extends DCLogic {
     const dec = Math.atan2(Math.sin(dec0) + eta * Math.cos(dec0),
                            Math.hypot(xi, den));
     return [((ra / D / 15) % 24 + 24) % 24, dec / D];
+  }
+  // And back: a point on the sky to the tangent plane of a box, in its own
+  // axes, or null for a point on the far side of the sky from it, which has
+  // no place on the plane at all. Resizing the mosaic by a corner uses it.
+  skyToTan(f, ra, dec) {
+    const D = this.D2R, d0 = f.dec * D, d = dec * D, da = (ra - f.ra) * 15 * D;
+    const cc = Math.sin(d0) * Math.sin(d) + Math.cos(d0) * Math.cos(d) * Math.cos(da);
+    if (cc <= 1e-6) return null;
+    const xi = Math.cos(d) * Math.sin(da) / cc;
+    const eta = (Math.cos(d0) * Math.sin(d) - Math.sin(d0) * Math.cos(d) * Math.cos(da)) / cc;
+    const th = f.rot * D;
+    return [xi * Math.cos(th) - eta * Math.sin(th), xi * Math.sin(th) + eta * Math.cos(th)];
   }
   // The outline, walked rather than cornered: four straight lines would be a
   // lie about a shape the projection bends, and the bending is the whole
@@ -5566,6 +5820,59 @@ class Component extends DCLogic {
       ctx.stroke();
       });
     }
+    // The mosaic area, under the frames: once it is split, its panels are the
+    // thing being worked with and the area is what they were cut from. Violet
+    // and dashed - a colour nothing else on the chart uses, and a line that
+    // reads as a region to be filled rather than a frame to be shot.
+    this._mosHit = null;
+    this._mosLblBox = null;
+    let mosG = null;
+    if (this.state.mosOn && this.state.mosPlaced) {
+      const midM = axStart + axSpan / 2;
+      const xM = ra => X0 + (1 - ((((ra - midM + 12) % 24 + 24) % 24 - 12) + axSpan / 2) / axSpan) * (X1 - X0);
+      const m = this.mosObj(), z = this.mosSize();
+      const pts = this.camOutline(m, z).map(([ra, dec]) => [xM(ra), yOf(dec)]);
+      const cx = xM(m.ra), cy = yOf(m.dec);
+      const top = this.camPoint(m, 0, 1, z);
+      let ux = xM(top[0]) - cx, uy = yOf(top[1]) - cy;
+      const ul = Math.hypot(ux, uy) || 1;
+      ux /= ul; uy /= ul;
+      const reach = Math.max(ul, 22) + 18;
+      const corners = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([u, v]) => {
+        const q = this.camPoint(m, u, v, z); return [xM(q[0]), yOf(q[1])]; });
+      let fx0 = Infinity, fy0 = Infinity, fx1 = -Infinity, fy1 = -Infinity;
+      for (const [qx, qy] of pts) {
+        if (qx < fx0) fx0 = qx;
+        if (qx > fx1) fx1 = qx;
+        if (qy < fy0) fy0 = qy;
+        if (qy > fy1) fy1 = qy;
+      }
+      mosG = { pts, cx, cy, ux, uy, hx: cx + ux * reach, hy: cy + uy * reach, corners,
+               fx0: Math.max(fx0, X0), fx1: Math.min(fx1, X1), fy0: Math.max(fy0, Y0), fy1: Math.min(fy1, Y1) };
+      ctx.save();
+      ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+      ctx.strokeStyle = this.MOS_COLOR; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.setLineDash([8, 5]);
+      ctx.beginPath();
+      let px = null;
+      for (const [x, y] of pts) {
+        if (px === null || Math.abs(x - px) > wrapPx / 2) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        px = x;
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy); ctx.lineTo(cx - 3, cy);
+      ctx.moveTo(cx + 3, cy); ctx.lineTo(cx + 8, cy);
+      ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy - 3);
+      ctx.moveTo(cx, cy + 3); ctx.lineTo(cx, cy + 8);
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + ux * 10, cy + uy * 10); ctx.lineTo(mosG.hx, mosG.hy);
+      ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+    }
     // The camera's frames. Green: the chart already spends amber on usable
     // time, blue-white on the figures and neutral grey on the boundaries, and
     // this is a fourth kind of thing that has to be found at a glance.
@@ -5783,6 +6090,68 @@ class Component extends DCLogic {
                                hx: g.i === sel ? g.hx : null, hy: g.i === sel ? g.hy : null });
         }
       }
+    }
+
+    // The mosaic's handles and label go over the frames. Once the area is
+    // split its edges lie along the outer panels' edges, and handles drawn
+    // underneath them could not be reached; the corners and the knob are
+    // small, and pressed only on purpose.
+    if (mosG) {
+      const g = mosG, k = this.state.popScale;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(X0, Y0, X1 - X0, Y1 - Y0); ctx.clip();
+      if (this.state.mosLbl) {
+        const plan = this.mosPlan(), z = this.mosSize();
+        const deg = v => v >= 1 ? v.toFixed(2) + '\u00B0' : (v * 60).toFixed(0) + '\u2032';
+        const l1 = 'Mosaic   ' + this.fmtCamCentre(this.mosObj());
+        const l2 = deg(z.w) + ' \u00D7 ' + deg(z.h) + '  \u00B7  ' + (plan.err ? plan.short : plan.text);
+        ctx.font = '700 13px Inter, sans-serif';
+        const w1 = ctx.measureText(l1).width;
+        ctx.font = '600 12px Inter, sans-serif';
+        const w2 = ctx.measureText(l2).width;
+        const CCLOSE = 15, bw = Math.max(w1 + CCLOSE + 6, w2) + 20, bh = 40;
+        const { cx, cy, fx0, fx1, fy0, fy1 } = g;
+        const drawn = (x, y) => ({ x: cx + (x - cx) * k, y: cy + (y - cy) * k, w: bw * k, h: bh * k });
+        const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+        const fits = (x, y) => x >= X0 + 4 && x + bw <= X1 - 4 && y >= Y0 + 4 && y + bh <= Y1 - 4;
+        const clearOfLbls = (x, y) => (this._camLblBoxes || []).every(q => !overlap(drawn(x, y), q));
+        // Outside the area, and clear of the frames' labels, which were put
+        // down first. Above it first: the frames' labels favour the sides.
+        const slide = x => Math.max(X0 + 4, Math.min(X1 - 4 - bw, x));
+        const spots = [[slide(fx0), fy0 - bh - 12], [slide(fx0), fy1 + 12],
+                       [fx1 + 12, fy0], [fx0 - bw - 12, fy0],
+                       [cx + 16, cy + 14], [cx - bw - 16, cy + 14]];
+        let bx = null, by = null;
+        for (const t of [(x, y) => fits(x, y) && clearOfLbls(x, y), fits])
+          { for (const [sx, sy] of spots) if (t(sx, sy)) { bx = sx; by = sy; break; } if (bx !== null) break; }
+        if (bx === null) { bx = cx + 16; by = cy + 14; }
+        bx = this.labelClamp(bx, bw, cx, X0 + 4, X1 - 4, k);
+        by = this.labelClamp(by, bh, cy, Y0 + 4, Y1 - 4, k);
+        const ccx = bx + bw - CCLOSE - 3, ccy = by + 4;
+        this._mosLblBox = this.labelBox({ x: bx, y: by, w: bw, h: bh, px: cx, py: cy,
+                                          cx: ccx, cy: ccy, cw: CCLOSE, ch: CCLOSE }, cx, cy, k);
+        this.labelZoom(ctx, cx, cy, k, () => {
+          ctx.fillStyle = 'rgba(10,10,10,0.90)'; ctx.strokeStyle = '#5E4C8C'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+          ctx.textAlign = 'left';
+          ctx.fillStyle = this.MOS_COLOR; ctx.font = '700 13px Inter, sans-serif';
+          ctx.fillText(l1, bx + 10, by + 17);
+          ctx.fillStyle = plan.err ? '#E08A7A' : '#9C86CC'; ctx.font = '600 12px Inter, sans-serif';
+          ctx.fillText(l2, bx + 10, by + 33);
+          ctx.strokeStyle = '#8E897D'; ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(ccx + 4, ccy + 4); ctx.lineTo(ccx + CCLOSE - 4, ccy + CCLOSE - 4);
+          ctx.moveTo(ccx + CCLOSE - 4, ccy + 4); ctx.lineTo(ccx + 4, ccy + CCLOSE - 4);
+          ctx.stroke();
+        });
+      }
+      // Corners to resize by: squares, to tell them from the round knob that
+      // turns the area.
+      ctx.strokeStyle = this.MOS_COLOR; ctx.lineWidth = 1.5; ctx.fillStyle = '#0A0A0A';
+      for (const [x, y] of g.corners) { ctx.beginPath(); ctx.rect(x - 4.5, y - 4.5, 9, 9); ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(g.hx, g.hy, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      this._mosHit = { poly: g.pts, cx: g.cx, cy: g.cy, hx: g.hx, hy: g.hy, corners: g.corners };
     }
 
     // Object panels last of all, so they sit above the readouts as well as the
@@ -6289,6 +6658,15 @@ class Component extends DCLogic {
       showSun: s.showSun,
       camOn: s.camOn,
       camLbl: !!(this.camSelF() && this.camSelF().lbl),
+      mosOn: s.mosOn && s.mosPlaced, mosLbl: s.mosLbl,
+      mosRaText: s.mosRaText, mosDecText: s.mosDecText, mosRotText: s.mosRotText,
+      mosWText: s.mosWText, mosHText: s.mosHText, mosOverlapText: s.mosOverlapText,
+      // The last split's result or error while it is still true, and the live
+      // plan for the area otherwise - so the count is known before pressing.
+      ...(() => { const pl = this.mosPlan();
+        const err = s.mosMsg ? /^(Impossible|Too many|Enter)/.test(s.mosMsg) : !!pl.err;
+        return { mosStatus: s.mosMsg || (pl.err || pl.text),
+                 mosStatusColor: err ? '#E08A7A' : '#9C86CC' }; })(),
       camSelVal: (s.cams || []).length ? String(s.camSel) : '',
       camOptions: (s.cams || []).length
         ? s.cams.map((_, i) => ({ value: String(i), label: 'Frame ' + (i + 1) }))
@@ -6481,6 +6859,25 @@ class Component extends DCLogic {
         if (on && !(this.state.cams || []).length) { this.addCam(); return; }
         this.setState({ camOn: on });
       },
+      onMosOn: e => {
+        const on = !!e.target.checked;
+        if (on && !this.state.mosPlaced) { this.placeMos(); return; }
+        this.setState({ mosOn: on });
+      },
+      onMosLbl: e => this.setState({ mosLbl: !!e.target.checked }),
+      onMosRaText: e => { const raw = e.target.value, v = this.parseSex(raw), st = { mosRaText: raw };
+        if (isFinite(v)) st.mosRa = ((v % 24) + 24) % 24; this.setMos(st); },
+      onMosDecText: e => { const raw = e.target.value, v = this.parseSex(raw), st = { mosDecText: raw };
+        if (isFinite(v)) st.mosDec = Math.max(-90, Math.min(90, v)); this.setMos(st); },
+      onMosRot: e => { const raw = e.target.value, v = parseFloat(raw), st = { mosRotText: raw };
+        if (isFinite(v)) st.mosRot = ((v % 360) + 360) % 360; this.setMos(st); },
+      onMosW: e => { const raw = e.target.value, v = parseFloat(raw), st = { mosWText: raw };
+        if (isFinite(v) && v > 0) st.mosW = Math.max(this.MOS_MIN, Math.min(this.MOS_MAX_DEG, v)); this.setMos(st); },
+      onMosH: e => { const raw = e.target.value, v = parseFloat(raw), st = { mosHText: raw };
+        if (isFinite(v) && v > 0) st.mosH = Math.max(this.MOS_MIN, Math.min(this.MOS_MAX_DEG, v)); this.setMos(st); },
+      onMosOverlap: e => { const raw = e.target.value, v = parseFloat(raw), st = { mosOverlapText: raw };
+        if (isFinite(v)) st.mosOverlap = Math.max(0, Math.min(100, v)); this.setMos(st); },
+      mosSplit: () => this.mosSplit(),
       onCamSel: e => { const i = parseInt(e.target.value, 10); if (isFinite(i)) this.selectCam(i); },
       addCam: () => this.addCam(),
       deleteCam: () => this.deleteCam(),
