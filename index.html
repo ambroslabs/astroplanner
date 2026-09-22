@@ -989,7 +989,7 @@
       <div class="wide-row" style="display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D;">Mosaic</span>
         <div style="display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap;">
-          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Draw an area to cover with a mosaic. Drag its edge or centre to move it, its round handle to turn it, a square corner to resize it.">
+          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Draw an area to cover with a mosaic. Drag its centre to move it, a side or a corner to resize it, its round handle to turn it.">
             <input type="checkbox" checked="{{ mosOn }}" sc-camel-on-change="{{ onMosOn }}" style="accent-color: #A77BFF; width: 15px; height: 15px; margin: 0;">Show
           </label>
           <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #C9C4B7; cursor: pointer; white-space: nowrap; padding-bottom: 8px;" title="Print the area's centre, size and how many panels it needs beside it on the chart. The cross on the label puts it away; this, or a click on the area's centre, brings it back.">
@@ -1001,6 +1001,7 @@
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;" title="Across the area, along its own axis">Width °<input type="number" min="0.05" max="100" step="0.1" sc-camel-value="{{ mosWText }}" sc-camel-on-change="{{ onMosW }}" sc-camel-on-input="{{ onMosW }}" style="width: 70px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;" title="Up the area, along its own axis">Height °<input type="number" min="0.05" max="100" step="0.1" sc-camel-value="{{ mosHText }}" sc-camel-on-change="{{ onMosH }}" sc-camel-on-input="{{ onMosH }}" style="width: 70px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
           <label style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #5A5751; display: flex; flex-direction: column; gap: 4px;" title="How much of each panel is shared with its neighbour, 0 to 100">Overlap %<input type="number" min="0" max="100" step="1" sc-camel-value="{{ mosOverlapText }}" sc-camel-on-change="{{ onMosOverlap }}" sc-camel-on-input="{{ onMosOverlap }}" style="width: 66px; background: #161616; border: 1px solid #2E2C27; border-radius: 2px; color: #F6F5F2; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 8px; font-variant-numeric: tabular-nums;"></label>
+          <button sc-camel-on-click="{{ mosRecentre }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 11px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #A77BFF; color: #F6F5F2;" title="Bring the area to the middle of the view, shrinking it to fit if it is bigger than the view">Center in view</button>
           <button sc-camel-on-click="{{ mosSplit }}" style="background: #161616; color: #C9C4B7; border: 1px solid #2E2C27; border-radius: 2px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 11px; cursor: pointer; white-space: nowrap;" style-hover="border-color: #A77BFF; color: #F6F5F2;" title="Replace the camera frames with the panels that cover this area at this overlap, numbered row by row from the top left">Split into frames</button>
           <span style="font-size: 13px; font-weight: 600; color: {{ mosStatusColor }}; padding-bottom: 8px; max-width: 460px;">{{ mosStatus }}</span>
         </div>
@@ -1041,7 +1042,7 @@
          only way to move them as a unit. In the normal layout it is a plain
          block around three blocks and changes nothing. -->
     <div class="legend-wrap">
-      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag a camera frame</b> by its edge or centre to aim it and select it, by the selected frame's handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">drag a frame's label</b> to move it, or its &#215; to put it away, and click the frame's centre to bring it back &#183; <b style="color: #8E897D; font-weight: 700;">drag the mosaic area</b> like a frame, by a square corner to resize it, then split it into frames &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
+      <div style="margin-top: 8px; font-size: 12px; color: #5A5751;">Chart &#183; <b style="color: #8E897D; font-weight: 700;">{{ zoomHint }}</b> to zoom &#183; <b style="color: #8E897D; font-weight: 700;">drag</b> to pan or rotate &#183; <b style="color: #8E897D; font-weight: 700;">click an object</b> for its details &#183; <b style="color: #8E897D; font-weight: 700;">drag a camera frame</b> by its edge or centre to aim it and select it, by the selected frame's handle to rotate it &#183; <b style="color: #8E897D; font-weight: 700;">drag a frame's label</b> to move it, or its &#215; to put it away, and click the frame's centre to bring it back &#183; <b style="color: #8E897D; font-weight: 700;">drag the mosaic area</b> by its centre to move it, a side or corner to resize it, its handle to turn it, then split it into frames &#183; <b style="color: #8E897D; font-weight: 700;">click a constellation name</b> to pick out its border, twice to go there &#183; <b style="color: #8E897D; font-weight: 700;">click</b> empty sky to mark a point, again to remove it &#183; <b style="color: #8E897D; font-weight: 700;">drag a point</b> to move it &#183; <b style="color: #8E897D; font-weight: 700;">drag a readout</b> to move its label, drop it back on the point to re-place it</div>
       <div class="layers" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2E2C27;">
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8E897D; margin-right: 4px;">Layers <span style="color: #5A5751; letter-spacing: 0.06em;">&#183; click to toggle</span></span>
         <button sc-camel-on-click="{{ toggleUsable }}" style="display: inline-flex; align-items: center; gap: 7px; background: none; border: none; padding: 7px 4px; margin: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #C9C4B7; text-align: left; opacity: {{ opUsable }};" style-hover="color: #F6F5F2;" title="The edge of the sky that gets any usable time at all"><span style="display: inline-block; width: 26px; height: 0; border-top: 3px solid #D9A960;"></span>usable boundary</button>
@@ -2557,20 +2558,29 @@ class Component extends DCLogic {
       return b && q.x >= b.cx - g && q.x <= b.cx + b.cw + g && q.y >= b.cy - g && q.y <= b.cy + b.ch + g ? b : null; };
     const mosLblAt = (q, pad) => { const b = this._mosLblBox, g = pad || 0;
       return b && q.x >= b.x - g && q.x <= b.x + b.w + g && q.y >= b.y - g && q.y <= b.y + b.h + g ? b : null; };
-    const mosEdgeAt = (q, pad) => {
+    // The centre moves the area; a side or a corner resizes it. A box that
+    // is meant to be sized is sized by what it looks like it is sized by -
+    // its edges - and a frame, whose size is the camera's, is not.
+    const mosCentreAt = (q, pad) => { const m = this._mosHit;
+      return m && Math.hypot(q.x - m.cx, q.y - m.cy) <= 12 + (pad || 0) ? m : null; };
+    // Which side is under the pointer: 0 top, 1 right, 2 bottom, 3 left, in
+    // the area's own axes, or -1. The outline is walked one side at a time,
+    // a fixed number of points each, so the side is the segment's index.
+    const mosSideAt = (q, pad) => {
       const m = this._mosHit;
-      if (!m) return null;
-      const g = 9 + (pad || 0), wrap = wrapPxOf();
-      if (Math.hypot(q.x - m.cx, q.y - m.cy) <= g + 3) return m;
+      if (!m) return -1;
+      const g = 9 + (pad || 0), wrap = wrapPxOf(), per = (m.poly.length - 1) / 4;
+      let best = -1, bestD = g;
       for (let i = 0; i + 1 < m.poly.length; i++) {
         const [ax, ay] = m.poly[i], [bx, by] = m.poly[i + 1];
         const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy;
         if (!L2 || Math.abs(vx) > wrap / 2) continue;
         let t = ((q.x - ax) * vx + (q.y - ay) * vy) / L2;
         t = Math.max(0, Math.min(1, t));
-        if (Math.hypot(q.x - (ax + t * vx), q.y - (ay + t * vy)) <= g) return m;
+        const dd = Math.hypot(q.x - (ax + t * vx), q.y - (ay + t * vy));
+        if (dd <= bestD) { bestD = dd; best = Math.floor(i / per); }
       }
-      return null;
+      return best;
     };
 
     // Two fingers on the map. Only in wide mode: that is the one place the
@@ -2700,7 +2710,24 @@ class Component extends DCLogic {
       const mrot = grab ? mosRotAt(p, pad) : null;
       const mcor = grab && !mrot ? mosCornerAt(p, pad) : -1;
       if (mrot || mcor >= 0) {
-        this._drag = { mode: mrot ? 'mosrot' : 'mosrsz', moved: false,
+        // Corners in the order they were drawn: top right, bottom right,
+        // bottom left, top left - which sides of the area each one carries.
+        const su = [1, 1, -1, -1][mcor], sv = [1, -1, -1, 1][mcor];
+        this._drag = mrot ? { mode: 'mosrot' } : this.mosResizeStart(su, sv);
+        Object.assign(this._drag, { moved: false, x0: p.x, y0: p.y, x1: p.x, y1: p.y,
+                                    touch: e.pointerType === 'touch' });
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+        return;
+      }
+      // The area's centre is a handle drawn over the frames too: after a split
+      // with an odd number of panels it sits on the middle panel's centre,
+      // and the area has to stay movable.
+      const mctr = grab ? mosCentreAt(p, pad) : null;
+      if (mctr) {
+        const at = skyAt(p);
+        this._drag = { mode: 'mos', moved: false, centre: true,
+                       dra: this.state.mosRa - at.ra, ddec: this.state.mosDec - at.dec,
                        x0: p.x, y0: p.y, x1: p.x, y1: p.y,
                        touch: e.pointerType === 'touch' };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -2762,14 +2789,12 @@ class Component extends DCLogic {
         e.preventDefault();
         return;
       }
-      const mos = grab ? mosEdgeAt(p, pad) : null;
-      if (mos) {
-        const at = skyAt(p);
-        this._drag = { mode: 'mos', moved: false,
-                       centre: Math.hypot(p.x - mos.cx, p.y - mos.cy) <= 12 + pad,
-                       dra: this.state.mosRa - at.ra, ddec: this.state.mosDec - at.dec,
-                       x0: p.x, y0: p.y, x1: p.x, y1: p.y,
-                       touch: e.pointerType === 'touch' };
+      // A side of the area, under the frames: once split, the outer panels'
+      // edges lie along it and are the more likely thing to have been meant.
+      const mside = grab ? mosSideAt(p, pad) : -1;
+      if (mside >= 0) {
+        this._drag = Object.assign(this.mosResizeStart([0, 1, 0, -1][mside], [1, 0, -1, 0][mside]),
+          { moved: false, x0: p.x, y0: p.y, x1: p.x, y1: p.y, touch: e.pointerType === 'touch' });
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         e.preventDefault();
         return;
@@ -2832,12 +2857,28 @@ class Component extends DCLogic {
                                            && q.y >= b2.y && q.y <= b2.y + b2.h);
           const over = inPlot(q) && (overPanel || boxAt(q) || pointAt(q)
                                      || camLblAt(q) || camEdgeAt(q) || camRotAt(q)
-                                     || mosRotAt(q) || mosCornerAt(q) >= 0 || mosEdgeAt(q));
+                                     || mosRotAt(q) || mosCentreAt(q));
+          // The mosaic's sides and corners say which way they resize, worked
+          // out from where they are on the screen, since the area turns.
+          let rsz = '';
+          const m = this._mosHit;
+          if (m && inPlot(q) && !overPanel && !mosRotAt(q) && !mosCentreAt(q) && !camLblAt(q)) {
+            const ci = mosCornerAt(q), si = ci >= 0 ? -1 : (camEdgeAt(q) ? -1 : mosSideAt(q));
+            const tgt = ci >= 0 ? m.corners[ci] : (si >= 0 ? m.sides[si] : null);
+            if (tgt) {
+              const dx = tgt[0] - m.cx, dy = tgt[1] - m.cy;
+              if (ci >= 0) rsz = dx * dy > 0 ? 'nwse-resize' : 'nesw-resize';
+              else {
+                const a = Math.abs(Math.atan2(dy, dx)) / Math.PI * 180, f = a > 90 ? 180 - a : a;
+                rsz = f < 22.5 ? 'ew-resize' : f > 67.5 ? 'ns-resize' : (dx * dy > 0 ? 'nwse-resize' : 'nesw-resize');
+              }
+            }
+          }
           // A button, not something to drag, so it says so.
           const want = (inPlot(q) && !camRotAt(q)
                         && (closeAt(q) || probeCloseAt(q, 2)
                             || (!overPanel && (camLblCloseAt(q, 2) || mosLblCloseAt(q, 2)))))
-            ? 'pointer' : (over ? 'move' : '');
+            ? 'pointer' : (rsz || (over ? 'move' : ''));
           if (el.style.cursor !== want) el.style.cursor = want;
         }
         return;
@@ -2878,14 +2919,8 @@ class Component extends DCLogic {
       }
       if (d.mode === 'mosrsz') {
         d.x1 = p.x; d.y1 = p.y;
-        // The corner follows the pointer and the centre stays put, so the
-        // area grows or shrinks about its middle along its own two axes -
-        // measured on the sphere, since the chart's axes are not square.
-        const at = skyAt(p), t = this.skyToTan(this.mosObj(), at.ra, at.dec);
-        if (!t) return;
-        const side = v => Math.max(this.MOS_MIN, Math.min(this.MOS_MAX_DEG, 2 * Math.atan(Math.abs(v)) / this.D2R));
-        const w = +side(t[0]).toFixed(3), h = +side(t[1]).toFixed(3);
-        this.setMos({ mosW: w, mosH: h, mosWText: String(+w.toFixed(2)), mosHText: String(+h.toFixed(2)) });
+        const at = skyAt(p);
+        this.mosResizeTo(d, at.ra, at.dec);
         return;
       }
       if (d.mode === 'moslbl') return;
@@ -4602,6 +4637,67 @@ class Component extends DCLogic {
                   mosRaText: this.camRaStr(ra), mosDecText: this.camDecStr(dec),
                   mosRotText: String(rot), mosWText: String(w), mosHText: String(h) });
   }
+  // Resizing by a side or a corner: the side under the pointer follows it
+  // and the opposite side stays where it was, which is what dragging the
+  // edge of a box means everywhere else. su and sv say which sides move:
+  // +1 the right or top, -1 the left or bottom, 0 neither. Worked out every
+  // time from the area as it was when the drag began, on that area's
+  // tangent plane, so nothing accumulates and letting the pointer come back
+  // brings the area back exactly.
+  mosResizeStart(su, sv) {
+    const D = this.D2R, z = this.mosSize();
+    return { mode: 'mosrsz', su, sv, m0: this.mosObj(),
+             A: Math.tan(z.w / 2 * D), B: Math.tan(z.h / 2 * D) };
+  }
+  mosResizeTo(d, ra, dec) {
+    const D = this.D2R, t = this.skyToTan(d.m0, ra, dec);
+    if (!t) return;
+    const minT = 2 * Math.tan(this.MOS_MIN / 2 * D), maxT = 2 * Math.tan(this.MOS_MAX_DEG / 2 * D);
+    const span = (lo, hi, s, c) => {
+      // Stop at the smallest size rather than turning inside out when the
+      // pointer is dragged past the opposite side; and at the largest.
+      if (s > 0) hi = Math.max(lo + minT, Math.min(lo + maxT, c));
+      if (s < 0) lo = Math.min(hi - minT, Math.max(hi - maxT, c));
+      return [lo, hi];
+    };
+    const [u0, u1] = span(-d.A, d.A, d.su, t[0]), [v0, v1] = span(-d.B, d.B, d.sv, t[1]);
+    const uc = (u0 + u1) / 2, vc = (v0 + v1) / 2;
+    const [cra, cdec] = this.tanToSky(d.m0, uc, vc);
+    // Keep the area square with itself: its up at the new centre, which
+    // away from the old centre is not quite the angle it had.
+    const up = this.tanToSky(d.m0, uc, vc + 1e-5);
+    const rot = (uc || vc) ? this.camPaTo({ ra: cra, dec: cdec }, up[0], up[1]) : d.m0.rot;
+    const w = +(2 * Math.atan((u1 - u0) / 2) / D).toFixed(3), h = +(2 * Math.atan((v1 - v0) / 2) / D).toFixed(3);
+    const r = ((cra % 24) + 24) % 24, rr = ((Math.round(rot * 10) / 10) % 360 + 360) % 360;
+    this.setMos({ mosRa: r, mosDec: cdec, mosRot: rr, mosW: w, mosH: h,
+                  mosRaText: this.camRaStr(r), mosDecText: this.camDecStr(cdec),
+                  mosRotText: String(Math.round(rr) % 360),
+                  mosWText: String(+w.toFixed(2)), mosHText: String(+h.toFixed(2)) });
+  }
+  // Bring the area back to where it can be seen: the middle of the view,
+  // same size and angle - unless it is bigger than the view, in which case
+  // centring it would still leave it all off the edges, so it is also
+  // shrunk, keeping its shape, until it fits with room around it. Shown and
+  // labelled either way, since the point is to find it.
+  mosRecentre() {
+    const a = this._axis;
+    if (!a || !this.state.mosPlaced) { this.placeMos(); return; }
+    const ra = ((a.axStart + a.axSpan / 2) % 24 + 24) % 24, dec = (a.dTop + a.dBot) / 2;
+    const D = this.D2R, z = this.mosSize(), th = this.state.mosRot * D;
+    const viewW = a.axSpan * 15 * Math.max(0.05, Math.cos(dec * D)), viewH = a.dTop - a.dBot;
+    // How much of the sky's east-west and north-south the turned box spans.
+    const ew = Math.abs(z.w * Math.cos(th)) + Math.abs(z.h * Math.sin(th));
+    const ns = Math.abs(z.w * Math.sin(th)) + Math.abs(z.h * Math.cos(th));
+    const k = Math.min(1, 0.7 * viewW / ew, 0.7 * viewH / ns);
+    const st = { mosOn: true, mosLbl: true, mosRa: ra, mosDec: dec,
+                 mosRaText: this.camRaStr(ra), mosDecText: this.camDecStr(dec) };
+    if (k < 1) {
+      const w = +Math.max(this.MOS_MIN, z.w * k).toFixed(2), h = +Math.max(this.MOS_MIN, z.h * k).toFixed(2);
+      Object.assign(st, { mosW: w, mosH: h, mosWText: String(w), mosHText: String(h),
+                          mosMsg: 'Moved to the middle of the view and shrunk to fit it, to ' + w + '\u00B0 \u00D7 ' + h + '\u00B0.' });
+    } else st.mosMsg = 'Moved to the middle of the view.';
+    this.setMos(st);
+  }
   // How the area divides into panels: how many across and down, and how far
   // apart their centres are on the tangent plane. The count is the smallest
   // that covers the area with at least the overlap asked for; panels are
@@ -6150,8 +6246,13 @@ class Component extends DCLogic {
       ctx.strokeStyle = this.MOS_COLOR; ctx.lineWidth = 1.5; ctx.fillStyle = '#0A0A0A';
       for (const [x, y] of g.corners) { ctx.beginPath(); ctx.rect(x - 4.5, y - 4.5, 9, 9); ctx.fill(); ctx.stroke(); }
       ctx.beginPath(); ctx.arc(g.hx, g.hy, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // The centre, the handle that moves it: a ring around the crosshair,
+      // on top, so it can still be found and taken hold of over a panel.
+      ctx.beginPath(); ctx.arc(g.cx, g.cy, 6, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
-      this._mosHit = { poly: g.pts, cx: g.cx, cy: g.cy, hx: g.hx, hy: g.hy, corners: g.corners };
+      const per = (g.pts.length - 1) / 4;
+      this._mosHit = { poly: g.pts, cx: g.cx, cy: g.cy, hx: g.hx, hy: g.hy, corners: g.corners,
+                       sides: [0, 1, 2, 3].map(k2 => g.pts[Math.round(per * k2 + per / 2)]) };
     }
 
     // Object panels last of all, so they sit above the readouts as well as the
@@ -6878,6 +6979,7 @@ class Component extends DCLogic {
       onMosOverlap: e => { const raw = e.target.value, v = parseFloat(raw), st = { mosOverlapText: raw };
         if (isFinite(v)) st.mosOverlap = Math.max(0, Math.min(100, v)); this.setMos(st); },
       mosSplit: () => this.mosSplit(),
+      mosRecentre: () => this.mosRecentre(),
       onCamSel: e => { const i = parseInt(e.target.value, 10); if (isFinite(i)) this.selectCam(i); },
       addCam: () => this.addCam(),
       deleteCam: () => this.deleteCam(),
